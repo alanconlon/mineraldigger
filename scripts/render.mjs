@@ -430,7 +430,7 @@ export function renderFeature({ site, stripe, generated }) {
       <ol>
         <li>Choose the site, at £${prices.site_sponsor} a month, or one Friday email at £${prices.friday_email}.</li>
         <li>Pay by card through Stripe.</li>
-        <li>Email your name, a short line and your link once the mailbox is open.</li>
+        <li>Email your name, a short line and your link to mineraldigger.hq@gmail.com.</li>
         <li>You are live within two working days.</li>
       </ol>
       <p>Sponsors are labelled, and the link is marked as sponsored. We take sponsors that suit collectors of rocks, gems, minerals, fossils and beads.</p>

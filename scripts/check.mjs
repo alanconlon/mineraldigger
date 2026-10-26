@@ -52,6 +52,10 @@ for (const price of ["£15", "£99", "£25", "£12"]) {
   if (!feature.includes(price)) fail(`Feature page is missing ${price}.`);
 }
 if (!feature.includes("a month") || !feature.includes("an issue")) fail("Feature page is missing the sponsor periods.");
+if (!feature.includes("mineraldigger.hq@gmail.com")) fail("Feature page is missing mineraldigger.hq@gmail.com.");
+if (feature.includes("once the mailbox is open") || feature.includes("hello@mineraldigger.com")) {
+  fail("Feature page still waits on the old mailbox.");
+}
 const disabledPays = feature.match(/Stripe link still to be added/g) || [];
 if (disabledPays.length !== 4) fail(`Expected 4 disabled Stripe buttons, found ${disabledPays.length}.`);
 if (feature.includes("buy.stripe.com") || feature.includes("REPLACE_ME")) fail("Feature page linked a Stripe URL before one was set.");
@@ -78,6 +82,28 @@ if ((wired.match(/Stripe link still to be added/g) || []).length !== 3) fail("Em
 
 const submit = await readFile(join(dist, "submit/index.html"), "utf8");
 if (!submit.includes("<form") || !submit.includes('action="/api/submit"')) fail("Submit form is missing.");
+const submitJs = await readFile(join(dist, "js/submit.js"), "utf8");
+if (!submitJs.includes("Mail is not connected")) fail("Submit fallback should still say mail is not connected.");
+if (!submitJs.includes("mineraldigger.hq@gmail.com")) fail("Submit fallback is missing mineraldigger.hq@gmail.com.");
+if (submitJs.includes("once the mailbox is open") || submitJs.includes("hello@mineraldigger.com")) {
+  fail("Submit fallback still waits on the old mailbox.");
+}
+const siteFile = JSON.parse(await readFile(join(root, "data/site.json"), "utf8"));
+if (siteFile.email !== "mineraldigger.hq@gmail.com") fail("data/site.json email is not mineraldigger.hq@gmail.com.");
+const wrangler = await readFile(join(root, "workers/submit/wrangler.toml"), "utf8");
+if (!wrangler.includes('MINERALDIGGER_SUBMIT_TO = "mineraldigger.hq@gmail.com"')) {
+  fail("Wrangler MINERALDIGGER_SUBMIT_TO is not mineraldigger.hq@gmail.com.");
+}
+if (!wrangler.includes('destination_address = "mineraldigger.hq@gmail.com"')) {
+  fail("Wrangler destination_address is not mineraldigger.hq@gmail.com.");
+}
+if (wrangler.includes("hello@mineraldigger.com")) fail("Wrangler still names hello@mineraldigger.com.");
+if (!wrangler.includes("period = 60") || wrangler.includes("period = 600")) {
+  fail("Submit rate limit period must be 60 seconds.");
+}
+if (MINERALDIGGER_SUBMIT_TO !== "mineraldigger.hq@gmail.com") {
+  fail("MINERALDIGGER_SUBMIT_TO is not mineraldigger.hq@gmail.com.");
+}
 
 const files = await htmlFiles(dist);
 for (const file of files) {
@@ -176,12 +202,42 @@ for (let i = 0; i < 5; i += 1) {
 if (sent.length !== 5) fail(`Expected 5 emails, saw ${sent.length}.`);
 const mail = sent[0];
 const from = typeof mail.from === "string" ? mail.from : mail.from.email;
-if (from !== "submissions@mineraldigger.com" || mail.to !== "hello@mineraldigger.com" || mail.replyTo !== "fair@example.com") {
-  fail("Submission email was not addressed to the MineralDigger mailbox.");
+if (from !== "submissions@mineraldigger.com" || mail.to !== "mineraldigger.hq@gmail.com" || mail.replyTo !== "fair@example.com") {
+  fail("Submission email was not addressed to mineraldigger.hq@gmail.com.");
 }
 if (!String(mail.text).includes("fossil")) fail("Submission email dropped the show types.");
 const limited = await post(listing, "https://www.mineraldigger.com");
 if (limited.status !== 429) fail("Rate limit did not trip on the sixth listing.");
+resetRateLimit();
+const openBinding = {
+  ...env,
+  SUBMIT_LIMIT: {
+    async limit() {
+      return { success: true };
+    },
+  },
+};
+async function postOpen(ip) {
+  const response = await submitWorker.fetch(
+    new Request("https://mineraldigger.com/api/submit", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "cf-connecting-ip": ip,
+        Origin: "https://mineraldigger.com",
+      },
+      body: JSON.stringify(listing),
+    }),
+    openBinding,
+  );
+  return { status: response.status, body: await response.json() };
+}
+for (let i = 0; i < 5; i += 1) {
+  const ok = await postOpen("203.0.113.10");
+  if (ok.status !== 200 || ok.body.delivery !== "emailed") fail(`Binding-open submission ${i + 1} was not emailed.`);
+}
+const stillLimited = await postOpen("203.0.113.10");
+if (stillLimited.status !== 429) fail("In-worker window did not keep the sixth listing inside ten minutes.");
 const unconfigured = await submitWorker.fetch(
   new Request("https://mineraldigger.com/api/submit", {
     method: "POST",
