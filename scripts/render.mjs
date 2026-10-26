@@ -17,6 +17,9 @@ const TYPE_INTRO = {
   bead: "Bead shows, including the rock, gem and bead weekends.",
 };
 
+const SHARE_ALT = "MineralDigger: Rock, gem, mineral, fossil and bead shows across the UK, on one map.";
+const SITE_BLURB = "Rock, gem, mineral, fossil and bead shows across the UK, on one map.";
+
 export function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
     "&": "&amp;",
@@ -52,8 +55,47 @@ function footer(generated) {
   </footer>`;
 }
 
-function layout({ site, path, title, description, body, map = false, generated, robots }) {
+function siteGraph(site) {
+  const page = new URL("/", site.url).href;
+  const origin = new URL(site.url).origin;
+  const data = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${origin}/#website`,
+        name: site.name,
+        url: page,
+        inLanguage: "en-GB",
+        description: SITE_BLURB,
+        publisher: { "@id": `${origin}/#org` },
+      },
+      {
+        "@type": "Organization",
+        "@id": `${origin}/#org`,
+        name: site.name,
+        url: page,
+        logo: {
+          "@type": "ImageObject",
+          url: new URL("/logo.png", site.url).href,
+          width: 512,
+          height: 512,
+        },
+        email: site.email,
+        sameAs: [
+          "https://www.facebook.com/people/MineralDigger/61595681170967/",
+          "https://bsky.app/profile/mineraldigger.com",
+        ],
+        areaServed: ["GB"],
+      },
+    ],
+  };
+  return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
+}
+
+function layout({ site, path, title, description, body, map = false, generated, robots, structuredData = "" }) {
   const canonical = new URL(path, site.url).href;
+  const image = new URL("/og-image.jpg", site.url).href;
   return `<!DOCTYPE html>
 <html lang="en-GB">
 <head>
@@ -63,13 +105,26 @@ function layout({ site, path, title, description, body, map = false, generated, 
   <meta name="description" content="${esc(description)}">
   ${robots ? `<meta name="robots" content="${esc(robots)}">` : ""}
   <link rel="canonical" href="${esc(canonical)}">
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <meta property="og:title" content="${esc(title)}">
   <meta property="og:description" content="${esc(description)}">
   <meta property="og:type" content="website">
   <meta property="og:url" content="${esc(canonical)}">
+  <meta property="og:site_name" content="${esc(site.name)}">
+  <meta property="og:locale" content="en_GB">
+  <meta property="og:image" content="${esc(image)}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="${esc(SHARE_ALT)}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${esc(title)}">
+  <meta name="twitter:description" content="${esc(description)}">
+  <meta name="twitter:image" content="${esc(image)}">
   <link rel="stylesheet" href="/site.css">
   ${map ? '<link rel="stylesheet" href="/vendor/leaflet/leaflet.css">' : ""}
+  ${structuredData}
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -206,6 +261,7 @@ export function renderListing({ site, path, title, description, heading, lede, s
     body,
     map: true,
     generated,
+    structuredData: home ? siteGraph(site) : "",
   });
 }
 
@@ -659,6 +715,7 @@ export function renderNotFound({ site, generated }) {
     description: "That page is not on MineralDigger.",
     body,
     generated,
+    robots: "noindex",
   });
 }
 

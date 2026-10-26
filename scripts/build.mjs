@@ -113,6 +113,10 @@ async function copyAssets() {
   await cp(join(root, "src/js/submit.js"), join(dist, "js/submit.js"));
   await cp(join(root, "functions/api/validate.js"), join(dist, "js/validate.js"));
   await cp(join(root, "public/favicon.svg"), join(dist, "favicon.svg"));
+  await cp(join(root, "public/favicon.ico"), join(dist, "favicon.ico"));
+  await cp(join(root, "public/apple-touch-icon.png"), join(dist, "apple-touch-icon.png"));
+  await cp(join(root, "public/og-image.jpg"), join(dist, "og-image.jpg"));
+  await cp(join(root, "public/logo.png"), join(dist, "logo.png"));
   await writeFile(
     join(dist, "_headers"),
     "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Frame-Options: SAMEORIGIN\n\n/thanks/payment/*\n  X-Robots-Tag: noindex\n",
