@@ -343,8 +343,64 @@ export function renderShow({ site, show, generated, todayISO }) {
 }
 
 function payControl(href, label, ready) {
-  if (!ready) return `<button class="pay" type="button" disabled>Stripe link still to be added</button>`;
+  if (!ready) return `<p class="soon">Coming soon</p>`;
   return `<a class="pay" href="${esc(href)}">${esc(label)}</a>`;
+}
+
+function paymentCopy(ready, prices) {
+  const open = Object.values(ready).filter(Boolean).length;
+  const allOpen = open === Object.keys(ready).length;
+  const noneOpen = open === 0;
+  if (allOpen) {
+    return {
+      notice: "",
+      featureSteps: `<ol>
+        <li>Make sure the show is listed. If it is not, <a href="/submit/">submit it free</a> first.</li>
+        <li>Choose an option and pay by card through Stripe. At checkout, say which show it is, or which organiser for the year pass.</li>
+        <li>You get a Stripe receipt by email. We feature the show within one working day, and we email if we need anything else.</li>
+      </ol>`,
+      sponsorSteps: `<ol>
+        <li>Choose the site, at £${prices.site_sponsor} a month, or one Friday email at £${prices.friday_email}.</li>
+        <li>Pay by card through Stripe.</li>
+        <li>Email your name, a short line and your link to mineraldigger.hq@gmail.com.</li>
+        <li>You are live within two working days.</li>
+      </ol>`,
+    };
+  }
+  if (noneOpen) {
+    return {
+      notice: `<div class="notice">
+        <p>Card payment is coming soon. The prices above are the ones we will charge. Until then, email mineraldigger.hq@gmail.com.</p>
+      </div>`,
+      featureSteps: `<ol>
+        <li>Make sure the show is listed. If it is not, <a href="/submit/">submit it free</a> first.</li>
+        <li>Card payment for a featured show or a year pass is coming soon.</li>
+        <li>Until then, email mineraldigger.hq@gmail.com with the show, or the organiser for a year pass.</li>
+      </ol>`,
+      sponsorSteps: `<ol>
+        <li>Choose the site, at £${prices.site_sponsor} a month, or one Friday email at £${prices.friday_email}.</li>
+        <li>Card payment is coming soon.</li>
+        <li>Email your name, a short line and your link to mineraldigger.hq@gmail.com.</li>
+        <li>You are live within two working days of payment.</li>
+      </ol>`,
+    };
+  }
+  return {
+    notice: `<div class="notice">
+        <p>Some card payments are still coming soon. Pay only where a button is shown. For the rest, email mineraldigger.hq@gmail.com.</p>
+      </div>`,
+    featureSteps: `<ol>
+        <li>Make sure the show is listed. If it is not, <a href="/submit/">submit it free</a> first.</li>
+        <li>Pay by card through Stripe where a button is shown. At checkout, say which show it is, or which organiser for the year pass.</li>
+        <li>You get a Stripe receipt by email. We feature the show within one working day, and we email if we need anything else.</li>
+      </ol>`,
+    sponsorSteps: `<ol>
+        <li>Choose the site, at £${prices.site_sponsor} a month, or one Friday email at £${prices.friday_email}.</li>
+        <li>Pay by card through Stripe where a button is shown. Options marked coming soon are not open yet.</li>
+        <li>Email your name, a short line and your link to mineraldigger.hq@gmail.com.</li>
+        <li>You are live within two working days of payment.</li>
+      </ol>`,
+  };
 }
 
 export function renderFeature({ site, stripe, generated }) {
@@ -356,6 +412,7 @@ export function renderFeature({ site, stripe, generated }) {
     site_sponsor: stripeReady(links.site_sponsor),
     friday_email: stripeReady(links.friday_email),
   };
+  const copy = paymentCopy(ready, prices);
   const body = `<article class="page"><div class="wrap">
       <p class="eyebrow">For organisers and sponsors</p>
       <h1>Feature a show</h1>
@@ -411,15 +468,9 @@ export function renderFeature({ site, stripe, generated }) {
           ${payControl(links.friday_email, `Pay £${prices.friday_email} with Stripe`, ready.friday_email)}
         </section>
       </div>
-      ${Object.values(ready).every(Boolean) ? "" : `<div class="notice">
-        <p>Payment links are not connected yet. The prices above are the ones we will charge. A button switches on when its Stripe Payment Link is added.</p>
-      </div>`}
+      ${copy.notice}
       <h2>How it works</h2>
-      <ol>
-        <li>Make sure the show is listed. If it is not, <a href="/submit/">submit it free</a> first.</li>
-        <li>Choose an option and pay by card through Stripe. At checkout, say which show it is, or which organiser for the year pass.</li>
-        <li>You get a Stripe receipt by email. We feature the show within one working day, and we email if we need anything else.</li>
-      </ol>
+      ${copy.featureSteps}
       <p>Free listings stay free. Featured shows are labelled.</p>
       <h2>What a sponsor looks like</h2>
       <div class="example">
@@ -427,12 +478,7 @@ export function renderFeature({ site, stripe, generated }) {
         <p><strong>Northstone Lapidary.</strong> Rough, slabs and findings for collectors.</p>
       </div>
       <h2>How sponsoring works</h2>
-      <ol>
-        <li>Choose the site, at £${prices.site_sponsor} a month, or one Friday email at £${prices.friday_email}.</li>
-        <li>Pay by card through Stripe.</li>
-        <li>Email your name, a short line and your link to mineraldigger.hq@gmail.com.</li>
-        <li>You are live within two working days.</li>
-      </ol>
+      ${copy.sponsorSteps}
       <p>Sponsors are labelled, and the link is marked as sponsored. We take sponsors that suit collectors of rocks, gems, minerals, fossils and beads.</p>
     </div></article>`;
   return layout({
@@ -543,13 +589,17 @@ export function renderAbout({ site, generated }) {
   });
 }
 
-export function renderDigest({ site, shows, sponsors, generated, today }) {
+export function renderDigest({ site, shows, sponsors, generated, today, stripe }) {
   const weekend = digestWeekend(today);
   const rows = shows.filter((show) => overlaps(show, weekend.start, weekend.end));
   const friday = sponsors && sponsors.friday;
+  const fridayPrice = stripe?.prices?.friday_email ?? 12;
+  const fridayOpen = stripeReady(stripe?.links?.friday_email);
   const sponsor = friday && friday.issue === weekend.start
     ? `<aside class="example"><p class="eyebrow">Sponsored</p><p><a rel="sponsored" href="${esc(friday.url)}">${esc(friday.name)}</a>. ${esc(friday.line || "")}</p></aside>`
-    : `<aside class="example"><p class="eyebrow">Friday email sponsor</p><p>No sponsor for this issue. <a href="/feature/">Sponsor one issue for £12</a>.</p></aside>`;
+    : fridayOpen
+      ? `<aside class="example"><p class="eyebrow">Friday email sponsor</p><p>No sponsor for this issue. <a href="/feature/">Sponsor one issue for £${fridayPrice}</a>.</p></aside>`
+      : `<aside class="example"><p class="eyebrow">Friday email sponsor</p><p>No sponsor for this issue. <a href="/feature/">Friday email sponsorship is coming soon</a> (£${fridayPrice} an issue).</p></aside>`;
   const list = rows.length
     ? `<ul>${rows.map((show) => `<li><a href="/show/${esc(show.slug)}/">${esc(show.name)}</a>, ${esc(formatRange(show.start, show.end))}, ${esc(show.venue.town)}. ${esc(show.entry.label)}.</li>`).join("")}</ul>`
     : `<p>No shows in the list fall on that weekend.</p>`;

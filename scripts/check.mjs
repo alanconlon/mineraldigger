@@ -56,9 +56,22 @@ if (!feature.includes("mineraldigger.hq@gmail.com")) fail("Feature page is missi
 if (feature.includes("once the mailbox is open") || feature.includes("hello@mineraldigger.com")) {
   fail("Feature page still waits on the old mailbox.");
 }
-const disabledPays = feature.match(/Stripe link still to be added/g) || [];
-if (disabledPays.length !== 4) fail(`Expected 4 disabled Stripe buttons, found ${disabledPays.length}.`);
-if (feature.includes("buy.stripe.com") || feature.includes("REPLACE_ME")) fail("Feature page linked a Stripe URL before one was set.");
+const comingSoon = feature.match(/class="soon"/g) || [];
+if (comingSoon.length !== 4) fail(`Expected 4 coming soon notes, found ${comingSoon.length}.`);
+if (!feature.includes("Coming soon")) fail("Feature page is missing Coming soon.");
+if (feature.includes("Stripe link still to be added") || feature.includes("disabled")) {
+  fail("Feature page still has a disabled Stripe buy button.");
+}
+if (/stripe/i.test(feature) || feature.includes("buy.stripe.com") || feature.includes("REPLACE_ME")) {
+  fail("Feature page still offers a Stripe buy path.");
+}
+const payLinks = [...feature.matchAll(/<a class="pay" href="([^"]+)"/g)].map((match) => match[1]);
+if (payLinks.length !== 1 || payLinks[0] !== "/submit/") {
+  fail(`Feature page pay links should only be the free submit form, found ${payLinks.join(", ") || "none"}.`);
+}
+const digest = await readFile(join(dist, "digest/index.html"), "utf8");
+if (digest.includes("Sponsor one issue")) fail("Digest still invites a live Friday sponsor payment.");
+if (!digest.includes("Friday email sponsorship is coming soon")) fail("Digest should say Friday sponsorship is coming soon.");
 
 const stripeFile = JSON.parse(await readFile(join(root, "data/stripe.json"), "utf8"));
 for (const key of ["featured_show", "year_pass", "site_sponsor", "friday_email"]) {
@@ -78,7 +91,9 @@ const wired = renderFeature({
   generated: "2026-10-25",
 });
 if (!wired.includes('href="https://buy.stripe.com/test_example"')) fail("A filled Stripe URL did not become a link.");
-if ((wired.match(/Stripe link still to be added/g) || []).length !== 3) fail("Empty Stripe URLs should stay disabled.");
+if (!wired.includes("Pay £15 with Stripe")) fail("A filled Stripe URL did not become a pay button.");
+if ((wired.match(/class="soon"/g) || []).length !== 3) fail("Empty Stripe URLs should say coming soon.");
+if (wired.includes("Stripe link still to be added")) fail("Empty Stripe URLs should not use the old placeholder.");
 
 const submit = await readFile(join(dist, "submit/index.html"), "utf8");
 if (!submit.includes("<form") || !submit.includes('action="/api/submit"')) fail("Submit form is missing.");
