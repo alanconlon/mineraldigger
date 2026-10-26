@@ -56,26 +56,48 @@ if (!feature.includes("mineraldigger.hq@gmail.com")) fail("Feature page is missi
 if (feature.includes("once the mailbox is open") || feature.includes("hello@mineraldigger.com")) {
   fail("Feature page still waits on the old mailbox.");
 }
-const comingSoon = feature.match(/class="soon"/g) || [];
-if (comingSoon.length !== 4) fail(`Expected 4 coming soon notes, found ${comingSoon.length}.`);
-if (!feature.includes("Coming soon")) fail("Feature page is missing Coming soon.");
+if (/coming soon/i.test(feature)) fail("Feature page still says payment is coming soon.");
+if ((feature.match(/class="soon"/g) || []).length !== 0) fail("Feature page still has a Coming soon placeholder.");
 if (feature.includes("Stripe link still to be added") || feature.includes("disabled")) {
   fail("Feature page still has a disabled Stripe buy button.");
 }
-if (/stripe/i.test(feature) || feature.includes("buy.stripe.com") || feature.includes("REPLACE_ME")) {
-  fail("Feature page still offers a Stripe buy path.");
+if (feature.includes("REPLACE_ME")) fail("Feature page still has a Stripe placeholder.");
+if (!feature.includes("Free listing") || !feature.includes("Submit a show")) fail("Feature page is missing the free listing.");
+if (!feature.includes("Pay by card through Stripe") || !feature.includes("within one working day")) {
+  fail("Feature page is missing the live checkout steps.");
 }
+if (!feature.includes("logo") || !feature.includes("one-line message")) {
+  fail("Feature page does not ask sponsors to email a logo and a one-line message.");
+}
+const liveLinks = {
+  featured_show: "https://buy.stripe.com/28E28r9Ukcba0QM6rAgnK00",
+  year_pass: "https://buy.stripe.com/28E14n8Qgfnmbvqg2agnK01",
+  site_sponsor: "https://buy.stripe.com/fZuaEX3vW2AA42Y5nwgnK02",
+  friday_email: "https://buy.stripe.com/fZueVd4A00ss8jebLUgnK03",
+};
 const payLinks = [...feature.matchAll(/<a class="pay" href="([^"]+)"/g)].map((match) => match[1]);
-if (payLinks.length !== 1 || payLinks[0] !== "/submit/") {
-  fail(`Feature page pay links should only be the free submit form, found ${payLinks.join(", ") || "none"}.`);
+const expectedPayLinks = ["/submit/", ...Object.values(liveLinks)];
+if (payLinks.join("\n") !== expectedPayLinks.join("\n")) {
+  fail(`Feature page pay links should be the free form plus the four Payment Links, found ${payLinks.join(", ") || "none"}.`);
+}
+for (const label of ["Pay £15 with Stripe", "Pay £99 with Stripe", "Pay £25 a month with Stripe", "Pay £12 with Stripe"]) {
+  if (!feature.includes(label)) fail(`Feature page is missing ${label}.`);
 }
 const digest = await readFile(join(dist, "digest/index.html"), "utf8");
-if (digest.includes("Sponsor one issue")) fail("Digest still invites a live Friday sponsor payment.");
-if (!digest.includes("Friday email sponsorship is coming soon")) fail("Digest should say Friday sponsorship is coming soon.");
+if (!digest.includes("Sponsor one issue for £12")) fail("Digest should invite the live Friday sponsor payment.");
+if (digest.includes("Friday email sponsorship is coming soon")) fail("Digest still says Friday sponsorship is coming soon.");
 
 const stripeFile = JSON.parse(await readFile(join(root, "data/stripe.json"), "utf8"));
-for (const key of ["featured_show", "year_pass", "site_sponsor", "friday_email"]) {
-  if (stripeFile.links[key] !== "") fail(`data/stripe.json links.${key} should start empty.`);
+if (/leave the string empty/i.test(stripeFile._note || "")) fail("stripe.json note still says to leave links empty.");
+for (const key of Object.keys(liveLinks)) {
+  const link = stripeFile.links[key];
+  if (typeof link !== "string" || !link.startsWith("https://")) {
+    fail(`data/stripe.json links.${key} must be a non-empty https URL.`);
+  }
+  if (!link.startsWith("https://buy.stripe.com/")) {
+    fail(`data/stripe.json links.${key} must be a buy.stripe.com Payment Link.`);
+  }
+  if (link !== liveLinks[key]) fail(`data/stripe.json links.${key} is not the live Payment Link.`);
   if (stripeFile.prices[key] !== { featured_show: 15, year_pass: 99, site_sponsor: 25, friday_email: 12 }[key]) {
     fail(`Price for ${key} changed.`);
   }
@@ -135,6 +157,26 @@ if (!robots.includes("Sitemap: https://mineraldigger.com/sitemap.xml")) fail("ro
 const sitemap = await readFile(join(dist, "sitemap.xml"), "utf8");
 if (!sitemap.includes("<loc>https://mineraldigger.com/</loc>")) fail("Sitemap is missing the .com homepage.");
 if (sitemap.includes("mineraldigger.co.uk")) fail("Sitemap still points at mineraldigger.co.uk.");
+if (sitemap.includes("/thanks/payment")) fail("Thank-you page must stay out of the sitemap.");
+const headers = await readFile(join(dist, "_headers"), "utf8");
+if (!headers.includes("X-Robots-Tag: noindex")) fail("Thank-you page is missing the noindex response header.");
+const thanks = await readFile(join(dist, "thanks/payment/index.html"), "utf8");
+if (!thanks.includes("<title>Payment received | MineralDigger</title>")) fail("Thank-you page title is wrong.");
+if (!thanks.includes('rel="canonical" href="https://mineraldigger.com/thanks/payment/"')) {
+  fail("Thank-you page canonical is not https://mineraldigger.com/thanks/payment/.");
+}
+if (!thanks.includes('name="robots" content="noindex"')) fail("Thank-you page is missing noindex.");
+if (!thanks.includes("mineraldigger.hq@gmail.com")) fail("Thank-you page is missing mineraldigger.hq@gmail.com.");
+if (thanks.includes("hello@")) fail("Thank-you page invented another mailbox.");
+if (!thanks.includes("Stripe receipt") || !thanks.includes("one working day") || !thanks.includes("12 months")) {
+  fail("Thank-you page is missing the receipt and featuring promise.");
+}
+if (!thanks.includes("logo") || !thanks.includes("one-line message") || !thanks.includes("2 working days")) {
+  fail("Thank-you page is missing the sponsor follow-up.");
+}
+if (!thanks.includes(">Home</a>") || !thanks.includes(">Upcoming shows</a>")) {
+  fail("Thank-you page is missing the home and upcoming-shows links.");
+}
 
 const catalogue = JSON.parse(await readFile(join(root, "data/shows.json"), "utf8"));
 if (catalogue.shows.length < 35 || catalogue.shows.length > 50) fail(`Unexpected show count ${catalogue.shows.length}`);

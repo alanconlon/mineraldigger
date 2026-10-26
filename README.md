@@ -23,7 +23,8 @@ npm run dev
 - `/` upcoming shows, with an OpenStreetMap map, type links, and date filters (this weekend, coming later). Pins sit on the venue postcode.
 - `/rock/`, `/gem/`, `/mineral/`, `/fossil/`, `/bead/` type pages
 - `/show/…/` one page per show, plus an `event.ics` calendar file
-- `/feature/` free listing, featured show £15, year pass £99, site sponsor £25 a month, Friday email £12 an issue
+- `/feature/` free listing, featured show £15, year pass £99, site sponsor £25 a month, Friday email £12 an issue. The four paid cards link to live Stripe checkout.
+- `/thanks/payment/` post-payment thank-you page. It is `noindex` and is not in the sitemap. This site does not ping IndexNow.
 - `/submit/` organiser form
 - `/digest/` a preview of the Friday email. Nothing is sent
 - `/about/` how shows are listed
@@ -80,23 +81,25 @@ Prices on `/feature/`:
 | Site sponsor | £25 a month |
 | Friday email | £12 an issue |
 
-Payment Links live in `data/stripe.json` under `links`. Each one starts as an empty string. On `/feature/`, that product says "Coming soon" and is not a buy button until the value is a non-empty `https://` URL. Then the button is a real link. Prices stay in `prices` and are not the links. The Friday list says sponsorship is coming soon while `links.friday_email` is empty.
+The four live Payment Links are in `data/stripe.json` under `links`. Prices stay in `prices`. On `/feature/`, a non-empty `https://` URL is a pay button (`Pay £… with Stripe`). An empty link still says "Coming soon" and is not a buy button. With `links.friday_email` set, the Friday list invites a sponsor for that issue.
 
-| Product | Price key | Link key |
+| Product | Price key | Link |
 | --- | --- | --- |
 | Featured show | `prices.featured_show` (£15) | `links.featured_show` |
 | Year pass | `prices.year_pass` (£99) | `links.year_pass` |
 | Site sponsor | `prices.site_sponsor` (£25 a month) | `links.site_sponsor` |
 | Friday email | `prices.friday_email` (£12) | `links.friday_email` |
 
-When the live links exist, paste each `https://buy.stripe.com/…` URL into that key, or export these before the build (they win over the file):
+These environment variables override the file at build time:
 
 - `STRIPE_FEATURED_SHOW_URL`
 - `STRIPE_YEAR_PASS_URL`
 - `STRIPE_SITE_SPONSOR_URL`
 - `STRIPE_FRIDAY_EMAIL_URL`
 
-Rebuild and upload `dist/` after changing them. Do not invent Payment Link ids. There is no Gumroad path.
+Rebuild and upload `dist/` after changing a link. Do not invent Payment Link ids. There is no Gumroad path.
+
+After payment, Stripe customers should land on `https://mineraldigger.com/thanks/payment/`. That page is `noindex`, omitted from `sitemap.xml`, and not submitted anywhere else. It asks sponsors to email a logo, a one-line message, and which package to `mineraldigger.hq@gmail.com`.
 
 Paid placement data, still empty:
 
@@ -147,10 +150,9 @@ npx wrangler pages deploy dist --project-name mineraldigger --branch main
 ## Still to do before a public launch
 
 - Keep `mineraldigger.co.uk` on the same Pages project as `mineraldigger.com`, with no redirect between them
-- Create the four Stripe Payment Links and paste them into `data/stripe.json` `links` (see above), then rebuild and upload. Until then, `/feature/` says coming soon and does not offer checkout
 - In Email Routing, verify the destination `mineraldigger.hq@gmail.com`, then run `npx wrangler deploy` from `workers/submit/`
 
-Not in this version: live checkout, DNS, sending the Friday email, social accounts, Facebook scraping, mind-body-spirit listings, and Ireland.
+Not in this version: DNS, sending the Friday email, social accounts, Facebook scraping, mind-body-spirit listings, and Ireland. Live Stripe checkout for the four products is on `/feature/`.
 
 ## Brand
 

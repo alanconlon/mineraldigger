@@ -1,5 +1,5 @@
 {
-  "_note": "Paste a live https://buy.stripe.com/ URL into links when Alan has created it. Leave the string empty until then. On /feature/, an empty link says Coming soon and is not a buy button. At build time these env vars win over the file: STRIPE_FEATURED_SHOW_URL, STRIPE_YEAR_PASS_URL, STRIPE_SITE_SPONSOR_URL, STRIPE_FRIDAY_EMAIL_URL. Do not invent Payment Link ids.",
+  "_note": "Live Payment Links for the four products. On /feature/, a non-empty https URL is a pay button. An empty link still says Coming soon. At build time these env vars win over the file: STRIPE_FEATURED_SHOW_URL, STRIPE_YEAR_PASS_URL, STRIPE_SITE_SPONSOR_URL, STRIPE_FRIDAY_EMAIL_URL. Do not invent Payment Link ids or replace these URLs.",
   "prices": {
     "featured_show": 15,
     "year_pass": 99,
@@ -7,9 +7,9 @@
     "friday_email": 12
   },
   "links": {
-    "featured_show": "",
-    "year_pass": "",
-    "site_sponsor": "",
-    "friday_email": ""
+    "featured_show": "https://buy.stripe.com/28E28r9Ukcba0QM6rAgnK00",
+    "year_pass": "https://buy.stripe.com/28E14n8Qgfnmbvqg2agnK01",
+    "site_sponsor": "https://buy.stripe.com/fZuaEX3vW2AA42Y5nwgnK02",
+    "friday_email": "https://buy.stripe.com/fZueVd4A00ss8jebLUgnK03"
   }
 }
