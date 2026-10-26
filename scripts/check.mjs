@@ -14,6 +14,43 @@ function fail(message) {
   failures.push(message);
 }
 
+function jpegSize(buffer) {
+  if (buffer[0] !== 0xff || buffer[1] !== 0xd8) return null;
+  let offset = 2;
+  while (offset + 9 < buffer.length) {
+    if (buffer[offset] !== 0xff) return null;
+    const marker = buffer[offset + 1];
+    if (marker === 0xd8) {
+      offset += 2;
+      continue;
+    }
+    if (marker === 0xd9 || marker === 0xda) return null;
+    const length = buffer.readUInt16BE(offset + 2);
+    if (marker >= 0xc0 && marker <= 0xc3) {
+      return { height: buffer.readUInt16BE(offset + 5), width: buffer.readUInt16BE(offset + 7) };
+    }
+    offset += 2 + length;
+  }
+  return null;
+}
+
+function pngSize(buffer) {
+  if (buffer.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a") return null;
+  if (buffer.subarray(12, 16).toString("ascii") !== "IHDR") return null;
+  return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+}
+
+function icoSizes(buffer) {
+  if (buffer.length < 22 || buffer.readUInt16LE(0) !== 0 || buffer.readUInt16LE(2) !== 1) return null;
+  const count = buffer.readUInt16LE(4);
+  const sizes = [];
+  for (let i = 0; i < count; i++) {
+    const offset = 6 + i * 16;
+    sizes.push({ width: buffer[offset] || 256, height: buffer[offset + 1] || 256 });
+  }
+  return sizes;
+}
+
 function textOnly(html) {
   return html
     .replace(/<!DOCTYPE[^>]*>/gi, "")
@@ -40,6 +77,48 @@ if (!index.includes(subline)) fail("Homepage is missing the subline.");
 if (!index.includes(footer)) fail("Homepage is missing the footer line.");
 if (!index.includes('rel="canonical" href="https://mineraldigger.com/"')) fail("Homepage canonical is not https://mineraldigger.com/.");
 if (!index.includes('property="og:url" content="https://mineraldigger.com/"')) fail("Homepage og:url is not https://mineraldigger.com/.");
+if (!index.includes('property="og:site_name" content="MineralDigger"')) fail("Homepage og:site_name is missing.");
+if (!index.includes('property="og:locale" content="en_GB"')) fail("Homepage og:locale is not en_GB.");
+if (!index.includes('property="og:image" content="https://mineraldigger.com/og-image.jpg"')) fail("Homepage og:image is missing.");
+if (!index.includes('property="og:image:width" content="1200"')) fail("Homepage og:image width is not 1200.");
+if (!index.includes('property="og:image:height" content="630"')) fail("Homepage og:image height is not 630.");
+if (!index.includes('property="og:image:alt" content="MineralDigger: Rock, gem, mineral, fossil and bead shows across the UK, on one map."')) {
+  fail("Homepage og:image alt does not match the site.");
+}
+if (!index.includes('name="twitter:card" content="summary_large_image"')) fail("Homepage twitter card is missing.");
+if (!index.includes('rel="icon" href="/favicon.ico" sizes="32x32"')) fail("Homepage favicon.ico link is missing.");
+if (!index.includes('rel="icon" href="/favicon.svg" type="image/svg+xml"')) fail("Homepage favicon.svg link is missing.");
+if (!index.includes('rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"')) fail("Homepage apple touch icon link is missing.");
+const jsonLd = [...index.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((match) => match[1]);
+if (jsonLd.length !== 1) fail(`Homepage should have one JSON-LD script, found ${jsonLd.length}.`);
+let graph;
+try {
+  graph = JSON.parse(jsonLd[0] || "");
+} catch {
+  fail("Homepage JSON-LD is not valid JSON.");
+}
+const website = graph?.["@graph"]?.[0];
+const org = graph?.["@graph"]?.[1];
+if (graph?.["@context"] !== "https://schema.org" || graph?.["@graph"]?.length !== 2) fail("Homepage JSON-LD is not a WebSite and Organization graph.");
+if (website?.["@type"] !== "WebSite" || website?.["@id"] !== "https://mineraldigger.com/#website") fail("WebSite @id is wrong.");
+if (website?.name !== "MineralDigger" || website?.url !== "https://mineraldigger.com/" || website?.inLanguage !== "en-GB") {
+  fail("WebSite name, url, or language is wrong.");
+}
+if (website?.description !== "Rock, gem, mineral, fossil and bead shows across the UK, on one map.") fail("WebSite description does not match the site.");
+if (website?.publisher?.["@id"] !== "https://mineraldigger.com/#org") fail("WebSite publisher does not point at the organization.");
+if (org?.["@type"] !== "Organization" || org?.["@id"] !== "https://mineraldigger.com/#org") fail("Organization @id is wrong.");
+if (org?.name !== "MineralDigger" || org?.url !== "https://mineraldigger.com/" || org?.email !== "mineraldigger.hq@gmail.com") {
+  fail("Organization name, url, or email is wrong.");
+}
+if (org?.logo?.["@type"] !== "ImageObject" || org?.logo?.url !== "https://mineraldigger.com/logo.png" || org?.logo?.width !== 512 || org?.logo?.height !== 512) {
+  fail("Organization logo is not the 512 logo.png.");
+}
+const sameAs = Array.isArray(org?.sameAs) ? org.sameAs.join("\n") : "";
+if (sameAs !== "https://www.facebook.com/people/MineralDigger/61595681170967/\nhttps://bsky.app/profile/mineraldigger.com") {
+  fail("Organization sameAs is not Facebook and Bluesky.");
+}
+if (!Array.isArray(org?.areaServed) || org.areaServed.join(",") !== "GB") fail("Organization areaServed should be GB.");
+if (index.includes("Also from us")) fail("Homepage should not include a sister-site footer.");
 if (!index.includes("Kempton Park")) fail("Homepage is missing the Rockngem Kempton show.");
 if (!/Oxford Mineral|Sussex Mineral|Bakewell Rock Exchange|South of England Mineral Show/.test(index)) {
   fail("Homepage is missing an independent show.");
@@ -150,6 +229,12 @@ for (const file of files) {
   if (html.includes("!")) fail(`Exclamation mark in ${file}`);
   if (/gumroad|crystaldigger/i.test(html)) fail(`Banned name in ${file}`);
   if (raw.includes("mineraldigger.co.uk")) fail(`mineraldigger.co.uk still linked in ${file}`);
+  if (raw.includes("Also from us")) fail(`Sister footer must stay off ${file}`);
+  if (!raw.includes('rel="icon" href="/favicon.ico" sizes="32x32"')) fail(`favicon.ico link missing in ${file}`);
+  if (!raw.includes('rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"')) fail(`apple touch icon missing in ${file}`);
+  if (!raw.includes('property="og:image" content="https://mineraldigger.com/og-image.jpg"')) fail(`og:image missing in ${file}`);
+  if (!raw.includes('property="og:site_name" content="MineralDigger"')) fail(`og:site_name missing in ${file}`);
+  if (!raw.includes('property="og:locale" content="en_GB"')) fail(`og:locale missing in ${file}`);
 }
 
 const robots = await readFile(join(dist, "robots.txt"), "utf8");
@@ -158,6 +243,28 @@ const sitemap = await readFile(join(dist, "sitemap.xml"), "utf8");
 if (!sitemap.includes("<loc>https://mineraldigger.com/</loc>")) fail("Sitemap is missing the .com homepage.");
 if (sitemap.includes("mineraldigger.co.uk")) fail("Sitemap still points at mineraldigger.co.uk.");
 if (sitemap.includes("/thanks/payment")) fail("Thank-you page must stay out of the sitemap.");
+if (sitemap.includes("404")) fail("404 page must stay out of the sitemap.");
+const missing = await readFile(join(dist, "404.html"), "utf8");
+if (!missing.includes("<title>Page not found | MineralDigger</title>")) fail("404 title changed.");
+if (!missing.includes("<h1>That page is not on the map.</h1>")) fail("404 heading changed.");
+if (!missing.includes('href="/">Back to upcoming shows</a>')) fail("404 home link is missing.");
+if (!missing.includes('name="robots" content="noindex"')) fail("404 is missing noindex.");
+if (missing.includes('"#website"') || missing.includes('"@graph"')) fail("404 should not include the homepage graph.");
+const ogImage = await readFile(join(dist, "og-image.jpg"));
+const ogSize = jpegSize(ogImage);
+if (!ogSize || ogSize.width !== 1200 || ogSize.height !== 630) fail(`og-image.jpg should be 1200x630 JPEG, found ${ogSize ? `${ogSize.width}x${ogSize.height}` : "not a JPEG"}.`);
+const logoPng = await readFile(join(dist, "logo.png"));
+const logoSize = pngSize(logoPng);
+if (!logoSize || logoSize.width !== 512 || logoSize.height !== 512) fail("logo.png should be a 512x512 PNG.");
+const appleIcon = await readFile(join(dist, "apple-touch-icon.png"));
+const appleSize = pngSize(appleIcon);
+if (!appleSize || appleSize.width !== 180 || appleSize.height !== 180) fail("apple-touch-icon.png should be a 180x180 PNG.");
+const faviconIco = await readFile(join(dist, "favicon.ico"));
+const faviconSize = icoSizes(faviconIco);
+if (!faviconSize || faviconSize.length !== 1 || faviconSize[0].width !== 32 || faviconSize[0].height !== 32) {
+  fail("favicon.ico should contain a single 32x32 image.");
+}
+if (!(await readFile(join(dist, "favicon.svg"), "utf8")).includes("#143f36")) fail("favicon.svg lost the Mineral green.");
 const headers = await readFile(join(dist, "_headers"), "utf8");
 if (!headers.includes("X-Robots-Tag: noindex")) fail("Thank-you page is missing the noindex response header.");
 const thanks = await readFile(join(dist, "thanks/payment/index.html"), "utf8");
