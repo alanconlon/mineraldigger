@@ -147,7 +147,7 @@ async function main() {
   await writePage("feature/index.html", renderFeature({ site, stripe, generated }));
   await writePage("submit/index.html", renderSubmit({ site, generated }));
   await writePage("about/index.html", renderAbout({ site, generated }));
-  await writePage("digest/index.html", renderDigest({ site, shows: upcoming, sponsors, generated, today }));
+  await writePage("digest/index.html", renderDigest({ site, shows: upcoming, sponsors, generated, today, stripe }));
   await writePage("404.html", renderNotFound({ site, generated }));
 
   const paths = ["/", "/feature/", "/submit/", "/digest/", "/about/", "/rock/", "/gem/", "/mineral/", "/fossil/", "/bead/"];

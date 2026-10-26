@@ -80,7 +80,7 @@ Prices on `/feature/`:
 | Site sponsor | £25 a month |
 | Friday email | £12 an issue |
 
-Payment Links live in `data/stripe.json` under `links`. Each one starts as an empty string. On `/feature/`, that product's button says "Stripe link still to be added" until the value is a non-empty `https://` URL. Then the button is a real link. Prices stay in `prices` and are not the links.
+Payment Links live in `data/stripe.json` under `links`. Each one starts as an empty string. On `/feature/`, that product says "Coming soon" and is not a buy button until the value is a non-empty `https://` URL. Then the button is a real link. Prices stay in `prices` and are not the links. The Friday list says sponsorship is coming soon while `links.friday_email` is empty.
 
 | Product | Price key | Link key |
 | --- | --- | --- |
@@ -147,7 +147,7 @@ npx wrangler pages deploy dist --project-name mineraldigger --branch main
 ## Still to do before a public launch
 
 - Keep `mineraldigger.co.uk` on the same Pages project as `mineraldigger.com`, with no redirect between them
-- Create the four Stripe Payment Links and paste them into `data/stripe.json` `links` (see above), then rebuild and upload
+- Create the four Stripe Payment Links and paste them into `data/stripe.json` `links` (see above), then rebuild and upload. Until then, `/feature/` says coming soon and does not offer checkout
 - In Email Routing, verify the destination `mineraldigger.hq@gmail.com`, then run `npx wrangler deploy` from `workers/submit/`
 
 Not in this version: live checkout, DNS, sending the Friday email, social accounts, Facebook scraping, mind-body-spirit listings, and Ireland.

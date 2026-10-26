@@ -303,6 +303,16 @@ button.pay[disabled], .pay[aria-disabled="true"] {
   color: var(--muted);
   cursor: not-allowed;
 }
+.soon {
+  margin: auto 0 0;
+  display: inline-block;
+  align-self: flex-start;
+  background: var(--paper-deep);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 0.55rem 0.8rem;
+  font: 600 0.95rem var(--sans);
+}
 .notice, .callout {
   background: var(--card);
   border-left: 4px solid var(--copper);
