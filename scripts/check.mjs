@@ -165,6 +165,14 @@ for (const label of ["Pay £15 with Stripe", "Pay £99 with Stripe", "Pay £25 a
 const digest = await readFile(join(dist, "digest/index.html"), "utf8");
 if (!digest.includes("Sponsor one issue for £12")) fail("Digest should invite the live Friday sponsor payment.");
 if (digest.includes("Friday email sponsorship is coming soon")) fail("Digest still says Friday sponsorship is coming soon.");
+if (!digest.includes("Not sent yet") || !digest.includes("Nothing is sent yet")) fail("Digest should stay an unsent preview.");
+
+const about = await readFile(join(dist, "about/index.html"), "utf8");
+if (/\bfairs?\b/i.test(about)) fail("About page still calls shows fairs.");
+if (!about.includes("society mineral and fossil shows")) fail("About page should say society mineral and fossil shows.");
+if (!about.includes("psychic shows")) fail("About page should say psychic shows.");
+if (!about.includes("across the UK")) fail("About page should stay UK-only.");
+if (/Ireland|UK\s*&|UK\s*\+/i.test(about)) fail("About page should not mention Ireland.");
 
 const stripeFile = JSON.parse(await readFile(join(root, "data/stripe.json"), "utf8"));
 if (/leave the string empty/i.test(stripeFile._note || "")) fail("stripe.json note still says to leave links empty.");
@@ -235,6 +243,48 @@ for (const file of files) {
   if (!raw.includes('property="og:image" content="https://mineraldigger.com/og-image.jpg"')) fail(`og:image missing in ${file}`);
   if (!raw.includes('property="og:site_name" content="MineralDigger"')) fail(`og:site_name missing in ${file}`);
   if (!raw.includes('property="og:locale" content="en_GB"')) fail(`og:locale missing in ${file}`);
+  const footStart = raw.indexOf('<footer class="site-footer">');
+  const footEnd = raw.indexOf("</footer>");
+  if (footStart < 0 || footEnd < footStart) {
+    fail(`Footer missing in ${file}`);
+    continue;
+  }
+  const foot = raw.slice(footStart, footEnd);
+  if (!foot.includes('class="wrap foot"')) fail(`Multi-column footer missing in ${file}`);
+  if (!foot.includes(">Browse</h2>") || !foot.includes(">Organisers</h2>") || !foot.includes(">Show types</h2>")) {
+    fail(`Footer columns missing in ${file}`);
+  }
+  for (const href of [
+    "/",
+    "/?when=weekend",
+    "/?when=later",
+    "/submit/",
+    "/feature/",
+    "/about/",
+    "/digest/",
+    "/rock/",
+    "/gem/",
+    "/mineral/",
+    "/fossil/",
+    "/bead/",
+    "/privacy/",
+  ]) {
+    if (!foot.includes(`href="${href}"`)) fail(`Footer in ${file} is missing ${href}`);
+  }
+  if (!foot.includes('href="/submit/">Submit your show</a>')) fail(`Submit label missing in ${file}`);
+  if (!foot.includes('href="/feature/">Feature your show</a>')) fail(`Feature label missing in ${file}`);
+  if (!foot.includes('href="/about/">How we list shows</a>')) fail(`About label missing in ${file}`);
+  if (!foot.includes('href="/digest/">Friday email</a>')) fail(`Friday email link missing in ${file}`);
+  if (!foot.includes('href="https://www.facebook.com/people/MineralDigger/61595681170967/" rel="me noopener" target="_blank">Facebook</a>')) {
+    fail(`Facebook link missing in ${file}`);
+  }
+  if (!foot.includes('href="https://bsky.app/profile/mineraldigger.com" rel="me noopener" target="_blank">Bluesky</a>')) {
+    fail(`Bluesky link missing in ${file}`);
+  }
+  if (!foot.includes("© 2026 MineralDigger.") || !foot.includes("Show data retrieved ")) fail(`Footer credit line missing in ${file}`);
+  if (/Ireland|UK\s*&|UK\s*\+|fairdigger|auctiondigger|alanconlon\.com|\/newsletter\/|\/app\//i.test(foot)) {
+    fail(`Footer in ${file} has a banned link or a non-UK blurb`);
+  }
 }
 
 const robots = await readFile(join(dist, "robots.txt"), "utf8");
@@ -242,8 +292,24 @@ if (!robots.includes("Sitemap: https://mineraldigger.com/sitemap.xml")) fail("ro
 const sitemap = await readFile(join(dist, "sitemap.xml"), "utf8");
 if (!sitemap.includes("<loc>https://mineraldigger.com/</loc>")) fail("Sitemap is missing the .com homepage.");
 if (sitemap.includes("mineraldigger.co.uk")) fail("Sitemap still points at mineraldigger.co.uk.");
+if (!sitemap.includes("<loc>https://mineraldigger.com/privacy/</loc>")) fail("Sitemap is missing the privacy page.");
 if (sitemap.includes("/thanks/payment")) fail("Thank-you page must stay out of the sitemap.");
 if (sitemap.includes("404")) fail("404 page must stay out of the sitemap.");
+const privacy = await readFile(join(dist, "privacy/index.html"), "utf8");
+if (!privacy.includes("<title>Privacy | MineralDigger</title>")) fail("Privacy title is wrong.");
+if (!privacy.includes('rel="canonical" href="https://mineraldigger.com/privacy/"')) fail("Privacy canonical is wrong.");
+if (!privacy.includes("Alan Conlon")) fail("Privacy page does not name Alan Conlon.");
+if (!privacy.includes("mineraldigger.hq@gmail.com")) fail("Privacy page is missing the contact email.");
+if (!privacy.includes("Buttondown")) fail("Privacy page does not name Buttondown.");
+if (!privacy.includes("Stripe")) fail("Privacy page does not name Stripe.");
+if (!privacy.includes("Cloudflare")) fail("Privacy page does not name Cloudflare.");
+if (!privacy.includes('href="https://www.dataprotection.ie/"')) fail("Privacy page does not point at the Irish DPC.");
+if (!privacy.includes('href="/submit/"')) fail("Privacy page does not link the submit form.");
+if (!privacy.includes('href="/digest/"')) fail("Privacy page does not link the Friday list.");
+if (/fairdigger|auctiondigger|alanconlon\.com/i.test(privacy)) fail("Privacy page names a sister site.");
+if (privacy.includes("UK & Ireland") || privacy.includes("UK+IE") || privacy.includes("Eircode")) {
+  fail("Privacy page uses Fair's geography.");
+}
 const missing = await readFile(join(dist, "404.html"), "utf8");
 if (!missing.includes("<title>Page not found | MineralDigger</title>")) fail("404 title changed.");
 if (!missing.includes("<h1>That page is not on the map.</h1>")) fail("404 heading changed.");
