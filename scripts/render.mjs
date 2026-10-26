@@ -12,7 +12,7 @@ const TYPES = [
 const TYPE_INTRO = {
   rock: "Rock shows, and the rock, gem and bead weekends that include them.",
   gem: "Gem shows, including the rock, gem and bead weekends.",
-  mineral: "Mineral shows and society fairs with a date on the organiser site.",
+  mineral: "Mineral shows, including society shows, with a date on the organiser site.",
   fossil: "Fossil shows, and mineral weekends that include fossils.",
   bead: "Bead shows, including the rock, gem and bead weekends.",
 };
@@ -44,14 +44,33 @@ function nav(path) {
 }
 
 function footer(generated) {
-  const types = TYPES.map(([key, label, href]) => `<a href="${href}">${label}</a>`).join("");
+  const types = TYPES.map(([, label, href]) => `<a href="${href}">${label}</a>`).join("");
   return `<footer class="site-footer">
-    <div class="wrap">
-      <p>Rock, gem, mineral, fossil and bead shows across the UK.</p>
-      <p>Dates checked against organiser websites. Always confirm with the organiser before you travel.</p>
-      <p class="fine">Show data retrieved ${esc(formatDay(generated))}.</p>
-      <nav class="types" aria-label="Show types">${types}</nav>
+    <div class="wrap foot">
+      <div>
+        <a class="logo" href="/">Mineral<span>Digger</span></a>
+        <p class="muted">Rock, gem, mineral, fossil and bead shows across the UK. On one map.<br>Dates checked against organiser websites. Always confirm with the organiser before you travel.</p>
+        <p class="social"><a href="https://www.facebook.com/people/MineralDigger/61595681170967/" rel="me noopener" target="_blank">Facebook</a><a href="https://bsky.app/profile/mineraldigger.com" rel="me noopener" target="_blank">Bluesky</a></p>
+      </div>
+      <div>
+        <h2>Browse</h2>
+        <a href="/">Upcoming shows</a>
+        <a href="/?when=weekend">This weekend</a>
+        <a href="/?when=later">Coming later</a>
+      </div>
+      <div>
+        <h2>Organisers</h2>
+        <a href="/submit/">Submit your show</a>
+        <a href="/feature/">Feature your show</a>
+        <a href="/about/">How we list shows</a>
+      </div>
+      <div>
+        <h2>Show types</h2>
+        ${types}
+        <a href="/digest/">Friday email</a>
+      </div>
     </div>
+    <div class="wrap muted small">© 2026 MineralDigger. Show data retrieved ${esc(formatDay(generated))}. <a href="/privacy/">Privacy</a></div>
   </footer>`;
 }
 
@@ -656,7 +675,7 @@ export function renderAbout({ site, generated }) {
       <p class="eyebrow">About this list</p>
       <h1>How MineralDigger lists shows</h1>
       <p>MineralDigger lists rock, gem, mineral, fossil and bead shows across the UK. We pull dates from organiser websites and from shows submitted here, then put them on a map so you can see what is on this weekend and later in the year.</p>
-      <p>We focus on trade and collector shows: Rock, Gem &amp; Bead circuits, society mineral and fossil fairs, and gem expos. We do not list mind-body-spirit or psychic fairs.</p>
+      <p>We focus on trade and collector shows: Rock, Gem &amp; Bead circuits, society mineral and fossil shows, and gem expos. We do not list mind-body-spirit or psychic shows.</p>
       <p>Always check the organiser's page for times, tickets and any changes before you set off.</p>
       <h2>Where a date comes from</h2>
       <p>Each show page names the organiser URL and the day we read it. If a page prints a weekday and a day of the month but no year, we use that date only when the weekday matches, and we say so on the show page. If a date is unclear, we leave it off.</p>
@@ -703,6 +722,49 @@ export function renderDigest({ site, shows, sponsors, generated, today, stripe }
     path: "/digest/",
     title: "Friday list | MineralDigger",
     description: "A preview of the MineralDigger Friday email. Mail is not sent yet.",
+    body,
+    generated,
+  });
+}
+
+export function renderPrivacy({ site, generated }) {
+  const email = site.email;
+  const body = `<article class="page"><div class="wrap-narrow prose">
+      <p class="eyebrow">Privacy</p>
+      <h1>Privacy</h1>
+      <p class="fine">Last updated: 26 October 2026</p>
+      <p class="lede">MineralDigger (mineraldigger.com) is run by Alan Conlon in Ireland. This page explains what information we collect, why, who handles it for us, and how long we keep it. Questions or requests: <a href="mailto:${esc(email)}">${esc(email)}</a>.</p>
+      <h2>Browsing the site</h2>
+      <p>You do not need an account to use MineralDigger. MineralDigger does not use analytics, advertising trackers or its own cookies. Cloudflare may set a short-lived security cookie if it needs to check that a visitor is not a bot.</p>
+      <ul>
+        <li><strong>Hosting.</strong> The site is hosted by Cloudflare. Like any web host, Cloudflare handles the technical details of each visit (such as your IP address and browser type) to deliver pages and protect the site from abuse.</li>
+        <li><strong>Search and maps.</strong> The town and postcode box filters shows already loaded on the page. It does not send that search to another service. Maps load tiles from OpenStreetMap, which sees your IP address when your browser requests a tile. The map code is served from this site.</li>
+      </ul>
+      <h2>The Friday email</h2>
+      <p>The <a href="/digest/">Friday list</a> is a preview. Nothing is sent yet, and the site does not ask you to sign up today. When the Friday email is connected, sign-ups and sending will be handled by Buttondown. We will collect the email address you give us so we can send the weekly list. Every email will have an unsubscribe link. We will keep your address until you unsubscribe.</p>
+      <h2>Submitting a show</h2>
+      <p>The <a href="/submit/">submit form</a> asks for the show details (name, types, dates, times, venue, street, town, postcode, entry and website) and the organiser's name, email and phone. We use this to check and list the show, and to contact you about it. The form is sent by email to <a href="mailto:${esc(email)}">${esc(email)}</a> through Cloudflare. The show details are published on the site. Your email address is not. We keep submission emails while the show is listed and for a reasonable time afterwards in case of questions, and will delete them sooner if you ask.</p>
+      <h2>Payments</h2>
+      <p>Featured listings and sponsorships are paid through Stripe. Stripe processes the payment, and we never see your full card details. We receive your name, email address, billing address where Stripe asks for it, and what you tell checkout (which show it is, or which organiser for a year pass), so we can set up what you paid for. We keep payment records for as long as Irish tax law requires (generally six years). Keeping them is a legal obligation.</p>
+      <h2>Emailing us</h2>
+      <p>If you email <a href="mailto:${esc(email)}">${esc(email)}</a>, your message and email address are stored in Google's Gmail. We use them only to reply and to deal with your request.</p>
+      <h2>Who handles your information</h2>
+      <ul>
+        <li><strong>Buttondown</strong>: Friday email sign-ups and sending, once that email is connected.</li>
+        <li><strong>Stripe</strong>: payments for featured shows and sponsorships.</li>
+        <li><strong>Cloudflare</strong>: hosting, and passing on the submission form.</li>
+        <li><strong>Google (Gmail)</strong>: our email inbox.</li>
+      </ul>
+      <p>Some of these services are based in, or process data in, the US. They rely on the EU-US Data Privacy Framework or standard contractual clauses, as set out in their own terms.</p>
+      <p>We do not sell your information or share it with anyone beyond the services named on this page.</p>
+      <h2>Your rights</h2>
+      <p>Under the GDPR you can ask us for a copy of the information we hold about you, ask us to correct it, or ask us to delete it. Email <a href="mailto:${esc(email)}">${esc(email)}</a>. When the Friday email is running, you can unsubscribe at any time using the link in any email. If you are unhappy with how we have handled your information, you can complain to Ireland's Data Protection Commission at <a href="https://www.dataprotection.ie/" rel="noopener">dataprotection.ie</a>.</p>
+    </div></article>`;
+  return layout({
+    site,
+    path: "/privacy/",
+    title: "Privacy | MineralDigger",
+    description: "How MineralDigger handles personal information for the UK show list, the submit form, Stripe payments and the Friday email.",
     body,
     generated,
   });

@@ -9,6 +9,7 @@ import {
   renderFeature,
   renderHome,
   renderNotFound,
+  renderPrivacy,
   renderShow,
   renderSitemap,
   renderSubmit,
@@ -154,10 +155,11 @@ async function main() {
   await writePage("submit/index.html", renderSubmit({ site, generated }));
   await writePage("about/index.html", renderAbout({ site, generated }));
   await writePage("digest/index.html", renderDigest({ site, shows: upcoming, sponsors, generated, today, stripe }));
+  await writePage("privacy/index.html", renderPrivacy({ site, generated }));
   await writePage("404.html", renderNotFound({ site, generated }));
 
   // /thanks/payment/ is noindex and stays out of the sitemap. This site does not ping IndexNow.
-  const paths = ["/", "/feature/", "/submit/", "/digest/", "/about/", "/rock/", "/gem/", "/mineral/", "/fossil/", "/bead/"];
+  const paths = ["/", "/feature/", "/submit/", "/digest/", "/about/", "/privacy/", "/rock/", "/gem/", "/mineral/", "/fossil/", "/bead/"];
   for (const show of shows) {
     await writePage(`show/${show.slug}/index.html`, renderShow({ site, show, generated, todayISO }));
     await writePage(`show/${show.slug}/event.ics`, ics(show, todayISO, site));

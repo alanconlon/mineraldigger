@@ -28,6 +28,7 @@ npm run dev
 - `/submit/` organiser form
 - `/digest/` a preview of the Friday email. Nothing is sent
 - `/about/` how shows are listed
+- `/privacy/` what the site collects, who handles it, and how to ask about it
 
 ## Data
 
@@ -153,7 +154,7 @@ npx wrangler pages deploy dist --project-name mineraldigger --branch main
 - Keep `mineraldigger.co.uk` on the same Pages project as `mineraldigger.com`, with no redirect between them
 - In Email Routing, verify the destination `mineraldigger.hq@gmail.com`, then run `npx wrangler deploy` from `workers/submit/`
 
-Not in this version: DNS, sending the Friday email, social accounts, Facebook scraping, mind-body-spirit listings, and Ireland. Live Stripe checkout for the four products is on `/feature/`.
+Not in this version: DNS, sending the Friday email, Facebook scraping, mind-body-spirit listings, and Ireland. Live Stripe checkout for the four products is on `/feature/`. Facebook and Bluesky are linked from the footer.
 
 ## Brand
 
