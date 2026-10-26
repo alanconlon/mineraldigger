@@ -1,0 +1,139 @@
+{
+  "_note": "Postcode centroids from postcodes.io on 25 October 2026. Town labels are the place a visitor would use. place_note is set when the postcode parish is not that town.",
+  "TW16 5AQ": {
+    "lat": 51.418928,
+    "lng": -0.407472,
+    "town": "Sunbury-on-Thames",
+    "county": "Surrey",
+    "nation": "England"
+  },
+  "WR1 3EJ": {
+    "lat": 52.195217,
+    "lng": -2.231819,
+    "town": "Worcester",
+    "county": "Worcestershire",
+    "nation": "England"
+  },
+  "NE3 5HP": {
+    "lat": 55.035185,
+    "lng": -1.612058,
+    "town": "Newcastle upon Tyne",
+    "county": "Tyne and Wear",
+    "nation": "England"
+  },
+  "BN2 9XZ": {
+    "lat": 50.829064,
+    "lng": -0.112935,
+    "town": "Brighton",
+    "county": "East Sussex",
+    "nation": "England"
+  },
+  "CT1 2BT": {
+    "lat": 51.281261,
+    "lng": 1.077642,
+    "town": "Canterbury",
+    "county": "Kent",
+    "nation": "England"
+  },
+  "NP16 6EH": {
+    "lat": 51.658763,
+    "lng": -2.6939,
+    "town": "Chepstow",
+    "county": "Monmouthshire",
+    "nation": "Wales"
+  },
+  "SO42 7RY": {
+    "lat": 50.81471,
+    "lng": -1.576665,
+    "town": "Brockenhurst",
+    "county": "Hampshire",
+    "nation": "England"
+  },
+  "CW5 5DG": {
+    "lat": 53.068227,
+    "lng": -2.520597,
+    "town": "Nantwich",
+    "county": "Cheshire",
+    "nation": "England"
+  },
+  "HG2 8NZ": {
+    "lat": 53.983019,
+    "lng": -1.500137,
+    "town": "Harrogate",
+    "county": "North Yorkshire",
+    "nation": "England"
+  },
+  "CV8 2LH": {
+    "lat": 52.338596,
+    "lng": -1.519504,
+    "town": "Stoneleigh",
+    "county": "Warwickshire",
+    "nation": "England"
+  },
+  "NG24 2NY": {
+    "lat": 53.097736,
+    "lng": -0.769253,
+    "town": "Newark",
+    "county": "Nottinghamshire",
+    "nation": "England",
+    "place_note": "Postcode NG24 2NY is in Winthorpe, the site of Newark Showground."
+  },
+  "SS7 5HA": {
+    "lat": 51.553655,
+    "lng": 0.559083,
+    "town": "Benfleet",
+    "county": "Essex",
+    "nation": "England",
+    "place_note": "The organiser prints Richmond Hall and postcode SS7 5HA. That postcode is in Castle Point, Essex (ward St Mary's)."
+  },
+  "SN12 6ES": {
+    "lat": 51.370986,
+    "lng": -2.139422,
+    "town": "Melksham",
+    "county": "Wiltshire",
+    "nation": "England"
+  },
+  "TQ12 3AF": {
+    "lat": 50.540602,
+    "lng": -3.600176,
+    "town": "Newton Abbot",
+    "county": "Devon",
+    "nation": "England",
+    "place_note": "Postcode TQ12 3AF is in Kingsteignton, the site of Newton Abbot Racecourse."
+  },
+  "RH17 6TL": {
+    "lat": 51.05495,
+    "lng": -0.087943,
+    "town": "Ardingly",
+    "county": "West Sussex",
+    "nation": "England"
+  },
+  "DE45 1JA": {
+    "lat": 53.205147,
+    "lng": -1.682579,
+    "town": "Bakewell",
+    "county": "Derbyshire",
+    "nation": "England"
+  },
+  "SO16 8FA": {
+    "lat": 50.941083,
+    "lng": -1.45908,
+    "town": "Southampton",
+    "county": "Hampshire",
+    "nation": "England"
+  },
+  "OX5 1AB": {
+    "lat": 51.820759,
+    "lng": -1.28839,
+    "town": "Kidlington",
+    "county": "Oxfordshire",
+    "nation": "England"
+  },
+  "RH16 1LT": {
+    "lat": 51.008387,
+    "lng": -0.110314,
+    "town": "Haywards Heath",
+    "county": "West Sussex",
+    "nation": "England"
+  }
+}

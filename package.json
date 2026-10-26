@@ -1,0 +1,22 @@
+{
+  "name": "mineraldigger",
+  "private": true,
+  "type": "module",
+  "description": "UK rock, gem, mineral, fossil and bead shows on one map.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node scripts/serve.mjs",
+    "dev": "node scripts/build.mjs && node scripts/serve.mjs",
+    "refresh": "python3 scripts/refresh.py --fixtures --write",
+    "refresh:live": "python3 scripts/refresh.py --live --write",
+    "test": "python3 -m unittest discover -s scripts/tests -v && node scripts/build.mjs && node scripts/check.mjs"
+  },
+  "dependencies": {
+    "@fontsource/fraunces": "^5.2.9",
+    "@fontsource/outfit": "^5.2.8",
+    "leaflet": "^1.9.4"
+  }
+}

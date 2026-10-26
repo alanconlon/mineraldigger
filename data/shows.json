@@ -1,0 +1,2214 @@
+{
+  "generated": "2026-10-25",
+  "generator": "scripts/refresh.py",
+  "shows": [
+    {
+      "id": "southampton-minfoss-2026-09-19-so168fa",
+      "slug": "hampshire-mineral-and-fossil-show-southampton-2026-09-19",
+      "name": "Hampshire Mineral & Fossil Show",
+      "summary": "Mineral and fossil show run by the Southampton Mineral & Fossil Society.",
+      "organiser": {
+        "id": "southampton-minfoss",
+        "name": "Southampton Mineral & Fossil Society",
+        "url": "https://sotonminfoss.org.uk/",
+        "phone": null,
+        "email": null
+      },
+      "types": [
+        "mineral",
+        "fossil"
+      ],
+      "start": "2026-09-19",
+      "end": "2026-09-19",
+      "provisional": false,
+      "year_inferred": false,
+      "times": {
+        "summary": "Saturday 10:00 to 16:00.",
+        "notes": null
+      },
+      "entry": {
+        "kind": "paid",
+        "label": "Entry £2",
+        "adult_gbp": 2,
+        "notes": "Accompanied children aged 5 to 14: £1. Pay cash at the door. No pre-booking."
+      },
+      "venue": {
+        "name": "Oasis Academy Lord's Hill",
+        "street": "Romsey Road",
+        "postcode": "SO16 8FA",
+        "town": "Southampton",
+        "county": "Hampshire",
+        "nation": "England",
+        "lat": 50.941083,
+        "lng": -1.45908,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": "Free parking on site, next door at the rugby club, and nearby at Sainsbury's.",
+      "access_notes": "One hall, level access.",
+      "source": {
+        "url": "https://sotonminfoss.org.uk/smfsshow.htm",
+        "retrieved": "2026-10-25",
+        "notes": "Date, venue and door price are on the society show page. The page also gives satnav postcode SO16 0XN.",
+        "also": []
+      }
+    },
+    {
+      "id": "bakewell-rock-exchange-2026-10-10-de451ja",
+      "slug": "bakewell-rock-exchange-bakewell-2026-10-10",
+      "name": "Bakewell Rock Exchange",
+      "summary": "Rocks, minerals, fossils and gemstones. Organised by the Peak Lapidary and Mineral Society.",
+      "organiser": {
+        "id": "bakewell-rock-exchange",
+        "name": "Peak Lapidary and Mineral Society",
+        "url": "https://rockexchange.uk/",
+        "phone": "01433 620304",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil"
+      ],
+      "start": "2026-10-10",
+      "end": "2026-10-11",
+      "provisional": false,
+      "year_inferred": false,
+      "times": {
+        "summary": "Saturday 10:00 to 17:00. Sunday 10:00 to 16:00.",
+        "notes": null
+      },
+      "entry": {
+        "kind": "paid",
+        "label": "Entry £3",
+        "adult_gbp": 3,
+        "notes": "£5 for both days. Saturday early entry from 09:00 is £10 and covers both days. Accompanied children free."
+      },
+      "venue": {
+        "name": "Lady Manners School",
+        "street": null,
+        "postcode": "DE45 1JA",
+        "town": "Bakewell",
+        "county": "Derbyshire",
+        "nation": "England",
+        "lat": 53.205147,
+        "lng": -1.682579,
+        "place_note": null
+      },
+      "dealers": "70+",
+      "parking": "Free parking",
+      "access_notes": "Disabled access.",
+      "source": {
+        "url": "https://rockexchange.uk/",
+        "retrieved": "2026-10-25",
+        "notes": "Both weekends, the door price and the opening times are on the one show page.",
+        "also": []
+      }
+    },
+    {
+      "id": "nature-unearthed-2026-10-17-rh176tl",
+      "slug": "south-of-england-mineral-show-ardingly-2026-10-17",
+      "name": "South of England Mineral Show",
+      "summary": "Mineral show at the South of England Showground, with fossils, gems, beads and rocks.",
+      "organiser": {
+        "id": "nature-unearthed",
+        "name": "Nature Unearthed",
+        "url": "https://www.natureunearthed.co.uk/",
+        "phone": null,
+        "email": "info@natureunearthed.co.uk"
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2026-10-17",
+      "end": "2026-10-18",
+      "provisional": false,
+      "year_inferred": false,
+      "times": {
+        "summary": "Saturday 10:00 to 16:00. Sunday 10:00 to 16:00.",
+        "notes": null
+      },
+      "entry": {
+        "kind": "paid",
+        "label": "Entry £5",
+        "adult_gbp": 5,
+        "notes": "On the door, or buy a ticket on the organiser site. Children under 5 go free with an adult."
+      },
+      "venue": {
+        "name": "Queen's Jubilee Hall, South of England Showground",
+        "street": null,
+        "postcode": "RH17 6TL",
+        "town": "Ardingly",
+        "county": "West Sussex",
+        "nation": "England",
+        "lat": 51.05495,
+        "lng": -0.087943,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": "Free parking",
+      "access_notes": "The show page says to use the North Gate and then the Green Gate.",
+      "source": {
+        "url": "https://www.natureunearthed.co.uk/",
+        "retrieved": "2026-10-25",
+        "notes": "Date, door price and opening times are on the show page for this October weekend.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2026-10-31-tw165aq",
+      "slug": "rock-gem-and-bead-show-sunbury-on-thames-2026-10-31",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2026-10-31",
+      "end": "2026-11-01",
+      "provisional": false,
+      "year_inferred": false,
+      "times": {
+        "summary": "Saturday 10:00 to 17:00. Sunday 10:00 to 16:00.",
+        "notes": "Last entry one hour before closing."
+      },
+      "entry": {
+        "kind": "paid",
+        "label": "Entry £6",
+        "adult_gbp": 6,
+        "notes": "Pay on the door. Accompanying under 12s free."
+      },
+      "venue": {
+        "name": "Kempton Park Racecourse",
+        "street": null,
+        "postcode": "TW16 5AQ",
+        "town": "Sunbury-on-Thames",
+        "county": "Surrey",
+        "nation": "England",
+        "lat": 51.418928,
+        "lng": -0.407472,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": "Free parking",
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. Printed in the 2026 date list, which is not marked provisional. Door price and opening times are printed in the next-show block for this weekend.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2026-11-07-wr13ej",
+      "slug": "rock-gem-and-bead-show-worcester-2026-11-07",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2026-11-07",
+      "end": "2026-11-08",
+      "provisional": false,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Worcester Racecourse",
+        "street": null,
+        "postcode": "WR1 3EJ",
+        "town": "Worcester",
+        "county": "Worcestershire",
+        "nation": "England",
+        "lat": 52.195217,
+        "lng": -2.231819,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. Printed in the 2026 date list, which is not marked provisional. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2026-11-14-ne35hp",
+      "slug": "rock-gem-and-bead-show-newcastle-upon-tyne-2026-11-14",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2026-11-14",
+      "end": "2026-11-15",
+      "provisional": false,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Newcastle Racecourse",
+        "street": null,
+        "postcode": "NE3 5HP",
+        "town": "Newcastle upon Tyne",
+        "county": "Tyne and Wear",
+        "nation": "England",
+        "lat": 55.035185,
+        "lng": -1.612058,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. Printed in the 2026 date list, which is not marked provisional. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "smls-2026-11-14-rh161lt",
+      "slug": "sussex-mineral-crystal-and-fossil-show-haywards-heath-2026-11-14",
+      "name": "Sussex Mineral, Crystal & Fossil Show",
+      "summary": "Mineral, fossil and gem show run by the Sussex Mineral and Lapidary Society.",
+      "organiser": {
+        "id": "smls",
+        "name": "Sussex Mineral and Lapidary Society",
+        "url": "https://www.smls.online/show",
+        "phone": null,
+        "email": null
+      },
+      "types": [
+        "gem",
+        "mineral",
+        "fossil"
+      ],
+      "start": "2026-11-14",
+      "end": "2026-11-14",
+      "provisional": false,
+      "year_inferred": true,
+      "times": {
+        "summary": "Saturday 10:00 to 16:30.",
+        "notes": "Early entry from 09:15."
+      },
+      "entry": {
+        "kind": "paid",
+        "label": "Entry £5",
+        "adult_gbp": 5,
+        "notes": "Children £2. Early entry £10."
+      },
+      "venue": {
+        "name": "Haywards Heath College",
+        "street": "Harlands Road",
+        "postcode": "RH16 1LT",
+        "town": "Haywards Heath",
+        "county": "West Sussex",
+        "nation": "England",
+        "lat": 51.008387,
+        "lng": -0.110314,
+        "place_note": null
+      },
+      "dealers": "40+",
+      "parking": "Free parking, and it fills quickly.",
+      "access_notes": null,
+      "source": {
+        "url": "https://www.smls.online/show",
+        "retrieved": "2026-10-25",
+        "notes": "The show page prints Saturday 14 November and does not print the year. 14 November 2026 is that Saturday, so that is the date used here. Street and postcode are from the college contact page. The show page names Haywards Heath College and does not print them.",
+        "also": [
+          {
+            "url": "https://www.haywardsheath.ac.uk/contact-us/",
+            "note": "Street and postcode are from the college contact page. The show page names Haywards Heath College and does not print them."
+          }
+        ]
+      }
+    },
+    {
+      "id": "oxford-shows-2026-11-29-ox51ab",
+      "slug": "oxford-mineral-and-fossil-show-kidlington-2026-11-29",
+      "name": "Oxford Mineral & Fossil Show",
+      "summary": "Mineral and fossil show for collectors. The organiser also lists gems and rocks. Free entry.",
+      "organiser": {
+        "id": "oxford-shows",
+        "name": "Oxford Shows",
+        "url": "https://oxfordshows.co.uk/",
+        "phone": "07971 346241",
+        "email": "info@oxfordshows.co.uk"
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil"
+      ],
+      "start": "2026-11-29",
+      "end": "2026-11-29",
+      "provisional": false,
+      "year_inferred": false,
+      "times": {
+        "summary": "Sunday 10:00 to 16:00.",
+        "notes": "No public entry before 10:00, while exhibitors set up."
+      },
+      "entry": {
+        "kind": "free",
+        "label": "Free",
+        "adult_gbp": 0,
+        "notes": "Free entrance."
+      },
+      "venue": {
+        "name": "Exeter Hall",
+        "street": "Oxford Road",
+        "postcode": "OX5 1AB",
+        "town": "Kidlington",
+        "county": "Oxfordshire",
+        "nation": "England",
+        "lat": 51.820759,
+        "lng": -1.28839,
+        "place_note": null
+      },
+      "dealers": "30+",
+      "parking": "Free parking if you enter your vehicle registration on the keypad at the entrance.",
+      "access_notes": null,
+      "source": {
+        "url": "https://oxfordshows.co.uk/",
+        "retrieved": "2026-10-25",
+        "notes": "Date card and entry conditions are on oxfordshows.co.uk.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-01-16-bn29xz",
+      "slug": "rock-gem-and-bead-show-brighton-2027-01-16",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-01-16",
+      "end": "2027-01-17",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Brighton Racecourse",
+        "street": null,
+        "postcode": "BN2 9XZ",
+        "town": "Brighton",
+        "county": "East Sussex",
+        "nation": "England",
+        "lat": 50.829064,
+        "lng": -0.112935,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-01-23-wr13ej",
+      "slug": "rock-gem-and-bead-show-worcester-2027-01-23",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-01-23",
+      "end": "2027-01-24",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Worcester Racecourse",
+        "street": null,
+        "postcode": "WR1 3EJ",
+        "town": "Worcester",
+        "county": "Worcestershire",
+        "nation": "England",
+        "lat": 52.195217,
+        "lng": -2.231819,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-01-30-ct12bt",
+      "slug": "rock-gem-and-bead-show-canterbury-2027-01-30",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-01-30",
+      "end": "2027-01-31",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Westgate Hall",
+        "street": null,
+        "postcode": "CT1 2BT",
+        "town": "Canterbury",
+        "county": "Kent",
+        "nation": "England",
+        "lat": 51.281261,
+        "lng": 1.077642,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-02-06-np166eh",
+      "slug": "rock-gem-and-bead-show-chepstow-2027-02-06",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-02-06",
+      "end": "2027-02-07",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Chepstow Racecourse",
+        "street": null,
+        "postcode": "NP16 6EH",
+        "town": "Chepstow",
+        "county": "Monmouthshire",
+        "nation": "Wales",
+        "lat": 51.658763,
+        "lng": -2.6939,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-02-13-so427ry",
+      "slug": "rock-gem-and-bead-show-brockenhurst-2027-02-13",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-02-13",
+      "end": "2027-02-14",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Brockenhurst Community Hall",
+        "street": null,
+        "postcode": "SO42 7RY",
+        "town": "Brockenhurst",
+        "county": "Hampshire",
+        "nation": "England",
+        "lat": 50.81471,
+        "lng": -1.576665,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-02-20-tw165aq",
+      "slug": "rock-gem-and-bead-show-sunbury-on-thames-2027-02-20",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-02-20",
+      "end": "2027-02-21",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Kempton Park Racecourse",
+        "street": null,
+        "postcode": "TW16 5AQ",
+        "town": "Sunbury-on-Thames",
+        "county": "Surrey",
+        "nation": "England",
+        "lat": 51.418928,
+        "lng": -0.407472,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-02-27-cw55dg",
+      "slug": "rock-gem-and-bead-show-nantwich-2027-02-27",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-02-27",
+      "end": "2027-02-28",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Nantwich Civic Hall",
+        "street": null,
+        "postcode": "CW5 5DG",
+        "town": "Nantwich",
+        "county": "Cheshire",
+        "nation": "England",
+        "lat": 53.068227,
+        "lng": -2.520597,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-03-05-hg28nz",
+      "slug": "rock-gem-and-bead-show-harrogate-2027-03-05",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-03-05",
+      "end": "2027-03-06",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "The Pavilions of Harrogate",
+        "street": null,
+        "postcode": "HG2 8NZ",
+        "town": "Harrogate",
+        "county": "North Yorkshire",
+        "nation": "England",
+        "lat": 53.983019,
+        "lng": -1.500137,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "nature-unearthed-2027-03-13-rh176tl",
+      "slug": "south-of-england-mineral-show-ardingly-2027-03-13",
+      "name": "South of England Mineral Show",
+      "summary": "Mineral show at the South of England Showground, with fossils, gems, beads and rocks.",
+      "organiser": {
+        "id": "nature-unearthed",
+        "name": "Nature Unearthed",
+        "url": "https://www.natureunearthed.co.uk/",
+        "phone": null,
+        "email": "info@natureunearthed.co.uk"
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-03-13",
+      "end": "2027-03-14",
+      "provisional": false,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "South of England Showground",
+        "street": null,
+        "postcode": "RH17 6TL",
+        "town": "Ardingly",
+        "county": "West Sussex",
+        "nation": "England",
+        "lat": 51.05495,
+        "lng": -0.087943,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.natureunearthed.co.uk/pages/exhibitor-information",
+        "retrieved": "2026-10-25",
+        "notes": "Date confirmed on the exhibitor information page. Door price and opening times are not repeated for this weekend.",
+        "also": []
+      }
+    },
+    {
+      "id": "oxford-shows-2027-03-21-ox51ab",
+      "slug": "oxford-mineral-and-fossil-show-kidlington-2027-03-21",
+      "name": "Oxford Mineral & Fossil Show",
+      "summary": "Mineral and fossil show for collectors. The organiser also lists gems and rocks. Free entry.",
+      "organiser": {
+        "id": "oxford-shows",
+        "name": "Oxford Shows",
+        "url": "https://oxfordshows.co.uk/",
+        "phone": "07971 346241",
+        "email": "info@oxfordshows.co.uk"
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil"
+      ],
+      "start": "2027-03-21",
+      "end": "2027-03-21",
+      "provisional": false,
+      "year_inferred": false,
+      "times": {
+        "summary": "Sunday 10:00 to 16:00.",
+        "notes": "No public entry before 10:00, while exhibitors set up."
+      },
+      "entry": {
+        "kind": "free",
+        "label": "Free",
+        "adult_gbp": 0,
+        "notes": "Free entrance."
+      },
+      "venue": {
+        "name": "Exeter Hall",
+        "street": "Oxford Road",
+        "postcode": "OX5 1AB",
+        "town": "Kidlington",
+        "county": "Oxfordshire",
+        "nation": "England",
+        "lat": 51.820759,
+        "lng": -1.28839,
+        "place_note": null
+      },
+      "dealers": "30+",
+      "parking": "Free parking if you enter your vehicle registration on the keypad at the entrance.",
+      "access_notes": null,
+      "source": {
+        "url": "https://oxfordshows.co.uk/",
+        "retrieved": "2026-10-25",
+        "notes": "Date card and entry conditions are on oxfordshows.co.uk.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-04-10-cv82lh",
+      "slug": "rock-gem-and-bead-show-stoneleigh-2027-04-10",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-04-10",
+      "end": "2027-04-11",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "NAEC Stoneleigh",
+        "street": null,
+        "postcode": "CV8 2LH",
+        "town": "Stoneleigh",
+        "county": "Warwickshire",
+        "nation": "England",
+        "lat": 52.338596,
+        "lng": -1.519504,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-04-17-ng242ny",
+      "slug": "rock-gem-and-bead-show-newark-2027-04-17",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-04-17",
+      "end": "2027-04-18",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Newark Showground",
+        "street": null,
+        "postcode": "NG24 2NY",
+        "town": "Newark",
+        "county": "Nottinghamshire",
+        "nation": "England",
+        "lat": 53.097736,
+        "lng": -0.769253,
+        "place_note": "Postcode NG24 2NY is in Winthorpe, the site of Newark Showground."
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-05-08-ne35hp",
+      "slug": "rock-gem-and-bead-show-newcastle-upon-tyne-2027-05-08",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-05-08",
+      "end": "2027-05-09",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Newcastle Racecourse",
+        "street": null,
+        "postcode": "NE3 5HP",
+        "town": "Newcastle upon Tyne",
+        "county": "Tyne and Wear",
+        "nation": "England",
+        "lat": 55.035185,
+        "lng": -1.612058,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-05-22-wr13ej",
+      "slug": "rock-gem-and-bead-show-worcester-2027-05-22",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-05-22",
+      "end": "2027-05-23",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Worcester Racecourse",
+        "street": null,
+        "postcode": "WR1 3EJ",
+        "town": "Worcester",
+        "county": "Worcestershire",
+        "nation": "England",
+        "lat": 52.195217,
+        "lng": -2.231819,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "oxford-shows-2027-05-23-ox51ab",
+      "slug": "oxford-mineral-and-fossil-show-kidlington-2027-05-23",
+      "name": "Oxford Mineral & Fossil Show",
+      "summary": "Mineral and fossil show for collectors. The organiser also lists gems and rocks. Free entry.",
+      "organiser": {
+        "id": "oxford-shows",
+        "name": "Oxford Shows",
+        "url": "https://oxfordshows.co.uk/",
+        "phone": "07971 346241",
+        "email": "info@oxfordshows.co.uk"
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil"
+      ],
+      "start": "2027-05-23",
+      "end": "2027-05-23",
+      "provisional": false,
+      "year_inferred": false,
+      "times": {
+        "summary": "Sunday 10:00 to 16:00.",
+        "notes": "No public entry before 10:00, while exhibitors set up."
+      },
+      "entry": {
+        "kind": "free",
+        "label": "Free",
+        "adult_gbp": 0,
+        "notes": "Free entrance."
+      },
+      "venue": {
+        "name": "Exeter Hall",
+        "street": "Oxford Road",
+        "postcode": "OX5 1AB",
+        "town": "Kidlington",
+        "county": "Oxfordshire",
+        "nation": "England",
+        "lat": 51.820759,
+        "lng": -1.28839,
+        "place_note": null
+      },
+      "dealers": "30+",
+      "parking": "Free parking if you enter your vehicle registration on the keypad at the entrance.",
+      "access_notes": null,
+      "source": {
+        "url": "https://oxfordshows.co.uk/",
+        "retrieved": "2026-10-25",
+        "notes": "Date card and entry conditions are on oxfordshows.co.uk.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-06-12-np166eh",
+      "slug": "rock-gem-and-bead-show-chepstow-2027-06-12",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-06-12",
+      "end": "2027-06-13",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Chepstow Racecourse",
+        "street": null,
+        "postcode": "NP16 6EH",
+        "town": "Chepstow",
+        "county": "Monmouthshire",
+        "nation": "Wales",
+        "lat": 51.658763,
+        "lng": -2.6939,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-07-03-bn29xz",
+      "slug": "rock-gem-and-bead-show-brighton-2027-07-03",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-07-03",
+      "end": "2027-07-04",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Brighton Racecourse",
+        "street": null,
+        "postcode": "BN2 9XZ",
+        "town": "Brighton",
+        "county": "East Sussex",
+        "nation": "England",
+        "lat": 50.829064,
+        "lng": -0.112935,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-07-10-ss75ha",
+      "slug": "rock-gem-and-bead-show-benfleet-2027-07-10",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-07-10",
+      "end": "2027-07-10",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Richmond Hall",
+        "street": null,
+        "postcode": "SS7 5HA",
+        "town": "Benfleet",
+        "county": "Essex",
+        "nation": "England",
+        "lat": 51.553655,
+        "lng": 0.559083,
+        "place_note": "The organiser prints Richmond Hall and postcode SS7 5HA. That postcode is in Castle Point, Essex (ward St Mary's)."
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-07-24-tw165aq",
+      "slug": "rock-gem-and-bead-show-sunbury-on-thames-2027-07-24",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-07-24",
+      "end": "2027-07-25",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Kempton Park Racecourse",
+        "street": null,
+        "postcode": "TW16 5AQ",
+        "town": "Sunbury-on-Thames",
+        "county": "Surrey",
+        "nation": "England",
+        "lat": 51.418928,
+        "lng": -0.407472,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "oxford-shows-2027-07-25-ox51ab",
+      "slug": "oxford-mineral-and-fossil-show-kidlington-2027-07-25",
+      "name": "Oxford Mineral & Fossil Show",
+      "summary": "Mineral and fossil show for collectors. The organiser also lists gems and rocks. Free entry.",
+      "organiser": {
+        "id": "oxford-shows",
+        "name": "Oxford Shows",
+        "url": "https://oxfordshows.co.uk/",
+        "phone": "07971 346241",
+        "email": "info@oxfordshows.co.uk"
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil"
+      ],
+      "start": "2027-07-25",
+      "end": "2027-07-25",
+      "provisional": false,
+      "year_inferred": false,
+      "times": {
+        "summary": "Sunday 10:00 to 16:00.",
+        "notes": "No public entry before 10:00, while exhibitors set up."
+      },
+      "entry": {
+        "kind": "free",
+        "label": "Free",
+        "adult_gbp": 0,
+        "notes": "Free entrance."
+      },
+      "venue": {
+        "name": "Exeter Hall",
+        "street": "Oxford Road",
+        "postcode": "OX5 1AB",
+        "town": "Kidlington",
+        "county": "Oxfordshire",
+        "nation": "England",
+        "lat": 51.820759,
+        "lng": -1.28839,
+        "place_note": null
+      },
+      "dealers": "30+",
+      "parking": "Free parking if you enter your vehicle registration on the keypad at the entrance.",
+      "access_notes": null,
+      "source": {
+        "url": "https://oxfordshows.co.uk/",
+        "retrieved": "2026-10-25",
+        "notes": "Date card and entry conditions are on oxfordshows.co.uk.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-07-31-so427ry",
+      "slug": "rock-gem-and-bead-show-brockenhurst-2027-07-31",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-07-31",
+      "end": "2027-08-01",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Brockenhurst Community Centre",
+        "street": null,
+        "postcode": "SO42 7RY",
+        "town": "Brockenhurst",
+        "county": "Hampshire",
+        "nation": "England",
+        "lat": 50.81471,
+        "lng": -1.576665,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-08-07-sn126es",
+      "slug": "rock-gem-and-bead-show-melksham-2027-08-07",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-08-07",
+      "end": "2027-08-08",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Melksham Assembly Rooms",
+        "street": null,
+        "postcode": "SN12 6ES",
+        "town": "Melksham",
+        "county": "Wiltshire",
+        "nation": "England",
+        "lat": 51.370986,
+        "lng": -2.139422,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-08-14-ct12bt",
+      "slug": "rock-gem-and-bead-show-canterbury-2027-08-14",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-08-14",
+      "end": "2027-08-15",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Westgate Hall",
+        "street": null,
+        "postcode": "CT1 2BT",
+        "town": "Canterbury",
+        "county": "Kent",
+        "nation": "England",
+        "lat": 51.281261,
+        "lng": 1.077642,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-08-21-hg28nz",
+      "slug": "rock-gem-and-bead-show-harrogate-2027-08-21",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-08-21",
+      "end": "2027-08-22",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Pavilions of Harrogate",
+        "street": null,
+        "postcode": "HG2 8NZ",
+        "town": "Harrogate",
+        "county": "North Yorkshire",
+        "nation": "England",
+        "lat": 53.983019,
+        "lng": -1.500137,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-09-04-cv82lh",
+      "slug": "rock-gem-and-bead-show-stoneleigh-2027-09-04",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-09-04",
+      "end": "2027-09-05",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "NAEC Stoneleigh",
+        "street": null,
+        "postcode": "CV8 2LH",
+        "town": "Stoneleigh",
+        "county": "Warwickshire",
+        "nation": "England",
+        "lat": 52.338596,
+        "lng": -1.519504,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-09-11-ng242ny",
+      "slug": "rock-gem-and-bead-show-newark-2027-09-11",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-09-11",
+      "end": "2027-09-12",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Newark Showground",
+        "street": null,
+        "postcode": "NG24 2NY",
+        "town": "Newark",
+        "county": "Nottinghamshire",
+        "nation": "England",
+        "lat": 53.097736,
+        "lng": -0.769253,
+        "place_note": "Postcode NG24 2NY is in Winthorpe, the site of Newark Showground."
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-09-18-cw55dg",
+      "slug": "rock-gem-and-bead-show-nantwich-2027-09-18",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-09-18",
+      "end": "2027-09-19",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Nantwich Civic Hall",
+        "street": null,
+        "postcode": "CW5 5DG",
+        "town": "Nantwich",
+        "county": "Cheshire",
+        "nation": "England",
+        "lat": 53.068227,
+        "lng": -2.520597,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-09-25-ne35hp",
+      "slug": "rock-gem-and-bead-show-newcastle-upon-tyne-2027-09-25",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-09-25",
+      "end": "2027-09-26",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Newcastle Racecourse",
+        "street": null,
+        "postcode": "NE3 5HP",
+        "town": "Newcastle upon Tyne",
+        "county": "Tyne and Wear",
+        "nation": "England",
+        "lat": 55.035185,
+        "lng": -1.612058,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-10-02-tq123af",
+      "slug": "rock-gem-and-bead-show-newton-abbot-2027-10-02",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-10-02",
+      "end": "2027-10-03",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Newton Abbot Racecourse",
+        "street": null,
+        "postcode": "TQ12 3AF",
+        "town": "Newton Abbot",
+        "county": "Devon",
+        "nation": "England",
+        "lat": 50.540602,
+        "lng": -3.600176,
+        "place_note": "Postcode TQ12 3AF is in Kingsteignton, the site of Newton Abbot Racecourse."
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "bakewell-rock-exchange-2027-10-09-de451ja",
+      "slug": "bakewell-rock-exchange-bakewell-2027-10-09",
+      "name": "Bakewell Rock Exchange",
+      "summary": "Rocks, minerals, fossils and gemstones. Organised by the Peak Lapidary and Mineral Society.",
+      "organiser": {
+        "id": "bakewell-rock-exchange",
+        "name": "Peak Lapidary and Mineral Society",
+        "url": "https://rockexchange.uk/",
+        "phone": "01433 620304",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil"
+      ],
+      "start": "2027-10-09",
+      "end": "2027-10-10",
+      "provisional": false,
+      "year_inferred": false,
+      "times": {
+        "summary": "Saturday 10:00 to 17:00. Sunday 10:00 to 16:00.",
+        "notes": null
+      },
+      "entry": {
+        "kind": "paid",
+        "label": "Entry £3",
+        "adult_gbp": 3,
+        "notes": "£5 for both days. Saturday early entry from 09:00 is £10 and covers both days. Accompanied children free."
+      },
+      "venue": {
+        "name": "Lady Manners School",
+        "street": null,
+        "postcode": "DE45 1JA",
+        "town": "Bakewell",
+        "county": "Derbyshire",
+        "nation": "England",
+        "lat": 53.205147,
+        "lng": -1.682579,
+        "place_note": null
+      },
+      "dealers": "70+",
+      "parking": "Free parking",
+      "access_notes": "Disabled access.",
+      "source": {
+        "url": "https://rockexchange.uk/",
+        "retrieved": "2026-10-25",
+        "notes": "Both weekends, the door price and the opening times are on the one show page.",
+        "also": []
+      }
+    },
+    {
+      "id": "nature-unearthed-2027-10-16-rh176tl",
+      "slug": "south-of-england-mineral-show-ardingly-2027-10-16",
+      "name": "South of England Mineral Show",
+      "summary": "Mineral show at the South of England Showground, with fossils, gems, beads and rocks.",
+      "organiser": {
+        "id": "nature-unearthed",
+        "name": "Nature Unearthed",
+        "url": "https://www.natureunearthed.co.uk/",
+        "phone": null,
+        "email": "info@natureunearthed.co.uk"
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-10-16",
+      "end": "2027-10-17",
+      "provisional": false,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "South of England Showground",
+        "street": null,
+        "postcode": "RH17 6TL",
+        "town": "Ardingly",
+        "county": "West Sussex",
+        "nation": "England",
+        "lat": 51.05495,
+        "lng": -0.087943,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.natureunearthed.co.uk/pages/exhibitor-information",
+        "retrieved": "2026-10-25",
+        "notes": "Date confirmed on the exhibitor information page. Door price and opening times are not repeated for this weekend.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-10-30-tw165aq",
+      "slug": "rock-gem-and-bead-show-sunbury-on-thames-2027-10-30",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-10-30",
+      "end": "2027-10-31",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Kempton Park Racecourse",
+        "street": null,
+        "postcode": "TW16 5AQ",
+        "town": "Sunbury-on-Thames",
+        "county": "Surrey",
+        "nation": "England",
+        "lat": 51.418928,
+        "lng": -0.407472,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-11-06-wr13ej",
+      "slug": "rock-gem-and-bead-show-worcester-2027-11-06",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-11-06",
+      "end": "2027-11-07",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Worcester Racecourse",
+        "street": null,
+        "postcode": "WR1 3EJ",
+        "town": "Worcester",
+        "county": "Worcestershire",
+        "nation": "England",
+        "lat": 52.195217,
+        "lng": -2.231819,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-25",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
+        "also": []
+      }
+    }
+  ]
+}

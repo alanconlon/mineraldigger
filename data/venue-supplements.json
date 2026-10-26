@@ -1,0 +1,9 @@
+{
+  "_note": "Facts that are not on the show page, taken from the venue's own website. Applied when a parser names the venue and does not find a postcode.",
+  "Haywards Heath College": {
+    "postcode": "RH16 1LT",
+    "street": "Harlands Road",
+    "source_url": "https://www.haywardsheath.ac.uk/contact-us/",
+    "note": "Street and postcode are from the college contact page. The show page names Haywards Heath College and does not print them."
+  }
+}

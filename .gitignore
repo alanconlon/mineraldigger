@@ -1,0 +1,10 @@
+node_modules/
+dist/
+data/inbox/
+.env
+.DS_Store
+uploads/
+*.log
+__pycache__/
+*.pyc
+.wrangler/

@@ -1,0 +1,5 @@
+{
+  "_note": "Paid placements. Leave both lists empty until a payment is matched. until is inclusive, YYYY-MM-DD. A show id is pinned while today is on or before until. An organiser id features all of that organiser's shows that have not ended, until the pass date.",
+  "shows": [],
+  "organisers": []
+}
