@@ -1,0 +1,168 @@
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { addDays, iso, parseISO } from "../src/js/format.js";
+import { featuredIds } from "./feature.mjs";
+import {
+  renderAbout,
+  renderDigest,
+  renderFeature,
+  renderHome,
+  renderNotFound,
+  renderShow,
+  renderSitemap,
+  renderSubmit,
+  renderType,
+} from "./render.mjs";
+
+const root = join(fileURLToPath(new URL(".", import.meta.url)), "..");
+const dist = join(root, "dist");
+
+function loadEnvFile() {
+  return readFile(join(root, ".env"), "utf8")
+    .then((text) => {
+      for (const line of text.split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
+        const index = trimmed.indexOf("=");
+        const key = trimmed.slice(0, index).trim();
+        const value = trimmed.slice(index + 1).trim();
+        if (key && process.env[key] === undefined) process.env[key] = value;
+      }
+    })
+    .catch(() => {});
+}
+
+async function readJson(path) {
+  return JSON.parse(await readFile(path, "utf8"));
+}
+
+function applyStripe(stripe) {
+  const env = {
+    featured_show: process.env.STRIPE_FEATURED_SHOW_URL,
+    year_pass: process.env.STRIPE_YEAR_PASS_URL,
+    site_sponsor: process.env.STRIPE_SITE_SPONSOR_URL,
+    friday_email: process.env.STRIPE_FRIDAY_EMAIL_URL,
+  };
+  const links = { ...stripe.links };
+  for (const [key, value] of Object.entries(env)) {
+    if (value) links[key] = value;
+  }
+  return { ...stripe, links };
+}
+
+function icsEscape(value) {
+  return String(value).replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
+}
+
+function ics(show, todayISO, site) {
+  const end = iso(addDays(parseISO(show.end), 1)).replace(/-/g, "");
+  const start = show.start.replace(/-/g, "");
+  const stamp = `${todayISO.replace(/-/g, "")}T120000Z`;
+  const host = new URL(site.url).host;
+  const location = [show.venue.name, show.venue.street, show.venue.town, show.venue.postcode].filter(Boolean).join(", ");
+  const description = `Confirm times and entry with the organiser before you travel. ${show.source.url}`;
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//MineralDigger//EN",
+    "CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT",
+    `UID:${show.id}@${host}`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART;VALUE=DATE:${start}`,
+    `DTEND;VALUE=DATE:${end}`,
+    `SUMMARY:${icsEscape(show.name)}`,
+    `LOCATION:${icsEscape(location)}`,
+    `URL:${show.source.url}`,
+    `DESCRIPTION:${icsEscape(description)}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+    "",
+  ].join("\r\n");
+}
+
+async function writePage(path, html) {
+  const file = join(dist, path);
+  await mkdir(dirname(file), { recursive: true });
+  await writeFile(file, html);
+}
+
+async function copyAssets() {
+  await mkdir(join(dist, "fonts"), { recursive: true });
+  await mkdir(join(dist, "vendor/leaflet"), { recursive: true });
+  await mkdir(join(dist, "js"), { recursive: true });
+  const fonts = [
+    ["@fontsource/fraunces/files/fraunces-latin-500-normal.woff2", "fraunces-latin-500-normal.woff2"],
+    ["@fontsource/fraunces/files/fraunces-latin-600-normal.woff2", "fraunces-latin-600-normal.woff2"],
+    ["@fontsource/fraunces/files/fraunces-latin-700-normal.woff2", "fraunces-latin-700-normal.woff2"],
+    ["@fontsource/outfit/files/outfit-latin-400-normal.woff2", "outfit-latin-400-normal.woff2"],
+    ["@fontsource/outfit/files/outfit-latin-500-normal.woff2", "outfit-latin-500-normal.woff2"],
+    ["@fontsource/outfit/files/outfit-latin-600-normal.woff2", "outfit-latin-600-normal.woff2"],
+  ];
+  for (const [from, name] of fonts) {
+    await cp(join(root, "node_modules", from), join(dist, "fonts", name));
+  }
+  await cp(join(root, "node_modules/leaflet/dist/leaflet-src.esm.js"), join(dist, "vendor/leaflet/leaflet-src.esm.js"));
+  await cp(join(root, "node_modules/leaflet/dist/leaflet.css"), join(dist, "vendor/leaflet/leaflet.css"));
+  await cp(join(root, "node_modules/leaflet/dist/images"), join(dist, "vendor/leaflet/images"), { recursive: true });
+  await cp(join(root, "src/site.css"), join(dist, "site.css"));
+  await cp(join(root, "src/js/format.js"), join(dist, "js/format.js"));
+  await cp(join(root, "src/js/site.js"), join(dist, "js/site.js"));
+  await cp(join(root, "src/js/submit.js"), join(dist, "js/submit.js"));
+  await cp(join(root, "functions/api/validate.js"), join(dist, "js/validate.js"));
+  await cp(join(root, "public/favicon.svg"), join(dist, "favicon.svg"));
+  await writeFile(
+    join(dist, "_headers"),
+    "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Frame-Options: SAMEORIGIN\n",
+  );
+}
+
+async function main() {
+  await loadEnvFile();
+  const today = new Date();
+  const todayISO = iso(today);
+  const catalogue = await readJson(join(root, "data/shows.json"));
+  const stripe = applyStripe(await readJson(join(root, "data/stripe.json")));
+  const featured = await readJson(join(root, "data/featured.json"));
+  const sponsors = await readJson(join(root, "data/sponsors.json"));
+  const site = await readJson(join(root, "data/site.json"));
+  const generated = catalogue.generated || todayISO;
+  const shows = catalogue.shows;
+  const featuredSet = featuredIds(shows, featured, todayISO);
+  for (const show of shows) show.featured = featuredSet.has(show.id);
+  const upcoming = shows.filter((show) => show.end >= todayISO);
+
+  await rm(dist, { recursive: true, force: true });
+  await mkdir(dist, { recursive: true });
+  await copyAssets();
+  const origin = new URL(site.url).origin;
+  await writeFile(join(dist, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml\n`);
+
+  const ctx = { site, shows: upcoming, generated, today, todayISO, stripe, sponsors };
+  await writePage("index.html", renderHome(ctx));
+  for (const key of ["rock", "gem", "mineral", "fossil", "bead"]) {
+    await writePage(`${key}/index.html`, renderType(ctx, key));
+  }
+  await writePage("feature/index.html", renderFeature({ site, stripe, generated }));
+  await writePage("submit/index.html", renderSubmit({ site, generated }));
+  await writePage("about/index.html", renderAbout({ site, generated }));
+  await writePage("digest/index.html", renderDigest({ site, shows: upcoming, sponsors, generated, today }));
+  await writePage("404.html", renderNotFound({ site, generated }));
+
+  const paths = ["/", "/feature/", "/submit/", "/digest/", "/about/", "/rock/", "/gem/", "/mineral/", "/fossil/", "/bead/"];
+  for (const show of shows) {
+    await writePage(`show/${show.slug}/index.html`, renderShow({ site, show, generated, todayISO }));
+    await writePage(`show/${show.slug}/event.ics`, ics(show, todayISO, site));
+    paths.push(`/show/${show.slug}/`);
+  }
+  await writeFile(join(dist, "sitemap.xml"), renderSitemap(site, paths));
+  await mkdir(join(dist, "data"), { recursive: true });
+  await writeFile(join(dist, "data/shows.json"), JSON.stringify({ generated, shows }, null, 2));
+  console.log(`Built ${upcoming.length} upcoming shows, ${shows.length} pages, as of ${todayISO}`);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

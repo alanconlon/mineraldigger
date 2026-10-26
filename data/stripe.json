@@ -1,0 +1,15 @@
+{
+  "_note": "Paste a live https://buy.stripe.com/ URL into links when Alan has created it. Leave the string empty until then. A button on /feature/ stays disabled while its link is empty. At build time these env vars win over the file: STRIPE_FEATURED_SHOW_URL, STRIPE_YEAR_PASS_URL, STRIPE_SITE_SPONSOR_URL, STRIPE_FRIDAY_EMAIL_URL. Do not invent Payment Link ids.",
+  "prices": {
+    "featured_show": 15,
+    "year_pass": 99,
+    "site_sponsor": 25,
+    "friday_email": 12
+  },
+  "links": {
+    "featured_show": "",
+    "year_pass": "",
+    "site_sponsor": "",
+    "friday_email": ""
+  }
+}

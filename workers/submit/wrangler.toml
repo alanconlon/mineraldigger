@@ -1,0 +1,42 @@
+# MineralDigger show submissions.
+# Route only /api/submit. The rest of each hostname stays on Cloudflare Pages.
+# Deploy from this directory:
+#   npx wrangler login
+#   npx wrangler deploy
+#
+# Email Routing is not assumed to be live.
+# Before mail will send, on the Cloudflare account for mineraldigger.com:
+#   1. Turn on Email Routing for mineraldigger.com.
+#   2. Verify hello@mineraldigger.com as a destination address.
+#   3. Allow the sender submissions@mineraldigger.com (the domain must be on this account).
+# MINERALDIGGER_SUBMIT_TO and destination_address must stay the same address.
+# There is no secret to put for the destination. The address itself has to be verified.
+
+name = "mineraldigger-submit"
+main = "src/index.js"
+compatibility_date = "2026-10-25"
+account_id = "f856dac626b67bcd86aee0824fad569f"
+workers_dev = false
+
+routes = [
+  { pattern = "mineraldigger.com/api/submit", zone_name = "mineraldigger.com" },
+  { pattern = "www.mineraldigger.com/api/submit", zone_name = "mineraldigger.com" },
+  { pattern = "mineraldigger.co.uk/api/submit", zone_name = "mineraldigger.co.uk" },
+  { pattern = "www.mineraldigger.co.uk/api/submit", zone_name = "mineraldigger.co.uk" },
+]
+
+[vars]
+MINERALDIGGER_SUBMIT_TO = "hello@mineraldigger.com"
+MINERALDIGGER_SUBMIT_FROM = "submissions@mineraldigger.com"
+
+[[send_email]]
+name = "SEND_EMAIL"
+allowed_sender_addresses = ["submissions@mineraldigger.com"]
+destination_address = "hello@mineraldigger.com"
+
+# 5 accepted listings per 10 minutes per IP. In-isolate memory is the fallback
+# when this binding is not present (local tests).
+[[ratelimits]]
+name = "SUBMIT_LIMIT"
+namespace_id = "1001"
+simple = { limit = 5, period = 600 }
