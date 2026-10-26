@@ -12,6 +12,7 @@ import {
   renderShow,
   renderSitemap,
   renderSubmit,
+  renderThanks,
   renderType,
 } from "./render.mjs";
 
@@ -114,7 +115,7 @@ async function copyAssets() {
   await cp(join(root, "public/favicon.svg"), join(dist, "favicon.svg"));
   await writeFile(
     join(dist, "_headers"),
-    "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Frame-Options: SAMEORIGIN\n",
+    "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Frame-Options: SAMEORIGIN\n\n/thanks/payment/*\n  X-Robots-Tag: noindex\n",
   );
 }
 
@@ -145,11 +146,13 @@ async function main() {
     await writePage(`${key}/index.html`, renderType(ctx, key));
   }
   await writePage("feature/index.html", renderFeature({ site, stripe, generated }));
+  await writePage("thanks/payment/index.html", renderThanks({ site, generated }));
   await writePage("submit/index.html", renderSubmit({ site, generated }));
   await writePage("about/index.html", renderAbout({ site, generated }));
   await writePage("digest/index.html", renderDigest({ site, shows: upcoming, sponsors, generated, today, stripe }));
   await writePage("404.html", renderNotFound({ site, generated }));
 
+  // /thanks/payment/ is noindex and stays out of the sitemap. This site does not ping IndexNow.
   const paths = ["/", "/feature/", "/submit/", "/digest/", "/about/", "/rock/", "/gem/", "/mineral/", "/fossil/", "/bead/"];
   for (const show of shows) {
     await writePage(`show/${show.slug}/index.html`, renderShow({ site, show, generated, todayISO }));

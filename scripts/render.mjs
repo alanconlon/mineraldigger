@@ -52,7 +52,7 @@ function footer(generated) {
   </footer>`;
 }
 
-function layout({ site, path, title, description, body, map = false, generated }) {
+function layout({ site, path, title, description, body, map = false, generated, robots }) {
   const canonical = new URL(path, site.url).href;
   return `<!DOCTYPE html>
 <html lang="en-GB">
@@ -61,6 +61,7 @@ function layout({ site, path, title, description, body, map = false, generated }
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${esc(title)}</title>
   <meta name="description" content="${esc(description)}">
+  ${robots ? `<meta name="robots" content="${esc(robots)}">` : ""}
   <link rel="canonical" href="${esc(canonical)}">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <meta property="og:title" content="${esc(title)}">
@@ -362,8 +363,8 @@ function paymentCopy(ready, prices) {
       sponsorSteps: `<ol>
         <li>Choose the site, at £${prices.site_sponsor} a month, or one Friday email at £${prices.friday_email}.</li>
         <li>Pay by card through Stripe.</li>
-        <li>Email your name, a short line and your link to mineraldigger.hq@gmail.com.</li>
-        <li>You are live within two working days.</li>
+        <li>Email your logo, a one-line message, and which package to mineraldigger.hq@gmail.com.</li>
+        <li>Your slot is live within 2 working days.</li>
       </ol>`,
     };
   }
@@ -397,8 +398,8 @@ function paymentCopy(ready, prices) {
     sponsorSteps: `<ol>
         <li>Choose the site, at £${prices.site_sponsor} a month, or one Friday email at £${prices.friday_email}.</li>
         <li>Pay by card through Stripe where a button is shown. Options marked coming soon are not open yet.</li>
-        <li>Email your name, a short line and your link to mineraldigger.hq@gmail.com.</li>
-        <li>You are live within two working days of payment.</li>
+        <li>Email your logo, a one-line message, and which package to mineraldigger.hq@gmail.com.</li>
+        <li>Your slot is live within 2 working days of payment.</li>
       </ol>`,
   };
 }
@@ -488,6 +489,30 @@ export function renderFeature({ site, stripe, generated }) {
     description: `Featured show £${prices.featured_show}, year pass £${prices.year_pass}, site sponsor £${prices.site_sponsor} a month, Friday email £${prices.friday_email} an issue.`,
     body,
     generated,
+  });
+}
+
+export function renderThanks({ site, generated }) {
+  const email = site.email;
+  const body = `<article class="page"><div class="wrap-narrow prose">
+      <p class="eyebrow">Payment received</p>
+      <h1>Thank you</h1>
+      <p class="lede">Thank you. Your payment has gone through. You get a Stripe receipt by email. We feature the show within one working day (with a year pass, all of that organiser's shows for 12 months from the day you pay), and we email if we need anything else.</p>
+      <p><strong>Sponsoring the site or the Friday email?</strong> Please email your logo, a one-line message, and which package you paid for to <a href="mailto:${esc(email)}">${esc(email)}</a>. Your slot starts within 2 working days.</p>
+      <p class="fine">Questions about your listing? Reply to the Stripe receipt or email <a href="mailto:${esc(email)}">${esc(email)}</a>.</p>
+      <div class="actions">
+        <a href="/">Home</a>
+        <a href="/">Upcoming shows</a>
+      </div>
+    </div></article>`;
+  return layout({
+    site,
+    path: "/thanks/payment/",
+    title: "Payment received | MineralDigger",
+    description: "Payment received for a MineralDigger featured show or sponsorship.",
+    body,
+    generated,
+    robots: "noindex",
   });
 }
 
