@@ -2003,7 +2003,7 @@
       "organiser": {
         "id": "bakewell-rock-exchange",
         "name": "Peak Lapidary and Mineral Society",
-        "url": "https://rockexchange.uk/",
+        "url": null,
         "phone": "01433 620304",
         "email": null
       },
@@ -2042,7 +2042,7 @@
       "parking": "Free parking",
       "access_notes": "Disabled access.",
       "source": {
-        "url": "https://rockexchange.uk/",
+        "url": null,
         "retrieved": "2026-10-25",
         "notes": "Both weekends, the door price and the opening times are on the one show page.",
         "also": []

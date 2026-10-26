@@ -62,8 +62,10 @@ function ics(show, todayISO, site) {
   const stamp = `${todayISO.replace(/-/g, "")}T120000Z`;
   const host = new URL(site.url).host;
   const location = [show.venue.name, show.venue.street, show.venue.town, show.venue.postcode].filter(Boolean).join(", ");
-  const description = `Confirm times and entry with the organiser before you travel. ${show.source.url}`;
-  return [
+  const description = show.source.url
+    ? `Confirm times and entry with the organiser before you travel. ${show.source.url}`
+    : "Confirm times and entry with the organiser before you travel.";
+  const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//MineralDigger//EN",
@@ -75,12 +77,10 @@ function ics(show, todayISO, site) {
     `DTEND;VALUE=DATE:${end}`,
     `SUMMARY:${icsEscape(show.name)}`,
     `LOCATION:${icsEscape(location)}`,
-    `URL:${show.source.url}`,
-    `DESCRIPTION:${icsEscape(description)}`,
-    "END:VEVENT",
-    "END:VCALENDAR",
-    "",
-  ].join("\r\n");
+  ];
+  if (show.source.url) lines.push(`URL:${show.source.url}`);
+  lines.push(`DESCRIPTION:${icsEscape(description)}`, "END:VEVENT", "END:VCALENDAR", "");
+  return lines.join("\r\n");
 }
 
 async function writePage(path, html) {

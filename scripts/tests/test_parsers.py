@@ -100,6 +100,10 @@ class FixtureTests(unittest.TestCase):
         self.assertIn("Saturday 10:00 to 17:00", rows[0]["times_summary"])
         self.assertEqual(rows[0]["dealers"], "70+")
         self.assertEqual(rows[0]["organiser_phone"], "01433 620304")
+        self.assertEqual(rows[1]["organiser_phone"], "01433 620304")
+        self.assertEqual(rows[0]["organiser_url"], "https://rockexchange.uk/")
+        self.assertIsNone(rows[1]["organiser_url"])
+        self.assertIsNone(rows[1]["source_url"])
 
     def test_smls_year_is_matched_not_printed(self):
         rows = parse_smls((FIXTURES / "smls.html").read_text(encoding="utf-8"), today=TODAY)
@@ -130,6 +134,10 @@ class FixtureTests(unittest.TestCase):
             self.assertFalse(banned(show["name"]), show["id"])
             self.assertEqual(show["source"]["retrieved"], "2026-10-25")
         sussex = next(show for show in shows if show["organiser"]["id"] == "smls")
+        bakewell_2027 = next(show for show in shows if show["id"] == "bakewell-rock-exchange-2027-10-09-de451ja")
+        self.assertIsNone(bakewell_2027["organiser"]["url"])
+        self.assertIsNone(bakewell_2027["source"]["url"])
+        self.assertEqual(bakewell_2027["organiser"]["phone"], "01433 620304")
         self.assertEqual(sussex["venue"]["postcode"], "RH16 1LT")
         self.assertEqual(sussex["venue"]["street"], "Harlands Road")
         self.assertIn("college contact page", sussex["source"]["notes"])
