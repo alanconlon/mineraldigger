@@ -1,6 +1,6 @@
 import { validateSubmission } from "../../../functions/api/validate.js";
 
-export const MINERALDIGGER_SUBMIT_TO = "hello@mineraldigger.com";
+export const MINERALDIGGER_SUBMIT_TO = "mineraldigger.hq@gmail.com";
 export const MINERALDIGGER_SUBMIT_FROM = "submissions@mineraldigger.com";
 
 export const ALLOWED_ORIGINS = new Set([
@@ -10,6 +10,9 @@ export const ALLOWED_ORIGINS = new Set([
   "https://www.mineraldigger.co.uk",
 ]);
 
+// About 5 listings per 10 minutes in this isolate. The binding period can
+// only be 10 or 60 seconds, so this window still applies when that binding
+// would allow another burst, and when the binding is missing.
 const WINDOW_MS = 10 * 60 * 1000;
 const MAX_IN_WINDOW = 5;
 const hits = new Map();
@@ -57,7 +60,7 @@ async function limited(request, env) {
   const ip = clientIp(request);
   if (env.SUBMIT_LIMIT && typeof env.SUBMIT_LIMIT.limit === "function") {
     const result = await env.SUBMIT_LIMIT.limit({ key: ip });
-    return result && result.success === false;
+    if (result && result.success === false) return true;
   }
   return memoryLimited(ip);
 }

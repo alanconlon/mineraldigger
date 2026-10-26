@@ -108,8 +108,8 @@ Paid placement data, still empty:
 `/submit/` posts JSON to `/api/submit`.
 
 - Locally, with no webhook, the server writes `data/inbox/*.json`. That folder is gitignored. The reply says it was saved on the machine and not emailed.
-- On the public hostnames, `workers/submit/` is the mail worker. It accepts POST `/api/submit` from `https://mineraldigger.com`, `https://www.mineraldigger.com`, `https://mineraldigger.co.uk` and `https://www.mineraldigger.co.uk`. A filled honeypot (`company_website`) is accepted and not emailed. The sixth listing from the same IP inside ten minutes is refused. The message is from `submissions@mineraldigger.com` to `hello@mineraldigger.com` (`MINERALDIGGER_SUBMIT_TO` in `workers/submit/src/index.js` and in `workers/submit/wrangler.toml`).
-- `hello@mineraldigger.com` has to be a verified Email Routing destination before Cloudflare will deliver that mail. The worker is in the repo. It does not assume routing is already on. If the binding is missing, or the destination is not verified, the form says mail is not connected and shows a copy of the listing. Nothing is stored.
+- On the public hostnames, `workers/submit/` is the mail worker. It accepts POST `/api/submit` from `https://mineraldigger.com`, `https://www.mineraldigger.com`, `https://mineraldigger.co.uk` and `https://www.mineraldigger.co.uk`. A filled honeypot (`company_website`) is accepted and not emailed. The sixth listing from the same IP inside ten minutes is refused. The message is from `submissions@mineraldigger.com` to `mineraldigger.hq@gmail.com` (`MINERALDIGGER_SUBMIT_TO` in `workers/submit/src/index.js` and in `workers/submit/wrangler.toml`).
+- `mineraldigger.hq@gmail.com` has to be a verified Email Routing destination before Cloudflare will deliver that mail. The worker is in the repo. It does not assume routing is already on. If the binding is missing, or the destination is not verified, the form says mail is not connected and shows a copy of the listing. Nothing is stored.
 - `functions/api/submit.js` remains a Pages fallback for when that zone route is not attached. It forwards to `SUBMISSION_WEBHOOK_URL` only when that variable is set.
 
 Deploy the worker from `workers/submit/` after `npx wrangler login`:
@@ -118,7 +118,7 @@ Deploy the worker from `workers/submit/` after `npx wrangler login`:
 npx wrangler deploy
 ```
 
-The account id in `wrangler.toml` is `f856dac626b67bcd86aee0824fad569f`. The routes are only `/api/submit` on `mineraldigger.com` and `mineraldigger.co.uk`, including `www`. There is no secret for the destination address. Alan verifies `hello@mineraldigger.com` in Email Routing, and the sender domain `mineraldigger.com` has to be on the same account so `submissions@mineraldigger.com` can send.
+The account id in `wrangler.toml` is `f856dac626b67bcd86aee0824fad569f`. The routes are only `/api/submit` on `mineraldigger.com` and `mineraldigger.co.uk`, including `www`. There is no secret for the destination address. Alan verifies `mineraldigger.hq@gmail.com` as an Email Routing destination, and the sender domain `mineraldigger.com` has to be on the same account so `submissions@mineraldigger.com` can send.
 
 ## Deploy to Cloudflare Pages
 
@@ -148,7 +148,7 @@ npx wrangler pages deploy dist --project-name mineraldigger --branch main
 
 - Keep `mineraldigger.co.uk` on the same Pages project as `mineraldigger.com`, with no redirect between them
 - Create the four Stripe Payment Links and paste them into `data/stripe.json` `links` (see above), then rebuild and upload
-- In Email Routing, verify the destination `hello@mineraldigger.com`, then run `npx wrangler deploy` from `workers/submit/`
+- In Email Routing, verify the destination `mineraldigger.hq@gmail.com`, then run `npx wrangler deploy` from `workers/submit/`
 
 Not in this version: live checkout, DNS, sending the Friday email, social accounts, Facebook scraping, mind-body-spirit listings, and Ireland.
 

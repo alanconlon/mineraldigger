@@ -7,10 +7,10 @@
 # Email Routing is not assumed to be live.
 # Before mail will send, on the Cloudflare account for mineraldigger.com:
 #   1. Turn on Email Routing for mineraldigger.com.
-#   2. Verify hello@mineraldigger.com as a destination address.
+#   2. Verify mineraldigger.hq@gmail.com as an Email Routing destination.
 #   3. Allow the sender submissions@mineraldigger.com (the domain must be on this account).
 # MINERALDIGGER_SUBMIT_TO and destination_address must stay the same address.
-# There is no secret to put for the destination. The address itself has to be verified.
+# There is no secret to put for the destination. The Gmail address itself has to be verified.
 
 name = "mineraldigger-submit"
 main = "src/index.js"
@@ -26,17 +26,18 @@ routes = [
 ]
 
 [vars]
-MINERALDIGGER_SUBMIT_TO = "hello@mineraldigger.com"
+MINERALDIGGER_SUBMIT_TO = "mineraldigger.hq@gmail.com"
 MINERALDIGGER_SUBMIT_FROM = "submissions@mineraldigger.com"
 
 [[send_email]]
 name = "SEND_EMAIL"
 allowed_sender_addresses = ["submissions@mineraldigger.com"]
-destination_address = "hello@mineraldigger.com"
+destination_address = "mineraldigger.hq@gmail.com"
 
-# 5 accepted listings per 10 minutes per IP. In-isolate memory is the fallback
-# when this binding is not present (local tests).
+# Cloudflare only allows a period of 10 or 60 seconds. This caps a burst at
+# 5 listings per minute. The worker still refuses a sixth listing from the
+# same IP inside 10 minutes, including when this binding is missing.
 [[ratelimits]]
 name = "SUBMIT_LIMIT"
 namespace_id = "1001"
-simple = { limit = 5, period = 600 }
+simple = { limit = 5, period = 60 }
