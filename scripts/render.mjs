@@ -324,16 +324,17 @@ function jsonLd(show, site) {
     organizer: {
       "@type": "Organization",
       name: show.organiser.name,
-      url: show.organiser.url,
     },
   };
+  if (show.organiser.url) data.organizer.url = show.organiser.url;
   if (show.entry.kind === "free") {
     data.isAccessibleForFree = true;
-    data.offers = { "@type": "Offer", price: "0", priceCurrency: "GBP", url: show.organiser.url };
+    data.offers = { "@type": "Offer", price: "0", priceCurrency: "GBP" };
   } else if (show.entry.kind === "paid") {
     data.isAccessibleForFree = false;
-    data.offers = { "@type": "Offer", price: String(show.entry.adult_gbp), priceCurrency: "GBP", url: show.organiser.url };
+    data.offers = { "@type": "Offer", price: String(show.entry.adult_gbp), priceCurrency: "GBP" };
   }
+  if (data.offers && show.organiser.url) data.offers.url = show.organiser.url;
   return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
 }
 
@@ -358,6 +359,10 @@ export function renderShow({ site, show, generated, todayISO }) {
     .join("");
   const phone = show.organiser.phone ? `<p>Phone: <a href="tel:${esc(show.organiser.phone.replace(/\s+/g, ""))}">${esc(show.organiser.phone)}</a></p>` : "";
   const email = show.organiser.email ? `<p>Email: <a href="mailto:${esc(show.organiser.email)}">${esc(show.organiser.email)}</a></p>` : "";
+  const website = show.organiser.url ? `<p><a href="${esc(show.organiser.url)}">Organiser website</a></p>` : "";
+  const retrieved = show.source.url
+    ? `<p>Retrieved ${esc(formatDay(show.source.retrieved))} from <a href="${esc(show.source.url)}">${esc(show.source.url)}</a>.</p>`
+    : `<p>Retrieved ${esc(formatDay(show.source.retrieved))}.</p>`;
   const also = (show.source.also || [])
     .map((item) => `<p>Also: <a href="${esc(item.url)}">${esc(item.url)}</a></p>`)
     .join("");
@@ -373,7 +378,7 @@ export function renderShow({ site, show, generated, todayISO }) {
       <div class="facts">${factHtml}</div>
       ${phone}
       ${email}
-      <p><a href="${esc(show.organiser.url)}">Organiser website</a></p>
+      ${website}
       <div class="actions">
         <a href="/show/${esc(show.slug)}/event.ics">Add to calendar</a>
         <a href="${esc(osm)}">Directions</a>
@@ -383,7 +388,7 @@ export function renderShow({ site, show, generated, todayISO }) {
       <p class="map-note">The pin is the venue postcode, not a surveyed entrance.${show.venue.place_note ? ` ${esc(show.venue.place_note)}` : ""}</p>
       <h2>Where this date came from</h2>
       <p>${esc(show.source.notes)}</p>
-      <p>Retrieved ${esc(formatDay(show.source.retrieved))} from <a href="${esc(show.source.url)}">${esc(show.source.url)}</a>.</p>
+      ${retrieved}
       ${also}
       <p>Always check the organiser's page for times, tickets and any changes before you set off.</p>
     </div></article>

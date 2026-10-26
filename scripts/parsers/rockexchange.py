@@ -72,11 +72,15 @@ def parse_rockexchange(html: str, today: date | None = None, retrieved: str | No
 
     rows = []
     for start, end in spans:
+        # rockexchange.uk is the only known society site. Its certificate expired
+        # in 2021 and the host returns HTTP 500. There is no replacement URL.
+        # A weekend that has not ended does not publish that address. The phone stays.
+        publish_url = None if end >= today.isoformat() else SOURCE
         rows.append(
             {
                 "organiser_id": "bakewell-rock-exchange",
                 "organiser_name": "Peak Lapidary and Mineral Society",
-                "organiser_url": SOURCE,
+                "organiser_url": publish_url,
                 "organiser_phone": phone,
                 "name": "Bakewell Rock Exchange",
                 "types": list(TYPES),
@@ -95,7 +99,7 @@ def parse_rockexchange(html: str, today: date | None = None, retrieved: str | No
                 "dealers": dealers,
                 "parking": parking,
                 "access_notes": access,
-                "source_url": SOURCE,
+                "source_url": publish_url,
                 "source_retrieved": retrieved,
                 "source_notes": "Both weekends, the door price and the opening times are on the one show page.",
                 "summary": "Rocks, minerals, fossils and gemstones. Organised by the Peak Lapidary and Mineral Society.",

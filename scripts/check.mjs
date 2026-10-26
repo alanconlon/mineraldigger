@@ -289,6 +289,25 @@ const catalogue = JSON.parse(await readFile(join(root, "data/shows.json"), "utf8
 if (catalogue.shows.length < 35 || catalogue.shows.length > 50) fail(`Unexpected show count ${catalogue.shows.length}`);
 const upcoming = catalogue.shows.filter((show) => show.end >= "2026-10-25");
 if (upcoming.length < 35) fail(`Not enough upcoming shows: ${upcoming.length}`);
+for (const show of upcoming) {
+  if (JSON.stringify(show).includes("rockexchange.uk")) {
+    fail(`${show.id} is still upcoming and still links to rockexchange.uk.`);
+  }
+}
+const bakewell2027 = catalogue.shows.find((show) => show.slug === "bakewell-rock-exchange-bakewell-2027-10-09");
+if (!bakewell2027) fail("Bakewell 2027 show is missing.");
+else if (bakewell2027.organiser.url || bakewell2027.source.url) fail("Bakewell 2027 still publishes rockexchange.uk.");
+else if (bakewell2027.organiser.phone !== "01433 620304") fail("Bakewell 2027 phone changed.");
+const bakewellPage = await readFile(join(dist, "show/bakewell-rock-exchange-bakewell-2027-10-09/index.html"), "utf8");
+if (bakewellPage.includes("rockexchange.uk")) fail("Bakewell 2027 page still links to rockexchange.uk.");
+if (bakewellPage.includes("Organiser website")) fail("Bakewell 2027 page still renders an organiser website link.");
+if (!bakewellPage.includes("01433 620304") || !bakewellPage.includes('href="tel:01433620304"')) {
+  fail("Bakewell 2027 page is missing the organiser phone.");
+}
+const bakewellIcs = await readFile(join(dist, "show/bakewell-rock-exchange-bakewell-2027-10-09/event.ics"), "utf8");
+if (bakewellIcs.includes("rockexchange.uk") || bakewellIcs.includes("URL:")) {
+  fail("Bakewell 2027 calendar still links out.");
+}
 
 const ids = featuredIds(
   [

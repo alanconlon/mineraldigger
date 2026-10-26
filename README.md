@@ -53,6 +53,7 @@ Rules the parsers follow:
 - The Sussex page prints "Saturday 14th November" and no year. 14 November 2026 is that Saturday, so the row uses it and the show page says the year was matched, not printed.
 - Haywards Heath College's street and postcode come from the college contact page, not from the show page. See `data/venue-supplements.json`.
 - Map coordinates are postcode centroids from postcodes.io, saved in `data/venues.json`.
+- Upcoming Bakewell rows do not publish https://rockexchange.uk/. That host has an expired certificate and returns HTTP 500, and there is no replacement URL. The phone number stays. The 2026 weekend has passed, so that row still records the URL it was read from.
 
 Refresh from the saved fixtures (no network):
 
