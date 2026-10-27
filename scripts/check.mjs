@@ -2,7 +2,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { featuredIds, stripeReady } from "./feature.mjs";
-import { renderFeature } from "./render.mjs";
+import { offerValidFrom, renderFeature } from "./render.mjs";
 import { validateSubmission } from "../functions/api/validate.js";
 import submitWorker, { resetRateLimit, MINERALDIGGER_SUBMIT_FROM, MINERALDIGGER_SUBMIT_TO } from "../workers/submit/src/index.js";
 
@@ -373,6 +373,78 @@ if (!bakewellPage.includes("01433 620304") || !bakewellPage.includes('href="tel:
 const bakewellIcs = await readFile(join(dist, "show/bakewell-rock-exchange-bakewell-2027-10-09/event.ics"), "utf8");
 if (bakewellIcs.includes("rockexchange.uk") || bakewellIcs.includes("URL:")) {
   fail("Bakewell 2027 calendar still links out.");
+}
+
+if (offerValidFrom("2026-10-25") !== "2026-10-25T00:00:00+01:00") fail("Offer validFrom on 25 October 2026 should be UK midnight in BST.");
+if (offerValidFrom("2026-01-16") !== "2026-01-16T00:00:00+00:00") fail("Offer validFrom in January should be UK midnight in GMT.");
+if (offerValidFrom("2026-07-25") !== "2026-07-25T00:00:00+01:00") fail("Offer validFrom in July should be UK midnight in BST.");
+
+function eventJsonLd(html) {
+  const blocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((match) => match[1]);
+  const events = [];
+  for (const block of blocks) {
+    let data;
+    try {
+      data = JSON.parse(block);
+    } catch {
+      return { error: "invalid" };
+    }
+    if (data?.["@type"] === "Event") events.push(data);
+  }
+  return { events };
+}
+
+for (const show of catalogue.shows) {
+  const pageUrl = `https://mineraldigger.com/show/${show.slug}/`;
+  let html;
+  try {
+    html = await readFile(join(dist, "show", show.slug, "index.html"), "utf8");
+  } catch {
+    fail(`Show page missing for ${show.slug}.`);
+    continue;
+  }
+  const parsed = eventJsonLd(html);
+  if (parsed.error || parsed.events.length !== 1) {
+    fail(`${show.slug} should have one Event JSON-LD script.`);
+    continue;
+  }
+  const event = parsed.events[0];
+  const refreshed = show.source?.retrieved || catalogue.generated;
+  if (event.url !== pageUrl) fail(`${show.slug} Event url is not the mineraldigger.com show page.`);
+  if (JSON.stringify(event.image) !== JSON.stringify(["https://mineraldigger.com/og-image.jpg"])) {
+    fail(`${show.slug} Event image is not the og-image array.`);
+  }
+  if (event.organizer?.["@type"] !== "Organization" || event.organizer?.name !== show.organiser.name) {
+    fail(`${show.slug} organizer name is wrong.`);
+  }
+  if ((event.organizer?.url || null) !== (show.organiser.url || null)) fail(`${show.slug} organizer url changed.`);
+  if (JSON.stringify(event.performer) !== JSON.stringify(event.organizer)) {
+    fail(`${show.slug} performer is not the same organization as organizer.`);
+  }
+  const offer = event.offers;
+  if (!offer || offer["@type"] !== "Offer") {
+    fail(`${show.slug} is missing an Offer.`);
+    continue;
+  }
+  if (offer.availability !== "https://schema.org/InStock") fail(`${show.slug} offer availability is not InStock.`);
+  if (offer.url !== pageUrl) fail(`${show.slug} offer url is not the mineraldigger.com show page.`);
+  if (offer.validFrom !== offerValidFrom(refreshed)) fail(`${show.slug} offer validFrom is not the refresh date in UK time.`);
+  if (String(offer.url).includes("mineraldigger.co.uk") || String(event.url).includes("mineraldigger.co.uk")) {
+    fail(`${show.slug} Event links to mineraldigger.co.uk.`);
+  }
+  const free = show.entry.kind === "free" || show.entry.adult_gbp === 0;
+  const priced = show.entry.kind === "paid" && Number.isFinite(show.entry.adult_gbp) && show.entry.adult_gbp > 0;
+  if (free) {
+    if (offer.price !== "0" || offer.priceCurrency !== "GBP" || event.isAccessibleForFree !== true) {
+      fail(`${show.slug} free entry should be price 0 GBP and accessible for free.`);
+    }
+  } else if (priced) {
+    if (offer.price !== String(show.entry.adult_gbp) || offer.priceCurrency !== "GBP" || event.isAccessibleForFree !== false) {
+      fail(`${show.slug} paid entry should keep the door price in GBP.`);
+    }
+  } else if ("price" in offer || "priceCurrency" in offer || "isAccessibleForFree" in event) {
+    fail(`${show.slug} unknown entry should not invent a price.`);
+  }
 }
 
 const ids = featuredIds(

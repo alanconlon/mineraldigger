@@ -317,7 +317,59 @@ function placeLine(show) {
   return [show.venue.town, show.venue.county, show.venue.nation].filter(Boolean).join(", ");
 }
 
-function jsonLd(show, site) {
+function londonOffsetMinutes(utcMs) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(utcMs));
+  const pick = (type) => Number(parts.find((part) => part.type === type).value);
+  const asUtc = Date.UTC(pick("year"), pick("month") - 1, pick("day"), pick("hour"), pick("minute"));
+  return Math.round((asUtc - utcMs) / 60000);
+}
+
+// Midnight in the UK on the catalogue refresh day, with the offset that applied then.
+export function offerValidFrom(dateISO) {
+  const day = String(dateISO).slice(0, 10);
+  const [year, month, date] = day.split("-").map(Number);
+  const utcMidnight = Date.UTC(year, month - 1, date, 0, 0, 0);
+  const offset = londonOffsetMinutes(utcMidnight - londonOffsetMinutes(utcMidnight) * 60000);
+  const sign = offset >= 0 ? "+" : "-";
+  const abs = Math.abs(offset);
+  const hours = String(Math.floor(abs / 60)).padStart(2, "0");
+  const minutes = String(abs % 60).padStart(2, "0");
+  return `${day}T00:00:00${sign}${hours}:${minutes}`;
+}
+
+function eventOffer(show, pageUrl, validFrom) {
+  const offer = { "@type": "Offer" };
+  const free = show.entry.kind === "free" || show.entry.adult_gbp === 0;
+  const priced = show.entry.kind === "paid" && Number.isFinite(show.entry.adult_gbp) && show.entry.adult_gbp > 0;
+  if (free) {
+    offer.price = "0";
+    offer.priceCurrency = "GBP";
+  } else if (priced) {
+    offer.price = String(show.entry.adult_gbp);
+    offer.priceCurrency = "GBP";
+  }
+  offer.availability = "https://schema.org/InStock";
+  offer.url = pageUrl;
+  offer.validFrom = validFrom;
+  return offer;
+}
+
+function jsonLd(show, site, generated) {
+  const pageUrl = new URL(`/show/${show.slug}/`, site.url).href;
+  const organizer = {
+    "@type": "Organization",
+    name: show.organiser.name,
+  };
+  if (show.organiser.url) organizer.url = show.organiser.url;
+  const refreshed = show.source?.retrieved || generated;
   const data = {
     "@context": "https://schema.org",
     "@type": "Event",
@@ -327,7 +379,8 @@ function jsonLd(show, site) {
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     eventStatus: "https://schema.org/EventScheduled",
     description: show.summary,
-    url: new URL(`/show/${show.slug}/`, site.url).href,
+    image: [new URL("/og-image.jpg", site.url).href],
+    url: pageUrl,
     location: {
       "@type": "Place",
       name: show.venue.name,
@@ -340,20 +393,14 @@ function jsonLd(show, site) {
         addressCountry: "GB",
       },
     },
-    organizer: {
-      "@type": "Organization",
-      name: show.organiser.name,
-    },
+    organizer,
+    // Mineral shows are not performances. The organiser fills performer so Search Console stops flagging the field.
+    performer: { ...organizer },
+    // Unknown door prices keep the Offer, without a price. Publishing 0 would claim the show is free.
+    offers: eventOffer(show, pageUrl, offerValidFrom(refreshed)),
   };
-  if (show.organiser.url) data.organizer.url = show.organiser.url;
-  if (show.entry.kind === "free") {
-    data.isAccessibleForFree = true;
-    data.offers = { "@type": "Offer", price: "0", priceCurrency: "GBP" };
-  } else if (show.entry.kind === "paid") {
-    data.isAccessibleForFree = false;
-    data.offers = { "@type": "Offer", price: String(show.entry.adult_gbp), priceCurrency: "GBP" };
-  }
-  if (data.offers && show.organiser.url) data.offers.url = show.organiser.url;
+  if (show.entry.kind === "free" || show.entry.adult_gbp === 0) data.isAccessibleForFree = true;
+  else if (show.entry.kind === "paid") data.isAccessibleForFree = false;
   return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
 }
 
@@ -411,7 +458,7 @@ export function renderShow({ site, show, generated, todayISO }) {
       ${also}
       <p>Always check the organiser's page for times, tickets and any changes before you set off.</p>
     </div></article>
-    ${jsonLd(show, site)}`;
+    ${jsonLd(show, site, generated)}`;
   return layout({
     site,
     path: `/show/${show.slug}/`,
