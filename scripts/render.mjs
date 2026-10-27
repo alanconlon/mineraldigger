@@ -43,7 +43,7 @@ function nav(path) {
     ["/", "Shows"],
     ["/feature/", "Feature"],
     ["/submit/", "Submit a show"],
-    ["/digest/", "Friday list"],
+    ["/digest/", "Friday email"],
     ["/about/", "About"],
   ];
   return items
@@ -577,7 +577,7 @@ export function renderFeature({ site, stripe, generated }) {
             <li>Pinned at the top of the list for 28 days, or until the show date if that is sooner</li>
             <li>A highlighted pin on the map</li>
             <li>A Featured label on the list and the show page</li>
-            <li>In the featured slot of the Friday list the weekend it runs</li>
+            <li>In the featured slot of the Friday email the weekend it runs</li>
           </ul>
           ${payControl(links.featured_show, `Pay £${prices.featured_show} with Stripe`, ready.featured_show)}
         </section>
@@ -771,17 +771,17 @@ export function renderDigest({ site, shows, sponsors, generated, today, stripe }
     : `<p>No shows in the list fall on that weekend.</p>`;
   const body = `<article class="page"><div class="wrap-narrow prose">
       <p class="eyebrow">Not sent yet</p>
-      <h1>Friday list</h1>
+      <h1>Friday email</h1>
       <p class="lede">A preview of the Friday email. Nothing is sent yet. Mail is still to be connected.</p>
       <h2>${esc(formatRange(weekend.start, weekend.end))}</h2>
       ${sponsor}
       ${list}
-      <p class="fine">The Friday list covers the coming Friday to Sunday. On a Saturday or Sunday it looks ahead to the next weekend.</p>
+      <p class="fine">The Friday email covers the coming Friday to Sunday. On a Saturday or Sunday it looks ahead to the next weekend.</p>
     </div></article>`;
   return layout({
     site,
     path: "/digest/",
-    title: "Friday list | MineralDigger",
+    title: "Friday email | MineralDigger",
     description: "A preview of the MineralDigger Friday email. Mail is not sent yet.",
     body,
     generated,
@@ -802,7 +802,7 @@ export function renderPrivacy({ site, generated }) {
         <li><strong>Search and maps.</strong> The town and postcode box filters shows already loaded on the page. It does not send that search to another service. Maps load tiles from OpenStreetMap, which sees your IP address when your browser requests a tile. The map code is served from this site.</li>
       </ul>
       <h2>The Friday email</h2>
-      <p>The <a href="/digest/">Friday list</a> is a preview. Nothing is sent yet, and the site does not ask you to sign up today. When the Friday email is connected, sign-ups and sending will be handled by Buttondown. We will collect the email address you give us so we can send the weekly list. Every email will have an unsubscribe link. We will keep your address until you unsubscribe.</p>
+      <p>The <a href="/digest/">Friday email</a> is a preview. Nothing is sent yet, and the site does not ask you to sign up today. When the Friday email is connected, sign-ups and sending will be handled by Buttondown. We will collect the email address you give us so we can send the weekly list. Every email will have an unsubscribe link. We will keep your address until you unsubscribe.</p>
       <h2>Submitting a show</h2>
       <p>The <a href="/submit/">submit form</a> asks for the show details (name, types, dates, times, venue, street, town, postcode, entry and website) and the organiser's name, email and phone. We use this to check and list the show, and to contact you about it. The form is sent by email to <a href="mailto:${esc(email)}">${esc(email)}</a> through Cloudflare. The show details are published on the site. Your email address is not. We keep submission emails while the show is listed and for a reasonable time afterwards in case of questions, and will delete them sooner if you ask.</p>
       <h2>Payments</h2>
