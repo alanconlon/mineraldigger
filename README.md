@@ -83,7 +83,7 @@ Prices on `/feature/`:
 | Site sponsor | £25 a month |
 | Friday email | £12 an issue |
 
-The four live Payment Links are in `data/stripe.json` under `links`. Prices stay in `prices`. On `/feature/`, a non-empty `https://` URL is a pay button (`Pay £… with Stripe`). An empty link still says "Coming soon" and is not a buy button. With `links.friday_email` set, the Friday list invites a sponsor for that issue.
+The four live Payment Links are in `data/stripe.json` under `links`. Prices stay in `prices`. On `/feature/`, a non-empty `https://` URL is a pay button (`Pay £… with Stripe`). An empty link still says "Coming soon" and is not a buy button. With `links.friday_email` set, the Friday email invites a sponsor for that issue.
 
 | Product | Price key | Link |
 | --- | --- | --- |

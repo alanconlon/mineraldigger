@@ -324,6 +324,12 @@ for (const file of files) {
   if (!foot.includes('href="/feature/">Feature your show</a>')) fail(`Feature label missing in ${file}`);
   if (!foot.includes('href="/about/">How we list shows</a>')) fail(`About label missing in ${file}`);
   if (!foot.includes('href="/digest/">Friday email</a>')) fail(`Friday email link missing in ${file}`);
+  const headerEnd = raw.indexOf("</header>");
+  const header = headerEnd > 0 ? raw.slice(0, headerEnd) : "";
+  if (!/href="\/digest\/"(?: aria-current="page")?>Friday email<\/a>/.test(header)) {
+    fail(`Header nav in ${file} is missing the Friday email label.`);
+  }
+  if (raw.includes("Friday list")) fail(`Friday list label still in ${file}`);
   if (!foot.includes('href="https://www.facebook.com/people/MineralDigger/61595681170967/" rel="me noopener" target="_blank">Facebook</a>')) {
     fail(`Facebook link missing in ${file}`);
   }
@@ -354,7 +360,7 @@ if (!privacy.includes("Stripe")) fail("Privacy page does not name Stripe.");
 if (!privacy.includes("Cloudflare")) fail("Privacy page does not name Cloudflare.");
 if (!privacy.includes('href="https://www.dataprotection.ie/"')) fail("Privacy page does not point at the Irish DPC.");
 if (!privacy.includes('href="/submit/"')) fail("Privacy page does not link the submit form.");
-if (!privacy.includes('href="/digest/"')) fail("Privacy page does not link the Friday list.");
+if (!privacy.includes('href="/digest/"')) fail("Privacy page does not link the Friday email.");
 if (/fairdigger|auctiondigger|alanconlon\.com/i.test(privacy)) fail("Privacy page names a sister site.");
 if (privacy.includes("UK & Ireland") || privacy.includes("UK+IE") || privacy.includes("Eircode")) {
   fail("Privacy page uses Fair's geography.");

@@ -1,5 +1,5 @@
 {
-  "_note": "Leave null until someone pays. site appears on the homepage and type pages. friday appears on the Friday list when issue matches that Friday (YYYY-MM-DD).",
+  "_note": "Leave null until someone pays. site appears on the homepage and type pages. friday appears on the Friday email when issue matches that Friday (YYYY-MM-DD).",
   "site": null,
   "friday": null
 }
