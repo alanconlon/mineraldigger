@@ -10,11 +10,19 @@ const TYPES = [
 ];
 
 const TYPE_INTRO = {
-  rock: "Rock shows, and the rock, gem and bead weekends that include them.",
-  gem: "Gem shows, including the rock, gem and bead weekends.",
-  mineral: "Mineral shows, including society shows, with a date on the organiser site.",
-  fossil: "Fossil shows, and mineral weekends that include fossils.",
-  bead: "Bead shows, including the rock, gem and bead weekends.",
+  rock: "Rock shows across the UK, plus the rock, gem and bead weekends that include them. MineralDigger is a free calendar and map of dates and venues from organiser sites. Always confirm times and tickets with the organiser before you travel.",
+  gem: "Gem shows and the rock, gem and bead weekends that list gems. MineralDigger puts UK dates, venues and entry on one map so you can see what is on this weekend and later in the year. Confirm with the organiser before you set off.",
+  mineral: "Mineral shows and society fairs with a date on the organiser site. MineralDigger is a free UK calendar and map for collectors, not a club or society. Check entry, times and any changes with the organiser before you travel.",
+  fossil: "Fossil shows, and mineral weekends that include fossils. MineralDigger lists UK dates and venues from organiser websites on one map. Use it as a finder, then confirm times, tickets and changes with the organiser before you go.",
+  bead: "Bead shows, including the rock, gem and bead weekends. MineralDigger is a free UK calendar and map of dates, venues and entry from organiser sites. Use it to plan a trip, then check with the organiser before you travel.",
+};
+
+const TYPE_DESCRIPTION = {
+  rock: "UK rock shows and rock, gem and bead weekends on one map. Free calendar from organiser sites.",
+  gem: "UK gem shows and rock, gem and bead weekends. Dates, venues and entry on MineralDigger.",
+  mineral: "UK mineral shows and society fairs on one map. Free calendar; confirm with the organiser.",
+  fossil: "UK fossil shows and mineral weekends that include fossils. Free map calendar on MineralDigger.",
+  bead: "UK bead shows and rock, gem and bead weekends. Dates and venues on MineralDigger.",
 };
 
 const SHARE_ALT = "MineralDigger: Rock, gem, mineral, fossil and bead shows across the UK, on one map.";
@@ -112,9 +120,11 @@ function siteGraph(site) {
   return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
 }
 
-function layout({ site, path, title, description, body, map = false, generated, robots, structuredData = "" }) {
+function layout({ site, path, title, description, ogTitle, ogDescription, body, map = false, generated, robots, structuredData = "" }) {
   const canonical = new URL(path, site.url).href;
   const image = new URL("/og-image.jpg", site.url).href;
+  const openTitle = ogTitle ?? title;
+  const openDescription = ogDescription ?? description;
   return `<!DOCTYPE html>
 <html lang="en-GB">
 <head>
@@ -127,8 +137,8 @@ function layout({ site, path, title, description, body, map = false, generated, 
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-  <meta property="og:title" content="${esc(title)}">
-  <meta property="og:description" content="${esc(description)}">
+  <meta property="og:title" content="${esc(openTitle)}">
+  <meta property="og:description" content="${esc(openDescription)}">
   <meta property="og:type" content="website">
   <meta property="og:url" content="${esc(canonical)}">
   <meta property="og:site_name" content="${esc(site.name)}">
@@ -223,7 +233,7 @@ function typeLinks(current) {
   return all + rest;
 }
 
-export function renderListing({ site, path, title, description, heading, lede, shows, generated, home = false, typeLock = null }) {
+export function renderListing({ site, path, title, description, ogTitle, ogDescription, heading, lede, shows, generated, home = false, typeLock = null }) {
   const featured = shows.filter((show) => show.featured);
   const rest = shows.filter((show) => !show.featured);
   const note = shows.some((show) => show.provisional)
@@ -277,6 +287,8 @@ export function renderListing({ site, path, title, description, heading, lede, s
     path,
     title,
     description,
+    ogTitle,
+    ogDescription,
     body,
     map: true,
     generated,
@@ -288,8 +300,10 @@ export function renderHome(ctx) {
   return renderListing({
     ...ctx,
     path: "/",
-    title: "MineralDigger. UK rock, gem, mineral, fossil and bead shows",
-    description: "Dates, venues and entry in one place. Check before you travel; always confirm with the organiser.",
+    title: "MineralDigger · UK rock, gem, mineral, fossil and bead shows map",
+    description: "Free UK calendar of rock, gem, mineral, fossil and bead shows. Dates, venues and entry on one map. Always confirm with the organiser before you travel.",
+    ogTitle: "MineralDigger · UK rock, gem, mineral, fossil and bead shows",
+    ogDescription: "Dates, venues and entry on one map. Free calendar for collectors and traders. Check the organiser before you travel.",
     heading: "UK rock, gem, mineral, fossil and bead shows on one map.",
     lede: "Dates, venues and entry in one place. Check before you travel; always confirm with the organiser.",
     home: true,
@@ -305,7 +319,7 @@ export function renderType(ctx, key) {
     shows,
     path: `/${key}/`,
     title: `${label} shows in the UK | MineralDigger`,
-    description: TYPE_INTRO[key],
+    description: TYPE_DESCRIPTION[key],
     heading: `${label} shows`,
     lede: TYPE_INTRO[key],
     home: false,

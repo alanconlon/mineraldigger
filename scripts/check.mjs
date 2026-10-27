@@ -72,9 +72,58 @@ const index = await readFile(join(dist, "index.html"), "utf8");
 const tagline = "UK rock, gem, mineral, fossil and bead shows on one map.";
 const subline = "Dates, venues and entry in one place. Check before you travel; always confirm with the organiser.";
 const footer = "Rock, gem, mineral, fossil and bead shows across the UK.";
-if (!index.includes(tagline)) fail("Homepage is missing the tagline.");
-if (!index.includes(subline)) fail("Homepage is missing the subline.");
+const homeTitle = "MineralDigger · UK rock, gem, mineral, fossil and bead shows map";
+const homeDescription = "Free UK calendar of rock, gem, mineral, fossil and bead shows. Dates, venues and entry on one map. Always confirm with the organiser before you travel.";
+const homeOgTitle = "MineralDigger · UK rock, gem, mineral, fossil and bead shows";
+const homeOgDescription = "Dates, venues and entry on one map. Free calendar for collectors and traders. Check the organiser before you travel.";
+if (!index.includes(`<h1>${tagline}</h1>`)) fail("Homepage H1 changed.");
+if (!index.includes(`<p class="lede">${subline}</p>`)) fail("Homepage lede changed.");
+if (!index.includes(`<title>${homeTitle}</title>`)) fail("Homepage title is wrong.");
+if (!index.includes(`<meta name="description" content="${homeDescription}">`)) fail("Homepage meta description is wrong.");
+if (!index.includes(`property="og:title" content="${homeOgTitle}"`)) fail("Homepage og:title is wrong.");
+if (!index.includes(`property="og:description" content="${homeOgDescription}"`)) fail("Homepage og:description is wrong.");
 if (!index.includes(footer)) fail("Homepage is missing the footer line.");
+const hubs = {
+  rock: {
+    heading: "Rock shows",
+    title: "Rock shows in the UK | MineralDigger",
+    description: "UK rock shows and rock, gem and bead weekends on one map. Free calendar from organiser sites.",
+    lede: "Rock shows across the UK, plus the rock, gem and bead weekends that include them. MineralDigger is a free calendar and map of dates and venues from organiser sites. Always confirm times and tickets with the organiser before you travel.",
+  },
+  gem: {
+    heading: "Gem shows",
+    title: "Gem shows in the UK | MineralDigger",
+    description: "UK gem shows and rock, gem and bead weekends. Dates, venues and entry on MineralDigger.",
+    lede: "Gem shows and the rock, gem and bead weekends that list gems. MineralDigger puts UK dates, venues and entry on one map so you can see what is on this weekend and later in the year. Confirm with the organiser before you set off.",
+  },
+  mineral: {
+    heading: "Mineral shows",
+    title: "Mineral shows in the UK | MineralDigger",
+    description: "UK mineral shows and society fairs on one map. Free calendar; confirm with the organiser.",
+    lede: "Mineral shows and society fairs with a date on the organiser site. MineralDigger is a free UK calendar and map for collectors, not a club or society. Check entry, times and any changes with the organiser before you travel.",
+  },
+  fossil: {
+    heading: "Fossil shows",
+    title: "Fossil shows in the UK | MineralDigger",
+    description: "UK fossil shows and mineral weekends that include fossils. Free map calendar on MineralDigger.",
+    lede: "Fossil shows, and mineral weekends that include fossils. MineralDigger lists UK dates and venues from organiser websites on one map. Use it as a finder, then confirm times, tickets and changes with the organiser before you go.",
+  },
+  bead: {
+    heading: "Bead shows",
+    title: "Bead shows in the UK | MineralDigger",
+    description: "UK bead shows and rock, gem and bead weekends. Dates and venues on MineralDigger.",
+    lede: "Bead shows, including the rock, gem and bead weekends. MineralDigger is a free UK calendar and map of dates, venues and entry from organiser sites. Use it to plan a trip, then check with the organiser before you travel.",
+  },
+};
+for (const [key, copy] of Object.entries(hubs)) {
+  const page = await readFile(join(dist, key, "index.html"), "utf8");
+  if (!page.includes(`<h1>${copy.heading}</h1>`)) fail(`${key} hub H1 changed.`);
+  if (!page.includes(`<p class="lede">${copy.lede}</p>`)) fail(`${key} hub lede is wrong.`);
+  if (!page.includes(`<title>${copy.title}</title>`)) fail(`${key} hub title is wrong.`);
+  if (!page.includes(`<meta name="description" content="${copy.description}">`)) fail(`${key} hub description is wrong.`);
+  if (!page.includes(`property="og:title" content="${copy.title}"`)) fail(`${key} hub og:title should match the title.`);
+  if (!page.includes(`property="og:description" content="${copy.description}"`)) fail(`${key} hub og:description should match the description.`);
+}
 if (!index.includes('rel="canonical" href="https://mineraldigger.com/"')) fail("Homepage canonical is not https://mineraldigger.com/.");
 if (!index.includes('property="og:url" content="https://mineraldigger.com/"')) fail("Homepage og:url is not https://mineraldigger.com/.");
 if (!index.includes('property="og:site_name" content="MineralDigger"')) fail("Homepage og:site_name is missing.");
