@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-25",
+  "generated": "2026-10-28",
   "generator": "scripts/refresh.py",
   "shows": [
     {
@@ -48,7 +48,7 @@
       "access_notes": "One hall, level access.",
       "source": {
         "url": "https://sotonminfoss.org.uk/smfsshow.htm",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date, venue and door price are on the society show page. The page also gives satnav postcode SO16 0XN.",
         "also": []
       }
@@ -101,7 +101,7 @@
       "access_notes": "Disabled access.",
       "source": {
         "url": "https://rockexchange.uk/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Both weekends, the door price and the opening times are on the one show page.",
         "also": []
       }
@@ -155,7 +155,7 @@
       "access_notes": "The show page says to use the North Gate and then the Green Gate.",
       "source": {
         "url": "https://www.natureunearthed.co.uk/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date, door price and opening times are on the show page for this October weekend.",
         "also": []
       }
@@ -209,7 +209,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. Printed in the 2026 date list, which is not marked provisional. Door price and opening times are printed in the next-show block for this weekend.",
         "also": []
       }
@@ -263,7 +263,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. Printed in the 2026 date list, which is not marked provisional. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -317,7 +317,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. Printed in the 2026 date list, which is not marked provisional. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -369,7 +369,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.smls.online/show",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "The show page prints Saturday 14 November and does not print the year. 14 November 2026 is that Saturday, so that is the date used here. Street and postcode are from the college contact page. The show page names Haywards Heath College and does not print them.",
         "also": [
           {
@@ -389,7 +389,7 @@
         "name": "Oxford Shows",
         "url": "https://oxfordshows.co.uk/",
         "phone": "07971 346241",
-        "email": "info@oxfordshows.co.uk"
+        "email": null
       },
       "types": [
         "rock",
@@ -427,7 +427,7 @@
       "access_notes": null,
       "source": {
         "url": "https://oxfordshows.co.uk/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date card and entry conditions are on oxfordshows.co.uk.",
         "also": []
       }
@@ -481,7 +481,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -535,7 +535,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -589,7 +589,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -643,7 +643,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -697,7 +697,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -751,7 +751,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -805,7 +805,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -859,7 +859,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -913,7 +913,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.natureunearthed.co.uk/pages/exhibitor-information",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date confirmed on the exhibitor information page. Door price and opening times are not repeated for this weekend.",
         "also": []
       }
@@ -928,7 +928,7 @@
         "name": "Oxford Shows",
         "url": "https://oxfordshows.co.uk/",
         "phone": "07971 346241",
-        "email": "info@oxfordshows.co.uk"
+        "email": null
       },
       "types": [
         "rock",
@@ -966,7 +966,7 @@
       "access_notes": null,
       "source": {
         "url": "https://oxfordshows.co.uk/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date card and entry conditions are on oxfordshows.co.uk.",
         "also": []
       }
@@ -1020,7 +1020,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -1074,7 +1074,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -1128,7 +1128,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -1182,7 +1182,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -1197,7 +1197,7 @@
         "name": "Oxford Shows",
         "url": "https://oxfordshows.co.uk/",
         "phone": "07971 346241",
-        "email": "info@oxfordshows.co.uk"
+        "email": null
       },
       "types": [
         "rock",
@@ -1235,8 +1235,62 @@
       "access_notes": null,
       "source": {
         "url": "https://oxfordshows.co.uk/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date card and entry conditions are on oxfordshows.co.uk.",
+        "also": []
+      }
+    },
+    {
+      "id": "rockngem-2027-06-05-co61eh",
+      "slug": "rock-gem-and-bead-show-marks-tey-2027-06-05",
+      "name": "Rock, Gem & Bead Show",
+      "summary": "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, for retail and wholesale visitors. This 2027 date is marked provisional on their site.",
+      "organiser": {
+        "id": "rockngem",
+        "name": "Rock, Gem & Bead Shows",
+        "url": "https://www.rockngem.co/",
+        "phone": "07712 276041",
+        "email": null
+      },
+      "types": [
+        "rock",
+        "gem",
+        "mineral",
+        "fossil",
+        "bead"
+      ],
+      "start": "2027-06-05",
+      "end": "2027-06-06",
+      "provisional": true,
+      "year_inferred": false,
+      "times": {
+        "summary": null,
+        "notes": null
+      },
+      "entry": {
+        "kind": "unknown",
+        "label": "Unknown",
+        "adult_gbp": null,
+        "notes": null
+      },
+      "venue": {
+        "name": "Marks Tey Parish Hall",
+        "street": null,
+        "postcode": "CO6 1EH",
+        "town": "Marks Tey",
+        "county": "Essex",
+        "nation": "England",
+        "lat": 51.87523,
+        "lng": 0.781389,
+        "place_note": null
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.rockngem.co/",
+        "retrieved": "2026-10-28",
+        "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
     },
@@ -1289,7 +1343,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -1343,7 +1397,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -1397,7 +1451,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -1451,7 +1505,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -1466,7 +1520,7 @@
         "name": "Oxford Shows",
         "url": "https://oxfordshows.co.uk/",
         "phone": "07971 346241",
-        "email": "info@oxfordshows.co.uk"
+        "email": null
       },
       "types": [
         "rock",
@@ -1504,7 +1558,7 @@
       "access_notes": null,
       "source": {
         "url": "https://oxfordshows.co.uk/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date card and entry conditions are on oxfordshows.co.uk.",
         "also": []
       }
@@ -1558,7 +1612,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -1612,7 +1666,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -1666,7 +1720,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -1720,7 +1774,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -1774,7 +1828,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -1828,7 +1882,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -1882,7 +1936,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -1936,7 +1990,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -1990,7 +2044,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -2043,7 +2097,7 @@
       "access_notes": "Disabled access.",
       "source": {
         "url": null,
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Both weekends, the door price and the opening times are on the one show page.",
         "also": []
       }
@@ -2097,7 +2151,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.natureunearthed.co.uk/pages/exhibitor-information",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date confirmed on the exhibitor information page. Door price and opening times are not repeated for this weekend.",
         "also": []
       }
@@ -2151,7 +2205,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
@@ -2205,7 +2259,7 @@
       "access_notes": null,
       "source": {
         "url": "https://www.rockngem.co/",
-        "retrieved": "2026-10-25",
+        "retrieved": "2026-10-28",
         "notes": "Date from the organiser homepage. 2027 dates are printed under the heading Provisional 2027 Dates. This date line does not repeat a door price or opening times.",
         "also": []
       }
