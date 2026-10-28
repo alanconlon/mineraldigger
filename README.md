@@ -26,7 +26,7 @@ npm run dev
 - `/feature/` free listing, featured show £15, year pass £99, site sponsor £25 a month, Friday email £12 an issue. The four paid cards link to live Stripe checkout.
 - `/thanks/payment/` post-payment thank-you page. It is `noindex` and is not in the sitemap. This site does not ping IndexNow.
 - `/submit/` organiser form
-- `/digest/` a preview of the Friday email. Nothing is sent
+- `/digest/` a preview of the Friday email. The page itself sends nothing. Drafts are made with the scripts in Friday email drafts below.
 - `/about/` how shows are listed
 - `/privacy/` what the site collects, who handles it, and how to ask about it
 
@@ -149,12 +149,29 @@ npx wrangler pages deploy dist --project-name mineraldigger --branch main
 
 `dist/_headers` sets a few basic response headers. `robots.txt` points at `https://mineraldigger.com/sitemap.xml`.
 
+## Friday email drafts
+
+`scripts/digest.py` reads `data/shows.json` and writes `out/newsletter-YYYY-MM-DD.md`. The date is the coming Friday. On a Saturday or Sunday it looks ahead to the next weekend, the same window as `/digest/`.
+
+The note lists shows that weekend and for the next couple of weeks (the two weekends after it): date, venue, times and entry when the catalogue already has them. It does not invent a price or a show. A weekend with nothing on is left out. If that whole window is empty and later shows are still listed, the file is a short coming-up note. If nothing is upcoming, it writes nothing.
+
+`scripts/buttondown_draft.py` uploads that file to the [mineraldigger](https://buttondown.com/mineraldigger) Buttondown newsletter as a draft. It calls `https://api.buttondown.com/v1` with `Authorization: Token` and `status` set to `draft`. It never sends or schedules. If a draft with the same subject already exists, it updates that draft and does not create a second one.
+
+Set `MINERALDIGGER_BUTTONDOWN_API_KEY` to the API key for that newsletter. The script does not read `BUTTONDOWN_API_KEY`. With the variable unset, or with `--dry-run`, it prints the subject and makes no request, so a run without a key still exits cleanly.
+
+```bash
+python3 scripts/digest.py
+python3 scripts/buttondown_draft.py
+```
+
+`out/` is generated and is not committed. The public `/digest/` page stays a preview. These scripts do not mail the list.
+
 ## Still to do before a public launch
 
 - Keep `mineraldigger.co.uk` on the same Pages project as `mineraldigger.com`, with no redirect between them
 - In Email Routing, verify the destination `mineraldigger.hq@gmail.com`, then run `npx wrangler deploy` from `workers/submit/`
 
-Not in this version: DNS, sending the Friday email, Facebook scraping, mind-body-spirit listings, and Ireland. Live Stripe checkout for the four products is on `/feature/`. Facebook and Bluesky are linked from the footer.
+Not in this version: DNS, mailing the Friday list automatically, Facebook scraping, mind-body-spirit listings, and Ireland. The Friday email scripts above create a Buttondown draft only. Live Stripe checkout for the four products is on `/feature/`. Facebook and Bluesky are linked from the footer.
 
 ## Brand
 
