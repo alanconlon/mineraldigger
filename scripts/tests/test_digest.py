@@ -19,6 +19,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import buttondown_draft  # noqa: E402
 from digest import (  # noqa: E402
+    empty_friday_sponsor,
     issue_friday,
     load_json,
     render_newsletter,
@@ -29,6 +30,11 @@ from digest import (  # noqa: E402
 TODAY = date(2026, 10, 28)
 SHOWS = load_json(ROOT / "data" / "shows.json")["shows"]
 SITE = "https://mineraldigger.com"
+EMPTY_FRIDAY = (
+    "Run a rock, gem or lapidary shop? Sponsor this email for £12 an issue, "
+    "or the site for £25 a month: "
+    "[see the sponsor options](https://mineraldigger.com/feature/)."
+)
 
 
 def run_main(argv: list[str]) -> tuple[int, str]:
@@ -69,6 +75,8 @@ class DigestTests(unittest.TestCase):
         self.assertIn(f"# {subject_for(friday)}", markdown)
         self.assertFalse(banned(markdown))
         self.assertNotIn("Sponsored", markdown)
+        self.assertEqual(markdown.count(EMPTY_FRIDAY), 1)
+        self.assertIn(EMPTY_FRIDAY + "\n\n## This weekend", markdown)
         self.assertNotIn("www.rockngem.co", markdown)
         self.assertNotIn("07712", markdown)
         self.assertNotIn("fills quickly", markdown)
@@ -144,6 +152,52 @@ class DigestTests(unittest.TestCase):
         _, plain = render_newsletter(SHOWS, TODAY, SITE, wrong_week, {"shows": [], "organisers": []})
         self.assertNotIn("Not this week", plain)
         self.assertNotIn("Sponsored", plain)
+        self.assertIn(EMPTY_FRIDAY, plain)
+        self.assertNotIn("see the sponsor options", markdown)
+
+    def test_empty_friday_slot_invites_a_sponsor(self):
+        self.assertEqual(empty_friday_sponsor(SITE), EMPTY_FRIDAY)
+        stripe = load_json(ROOT / "data" / "stripe.json")
+        self.assertEqual(stripe["prices"]["friday_email"], 12)
+        self.assertEqual(stripe["prices"]["site_sponsor"], 25)
+        self.assertNotIn("!", EMPTY_FRIDAY)
+        self.assertNotIn("\u2014", EMPTY_FRIDAY)
+        self.assertNotIn("\u2013", EMPTY_FRIDAY)
+
+        for sponsors in (
+            None,
+            {},
+            {"site": None, "friday": None},
+            {"friday": {}},
+            {"friday": {"issue": "2026-10-30", "name": "  ", "url": "https://example.com/blank", "line": "No."}},
+            {"friday": {"issue": "2026-11-06", "name": "Other week", "url": "https://example.com/other"}},
+        ):
+            _, markdown = render_newsletter(SHOWS, TODAY, SITE, sponsors)
+            self.assertEqual(markdown.count(EMPTY_FRIDAY), 1)
+            self.assertNotIn("Sponsored", markdown)
+            self.assertNotIn("example.com", markdown)
+            self.assertFalse(banned(markdown))
+
+        booked = {
+            "friday": {
+                "issue": "2026-10-30",
+                "name": "Quarry Lane",
+                "url": "http://example.com/quarry",
+                "line": "",
+            }
+        }
+        _, named = render_newsletter(SHOWS, TODAY, SITE, booked)
+        self.assertIn("Sponsored. Quarry Lane.", named)
+        self.assertNotIn("see the sponsor options", named)
+        self.assertNotIn(EMPTY_FRIDAY, named)
+
+        _, later = render_newsletter(SHOWS, date(2026, 12, 4), SITE, {"friday": None})
+        self.assertIn(EMPTY_FRIDAY + "\n\n## Coming up", later)
+
+        _, markdown = render_newsletter(SHOWS, TODAY, SITE, {"friday": None})
+        _, body = buttondown_draft.split_subject(markdown)
+        self.assertIn(EMPTY_FRIDAY, body)
+        self.assertNotIn("# Mineral shows", body)
 
     def test_write_uses_the_issue_friday_filename(self):
         import tempfile
@@ -161,6 +215,7 @@ class DigestTests(unittest.TestCase):
             self.assertEqual(path, out / "newsletter-2026-10-30.md")
             text = path.read_text(encoding="utf-8")
             self.assertIn("Sunbury-on-Thames", text)
+            self.assertIn(EMPTY_FRIDAY, text)
             self.assertFalse(banned(text))
 
 
@@ -241,6 +296,9 @@ class ButtondownTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             path = write_newsletter(TODAY, out_dir=Path(tmp))
+            draft = path.read_text(encoding="utf-8")
+            _, body = buttondown_draft.split_subject(draft)
+            self.assertIn(EMPTY_FRIDAY, body)
             with mock.patch("buttondown_draft.urllib.request.urlopen", side_effect=AssertionError("network")):
                 code, output = run_main(["--file", str(path), "--dry-run"])
             self.assertEqual(code, 0)
@@ -262,6 +320,7 @@ class ButtondownTests(unittest.TestCase):
         subject, body = buttondown_draft.split_subject(markdown)
         self.assertEqual(subject, subject_for(friday))
         self.assertIn("buttondown-editor-mode: plaintext", body)
+        self.assertIn(EMPTY_FRIDAY, body)
         self.assertNotIn(f"# {subject}", body)
 
         server = DraftServer()
@@ -316,6 +375,8 @@ class ButtondownTests(unittest.TestCase):
                 self.assertIn("Updated Buttondown draft draft-1.", second)
                 self.assertEqual(len(server.emails), 1)
                 self.assertEqual(server.emails[0]["status"], "draft")
+                self.assertIn(EMPTY_FRIDAY, server.emails[0]["body"])
+                self.assertNotIn("Sponsored", server.emails[0]["body"])
                 self.assertEqual(sum(call[0] == "POST" for call in server.calls), 1)
             finally:
                 server.shutdown()

@@ -1,5 +1,5 @@
 {
-  "_note": "Leave null until someone pays. site appears on the homepage and type pages. friday is included in the Friday email draft when issue matches that Friday (YYYY-MM-DD). The sign-up page does not show it.",
+  "_note": "Leave null until someone pays. site appears on the homepage and type pages. friday is included in the Friday email draft when issue matches that Friday (YYYY-MM-DD). When friday is empty, that draft invites a sponsor and links to /feature/. The sign-up page does not show it.",
   "site": null,
   "friday": null
 }

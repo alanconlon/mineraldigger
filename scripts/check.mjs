@@ -230,6 +230,9 @@ if (digest.includes("This weekend's shows")) fail("Digest should not list this w
 if (digest.includes("Friday email sponsor") || digest.includes("Sponsor one issue") || digest.includes("No sponsor for this issue")) {
   fail("Digest should not show a sponsor box under the form.");
 }
+if (digest.includes("see the sponsor options") || digest.includes("lapidary shop")) {
+  fail("Digest sign-up page should not include the Friday email sponsor invitation.");
+}
 if (digest.includes("No shows in the list fall on that weekend.")) fail("Digest should not preview an empty weekend.");
 if (digest.includes("Friday email sponsorship is coming soon")) fail("Digest still says Friday sponsorship is coming soon.");
 if (/Not sent yet|Nothing is sent yet|Mail is not sent yet|Mail is still to be connected|mail is not connected/i.test(digest)) {

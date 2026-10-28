@@ -110,7 +110,7 @@ After payment, Stripe customers should land on `https://mineraldigger.com/thanks
 Paid placement data, still empty:
 
 - `data/featured.json` for a show id or an organiser id, with an inclusive `until` date
-- `data/sponsors.json` for a site sponsor, or a Friday sponsor whose `issue` is that Friday (`YYYY-MM-DD`). The Friday sponsor is written into the email draft. The sign-up page does not show it.
+- `data/sponsors.json` for a site sponsor, or a Friday sponsor whose `issue` is that Friday (`YYYY-MM-DD`). The Friday sponsor is written into the email draft. When that slot is empty, the draft invites a sponsor instead. The sign-up page does not show it.
 
 ## Submit form
 
@@ -158,6 +158,8 @@ The home screen install uses `manifest.webmanifest`, `pwa.js` and `sw.js` at the
 ## Friday email drafts
 
 `scripts/digest.py` reads `data/shows.json` and writes `out/newsletter-YYYY-MM-DD.md`. The date is the coming Friday. On a Saturday or Sunday it looks ahead to the next weekend. That list is for the email draft. `/digest/` is the sign-up page and does not print it.
+
+If that Friday has no sponsor in `data/sponsors.json`, the draft adds one line: a shop can sponsor the email for £12 an issue, or the site for £25 a month, linking to `https://mineraldigger.com/feature/`. A booked Friday sponsor replaces that line.
 
 The note lists shows that weekend and for the next couple of weeks (the two weekends after it): date, venue, times and entry when the catalogue already has them. It does not invent a price or a show. A weekend with nothing on is left out. If that whole window is empty and later shows are still listed, the file is a short coming-up note. If nothing is upcoming, it writes nothing.
 
