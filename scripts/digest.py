@@ -3,8 +3,8 @@
 
 Reads data/shows.json (the catalogue built from organiser pages) and writes
 out/newsletter-YYYY-MM-DD.md. The date is the issue Friday: the coming Friday,
-or the next Friday when today is Saturday or Sunday. That matches the
-Friday-to-Sunday window on /digest/.
+or the next Friday when today is Saturday or Sunday. /digest/ is the
+sign-up page and does not list that window.
 
 The note lists shows on that weekend and over the next couple of weeks
 (the two weekends after it). Each line uses the date, venue, and entry
@@ -13,7 +13,10 @@ catalogue has one. Empty weekends are left out. If that window is empty
 and later shows are still on the list, the file is a short coming-up note.
 If nothing is upcoming, nothing is written.
 
-This script does not send email.
+This script does not send email. When sponsors.friday is empty, or its issue
+is not that Friday, the draft includes one invitation to sponsor the email
+(£12 an issue) or the site (£25 a month). A booked Friday sponsor replaces
+that line. The sign-up page does not show either.
 
 Examples:
   python3 scripts/digest.py
@@ -230,22 +233,33 @@ def heading_span(shows: list[dict]) -> str:
     )
 
 
-def sponsor_markdown(sponsors: dict | None, friday: date) -> str | None:
+def empty_friday_sponsor(site_url: str) -> str:
+    """Invitation used when no Friday email sponsor is booked for that issue.
+
+    Copy approved 28 October 2026. Amounts match /feature/: Friday email £12
+    an issue, site sponsor £25 a month.
+    """
+    base = site_url.rstrip("/")
+    return (
+        "Run a rock, gem or lapidary shop? Sponsor this email for £12 an issue, "
+        f"or the site for £25 a month: [see the sponsor options]({base}/feature/)."
+    )
+
+
+def sponsor_markdown(sponsors: dict | None, friday: date, site_url: str = SITE_URL) -> str:
+    """Booked Friday sponsor, or the empty-slot invitation when that issue is open."""
     row = (sponsors or {}).get("friday") if isinstance(sponsors, dict) else None
-    if not isinstance(row, dict):
-        return None
-    if row.get("issue") != friday.isoformat():
-        return None
-    name = (row.get("name") or "").strip()
-    if not name:
-        return None
-    url = (row.get("url") or "").strip()
-    line = (row.get("line") or "").strip()
-    head = f"[{name}]({url})" if url.startswith("https://") else name
-    text = f"Sponsored. {head}."
-    if line:
-        text = f"{text} {line}"
-    return text
+    if isinstance(row, dict) and row.get("issue") == friday.isoformat():
+        name = (row.get("name") or "").strip()
+        if name:
+            url = (row.get("url") or "").strip()
+            line = (row.get("line") or "").strip()
+            head = f"[{name}]({url})" if url.startswith("https://") else name
+            text = f"Sponsored. {head}."
+            if line:
+                text = f"{text} {line}"
+            return text
+    return empty_friday_sponsor(site_url)
 
 
 def hub_lines(shows: list[dict], site_url: str) -> list[str]:
@@ -311,9 +325,7 @@ def render_newsletter(
         ),
         "",
     ]
-    sponsor = sponsor_markdown(sponsors, friday)
-    if sponsor:
-        blocks.extend([sponsor, ""])
+    blocks.extend([sponsor_markdown(sponsors, friday, site_url), ""])
 
     if this_weekend:
         blocks.extend(["## This weekend", ""])
