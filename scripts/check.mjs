@@ -476,28 +476,35 @@ for (const show of catalogue.shows) {
   if (JSON.stringify(event.performer) !== JSON.stringify(event.organizer)) {
     fail(`${show.slug} performer is not the same organization as organizer.`);
   }
-  const offer = event.offers;
-  if (!offer || offer["@type"] !== "Offer") {
-    fail(`${show.slug} is missing an Offer.`);
-    continue;
-  }
-  if (offer.availability !== "https://schema.org/InStock") fail(`${show.slug} offer availability is not InStock.`);
-  if (offer.url !== pageUrl) fail(`${show.slug} offer url is not the mineraldigger.com show page.`);
-  if (offer.validFrom !== offerValidFrom(refreshed)) fail(`${show.slug} offer validFrom is not the refresh date in UK time.`);
-  if (String(offer.url).includes("mineraldigger.co.uk") || String(event.url).includes("mineraldigger.co.uk")) {
+  if (String(event.url).includes("mineraldigger.co.uk")) {
     fail(`${show.slug} Event links to mineraldigger.co.uk.`);
   }
+  const offer = event.offers;
   const free = show.entry.kind === "free" || show.entry.adult_gbp === 0;
   const priced = show.entry.kind === "paid" && Number.isFinite(show.entry.adult_gbp) && show.entry.adult_gbp > 0;
-  if (free) {
-    if (offer.price !== "0" || offer.priceCurrency !== "GBP" || event.isAccessibleForFree !== true) {
-      fail(`${show.slug} free entry should be price 0 GBP and accessible for free.`);
+  if (free || priced) {
+    if (!offer || offer["@type"] !== "Offer") {
+      fail(`${show.slug} is missing an Offer.`);
+      continue;
     }
-  } else if (priced) {
-    if (offer.price !== String(show.entry.adult_gbp) || offer.priceCurrency !== "GBP" || event.isAccessibleForFree !== false) {
+    if (offer.availability !== "https://schema.org/InStock") fail(`${show.slug} offer availability is not InStock.`);
+    if (offer.url !== pageUrl) fail(`${show.slug} offer url is not the mineraldigger.com show page.`);
+    if (offer.validFrom !== offerValidFrom(refreshed)) fail(`${show.slug} offer validFrom is not the refresh date in UK time.`);
+    if (String(offer.url).includes("mineraldigger.co.uk")) fail(`${show.slug} Event links to mineraldigger.co.uk.`);
+    if (free) {
+      if (offer.price !== "0" || offer.priceCurrency !== "GBP" || event.isAccessibleForFree !== true) {
+        fail(`${show.slug} free entry should be price 0 GBP and accessible for free.`);
+      }
+    } else if (offer.price !== String(show.entry.adult_gbp) || offer.priceCurrency !== "GBP" || event.isAccessibleForFree !== false) {
       fail(`${show.slug} paid entry should keep the door price in GBP.`);
     }
-  } else if ("price" in offer || "priceCurrency" in offer || "isAccessibleForFree" in event) {
+  } else if (offer) {
+    fail(`${show.slug} unknown entry should omit offers rather than emit an incomplete Offer.`);
+  } else if (show.entry.kind === "paid") {
+    if (event.isAccessibleForFree !== false) {
+      fail(`${show.slug} paid entry with an unknown price should stay not free, without an Offer.`);
+    }
+  } else if ("isAccessibleForFree" in event) {
     fail(`${show.slug} unknown entry should not invent a price.`);
   }
 }

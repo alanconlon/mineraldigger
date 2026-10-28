@@ -360,20 +360,19 @@ export function offerValidFrom(dateISO) {
 }
 
 function eventOffer(show, pageUrl, validFrom) {
-  const offer = { "@type": "Offer" };
   const free = show.entry.kind === "free" || show.entry.adult_gbp === 0;
   const priced = show.entry.kind === "paid" && Number.isFinite(show.entry.adult_gbp) && show.entry.adult_gbp > 0;
-  if (free) {
-    offer.price = "0";
-    offer.priceCurrency = "GBP";
-  } else if (priced) {
-    offer.price = String(show.entry.adult_gbp);
-    offer.priceCurrency = "GBP";
-  }
-  offer.availability = "https://schema.org/InStock";
-  offer.url = pageUrl;
-  offer.validFrom = validFrom;
-  return offer;
+  // An Offer without price and priceCurrency is incomplete. Search Console warns on it.
+  // Unknown admission omits offers. Publishing 0 would claim the show is free.
+  if (!free && !priced) return null;
+  return {
+    "@type": "Offer",
+    price: free ? "0" : String(show.entry.adult_gbp),
+    priceCurrency: "GBP",
+    availability: "https://schema.org/InStock",
+    url: pageUrl,
+    validFrom,
+  };
 }
 
 function jsonLd(show, site, generated) {
@@ -410,9 +409,10 @@ function jsonLd(show, site, generated) {
     organizer,
     // Mineral shows are not performances. The organiser fills performer so Search Console stops flagging the field.
     performer: { ...organizer },
-    // Unknown door prices keep the Offer, without a price. Publishing 0 would claim the show is free.
-    offers: eventOffer(show, pageUrl, offerValidFrom(refreshed)),
   };
+  const offer = eventOffer(show, pageUrl, offerValidFrom(refreshed));
+  if (offer) data.offers = offer;
+  // Set only when entry says free or paid. Unknown admission leaves it off.
   if (show.entry.kind === "free" || show.entry.adult_gbp === 0) data.isAccessibleForFree = true;
   else if (show.entry.kind === "paid") data.isAccessibleForFree = false;
   return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
