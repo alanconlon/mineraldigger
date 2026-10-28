@@ -143,7 +143,6 @@ async function main() {
   const catalogue = await readJson(join(root, "data/shows.json"));
   const stripe = applyStripe(await readJson(join(root, "data/stripe.json")));
   const featured = await readJson(join(root, "data/featured.json"));
-  const sponsors = await readJson(join(root, "data/sponsors.json"));
   const site = await readJson(join(root, "data/site.json"));
   const generated = catalogue.generated || todayISO;
   const shows = catalogue.shows;
@@ -157,7 +156,7 @@ async function main() {
   const origin = new URL(site.url).origin;
   await writeFile(join(dist, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml\n`);
 
-  const ctx = { site, shows: upcoming, generated, today, todayISO, stripe, sponsors };
+  const ctx = { site, shows: upcoming, generated, today, todayISO, stripe };
   await writePage("index.html", renderHome(ctx));
   for (const key of ["rock", "gem", "mineral", "fossil", "bead"]) {
     await writePage(`${key}/index.html`, renderType(ctx, key));
@@ -167,7 +166,7 @@ async function main() {
   await writePage("thanks/payment/index.html", renderThanks({ site, generated }));
   await writePage("submit/index.html", renderSubmit({ site, generated }));
   await writePage("about/index.html", renderAbout({ site, generated }));
-  await writePage("digest/index.html", renderDigest({ site, shows: upcoming, sponsors, generated, today, stripe }));
+  await writePage("digest/index.html", renderDigest({ site, generated }));
   await writePage("app/index.html", renderApp({ site, generated }));
   await writePage("offline/index.html", renderOffline({ site, generated }));
   await writePage("privacy/index.html", renderPrivacy({ site, generated }));

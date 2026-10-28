@@ -1,4 +1,4 @@
-import { formatDay, formatRange, monthKey, monthLabel, shortStack, digestWeekend, overlaps } from "../src/js/format.js";
+import { formatDay, formatRange, monthKey, monthLabel, shortStack } from "../src/js/format.js";
 import { stripeReady } from "./feature.mjs";
 
 const TYPES = [
@@ -251,7 +251,7 @@ function signupForm() {
         <input type="text" name="metadata__postcode" placeholder="Your postcode (optional)" aria-label="Postcode" autocomplete="postal-code" maxlength="12">
         <input type="hidden" name="embed" value="1">
         <button class="pay" type="submit">Sign me up</button>
-        <p class="small muted">A free Friday email of upcoming UK rock, gem, mineral, fossil and bead shows. No spam, unsubscribe any time. You'll get a short email to confirm.</p>
+        <p class="small muted">A free Friday email of upcoming UK rock, gem, mineral, fossil and bead shows. Unsubscribe any time. Emails are sent by <a href="https://buttondown.com/" rel="noopener">Buttondown</a>; you'll get a link to confirm.</p>
       </form>`;
 }
 
@@ -791,30 +791,12 @@ export function renderAbout({ site, generated }) {
 
 const DIGEST_DESCRIPTION = "The Friday email: a free weekly list of UK rock, gem, mineral, fossil and bead shows for the coming weekend.";
 
-export function renderDigest({ site, shows, sponsors, generated, today, stripe }) {
-  const weekend = digestWeekend(today);
-  const rows = shows.filter((show) => overlaps(show, weekend.start, weekend.end));
-  const friday = sponsors && sponsors.friday;
-  const fridayPrice = stripe?.prices?.friday_email ?? 12;
-  const fridayOpen = stripeReady(stripe?.links?.friday_email);
-  const sponsor = friday && friday.issue === weekend.start
-    ? `<aside class="example"><p class="eyebrow">Sponsored</p><p><a rel="sponsored" href="${esc(friday.url)}">${esc(friday.name)}</a>. ${esc(friday.line || "")}</p></aside>`
-    : fridayOpen
-      ? `<aside class="example"><p class="eyebrow">Friday email sponsor</p><p>No sponsor for this issue. <a href="/feature/">Sponsor one issue for £${fridayPrice}</a>.</p></aside>`
-      : `<aside class="example"><p class="eyebrow">Friday email sponsor</p><p>No sponsor for this issue. <a href="/feature/">Friday email sponsorship is coming soon</a> (£${fridayPrice} an issue).</p></aside>`;
-  const list = rows.length
-    ? `<ul>${rows.map((show) => `<li><a href="/show/${esc(show.slug)}/">${esc(show.name)}</a>, ${esc(formatRange(show.start, show.end))}, ${esc(show.venue.town)}. ${esc(show.entry.label)}.</li>`).join("")}</ul>`
-    : `<p>No shows in the list fall on that weekend.</p>`;
+export function renderDigest({ site, generated }) {
   const body = `<article class="page"><div class="wrap-narrow prose">
       <p class="eyebrow">Free weekly email</p>
       <h1>The Friday email</h1>
       <p class="lede">Every Friday morning: a free email of the UK rock, gem, mineral, fossil and bead shows on that weekend.</p>
       ${signupForm()}
-      <h2>This weekend's shows</h2>
-      <p>${esc(formatRange(weekend.start, weekend.end))}</p>
-      ${sponsor}
-      ${list}
-      <p class="fine">The Friday email covers the coming Friday to Sunday. On a Saturday or Sunday it looks ahead to the next weekend.</p>
     </div></article>`;
   return layout({
     site,
