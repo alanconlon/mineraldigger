@@ -9,3 +9,6 @@ uploads/
 __pycache__/
 *.pyc
 .wrangler/
+fb_pages.json
+bluesky.json
+*.tmp

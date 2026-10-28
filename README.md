@@ -168,12 +168,40 @@ python3 scripts/buttondown_draft.py
 
 `out/` is generated and is not committed. Sign-up on `/digest/` posts to Buttondown. These scripts create a draft only. They do not send or schedule the list.
 
+## Facebook and Bluesky
+
+Ann drafts the weekly posts. The Diggers CEO publishes them after Alan has OK'd the text.
+
+`scripts/facebook_post.py` and `scripts/bluesky_post.py` read upcoming UK shows from `data/shows.json`. With no extra flag they print a draft and stop. A dry run makes no Facebook or Bluesky request, and it leaves the logs untouched.
+
+Even ISO weeks lead with the next show and link to that show on mineraldigger.com. Odd weeks lead with a type hub (`/rock/`, `/gem/`, `/mineral/`, `/fossil/`, `/bead/`) and the next show of that type. The copy is plain British English, in the same voice as the Friday email, with no em dashes and no exclamation marks. A door price is included only when the catalogue already has one.
+
+```bash
+python3 scripts/facebook_post.py --today 2026-10-28
+python3 scripts/bluesky_post.py --today 2026-10-28
+```
+
+Use the same `--today` on the draft and on the publish, so the text Alan saw is the text that goes out.
+
+After Alan OKs both drafts:
+
+```bash
+python3 scripts/facebook_post.py --today 2026-10-28 --publish
+python3 scripts/bluesky_post.py --today 2026-10-28 --publish
+```
+
+Each network keeps a log keyed by ISO week (`2026-W44`): `growth/facebook_posts.json` and `growth/bluesky_posts.json`. When that week is already there, `--publish` stops. `--force` posts the week again and replaces that one key.
+
+Facebook posts to the Page in `growth/facebook_page.json` (Graph id `1419817424553579`). The page token is `MINERALDIGGER_FB_PAGE_TOKEN`, or the entry for that page id in `~/.secrets/fb_pages.json`. That file stays on the machine. It can map the page id to a token, or use `page_id` and `access_token`.
+
+Bluesky posts as `mineraldigger.com`. The app password is `MINERALDIGGER_BLUESKY_APP_PASSWORD`, or the `mineraldigger.com` entry in `~/.secrets/bluesky.json`.
+
 ## Still to do before a public launch
 
 - Keep `mineraldigger.co.uk` on the same Pages project as `mineraldigger.com`, with no redirect between them
 - In Email Routing, verify the destination `mineraldigger.hq@gmail.com`, then run `npx wrangler deploy` from `workers/submit/`
 
-Not in this version: DNS, mailing the Friday list automatically, Facebook scraping, mind-body-spirit listings, and Ireland. Sign-up is on `/digest/` through Buttondown. The Friday email scripts above create a Buttondown draft only. Live Stripe checkout for the four products is on `/feature/`. Facebook and Bluesky are linked from the footer.
+Not in this version: DNS, mailing the Friday list automatically, Facebook scraping, mind-body-spirit listings, and Ireland. Sign-up is on `/digest/` through Buttondown. The Friday email scripts above create a Buttondown draft only. Weekly Facebook and Bluesky posts are drafted with the scripts above and go out only when someone runs both with `--publish` after Alan has OK'd the text. Live Stripe checkout for the four products is on `/feature/`. Facebook and Bluesky are linked from the footer.
 
 ## Brand
 
