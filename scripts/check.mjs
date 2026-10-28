@@ -1,6 +1,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { digestWeekend, formatRange, iso, overlaps } from "../src/js/format.js";
 import { featuredIds, stripeReady } from "./feature.mjs";
 import { offerValidFrom, renderFeature } from "./render.mjs";
 import { validateSubmission } from "../functions/api/validate.js";
@@ -212,9 +213,48 @@ for (const label of ["Pay £15 with Stripe", "Pay £99 with Stripe", "Pay £25 a
   if (!feature.includes(label)) fail(`Feature page is missing ${label}.`);
 }
 const digest = await readFile(join(dist, "digest/index.html"), "utf8");
+const digestDescription = "The Friday email: a free weekly list of UK rock, gem, mineral, fossil and bead shows for the coming weekend.";
 if (!digest.includes("Sponsor one issue for £12")) fail("Digest should invite the live Friday sponsor payment.");
 if (digest.includes("Friday email sponsorship is coming soon")) fail("Digest still says Friday sponsorship is coming soon.");
-if (!digest.includes("Not sent yet") || !digest.includes("Nothing is sent yet")) fail("Digest should stay an unsent preview.");
+if (/Not sent yet|Nothing is sent yet|Mail is not sent yet|Mail is still to be connected|mail is not connected/i.test(digest)) {
+  fail("Digest still says mail is not connected.");
+}
+if (!digest.includes("<h1>The Friday email</h1>")) fail("Digest heading should be The Friday email.");
+if (!digest.includes("<title>The Friday email | MineralDigger</title>")) fail("Digest title is wrong.");
+if (!digest.includes(`<meta name="description" content="${digestDescription}">`)) fail("Digest meta description is wrong.");
+if (!digest.includes(`property="og:description" content="${digestDescription}"`)) fail("Digest og:description is wrong.");
+if (!digest.includes(`name="twitter:description" content="${digestDescription}"`)) fail("Digest twitter:description is wrong.");
+if (!digest.includes('action="https://buttondown.com/api/emails/embed-subscribe/mineraldigger"')) {
+  fail("Digest form does not post to the MineralDigger Buttondown embed.");
+}
+if (!digest.includes('method="post"')) fail("Digest form method is not post.");
+if (!digest.includes('type="email" name="email" required')) fail("Digest email field is not required.");
+if (!digest.includes('name="metadata__postcode"')) fail("Digest form is missing the optional postcode.");
+if (!digest.includes('type="hidden" name="embed" value="1"')) fail("Digest form is missing the hidden embed field.");
+if (!digest.includes('data-thanks="/thanks/"')) fail("Digest form does not send sign-ups to /thanks/.");
+if (!digest.includes(">Sign me up</button>")) fail("Digest button should say Sign me up.");
+if (!digest.includes("unsubscribe any time")) fail("Digest is missing the unsubscribe note.");
+if (!digest.includes("<h2>This weekend's shows</h2>")) fail("Digest is missing the weekend preview heading.");
+if (!digest.includes('src="/js/newsletter.js"')) fail("Digest is missing the sign-up script.");
+const builtToday = new Date();
+const builtWeekend = digestWeekend(builtToday);
+const weekendLabel = formatRange(builtWeekend.start, builtWeekend.end);
+if (!digest.includes(weekendLabel)) fail(`Digest weekend range should be ${weekendLabel}.`);
+const digestCatalogue = JSON.parse(await readFile(join(root, "data/shows.json"), "utf8"));
+const digestToday = iso(builtToday);
+const digestShows = digestCatalogue.shows.filter((show) => show.end >= digestToday && overlaps(show, builtWeekend.start, builtWeekend.end));
+if (digestShows.length) {
+  for (const show of digestShows) {
+    if (!digest.includes(`/show/${show.slug}/`)) fail(`Digest weekend list is missing ${show.slug}.`);
+  }
+} else if (!digest.includes("No shows in the list fall on that weekend.")) {
+  fail("Digest should say when that weekend has no shows.");
+}
+const newsletterJs = await readFile(join(dist, "js/newsletter.js"), "utf8");
+if (!newsletterJs.includes('location.href = f.getAttribute("data-thanks") || "/thanks/"')) {
+  fail("Sign-up script does not follow data-thanks to /thanks/.");
+}
+if (!newsletterJs.includes('mode: "no-cors"')) fail("Sign-up script should post to Buttondown in the background.");
 
 const about = await readFile(join(dist, "about/index.html"), "utf8");
 if (/\bfairs?\b/i.test(about)) fail("About page still calls shows fairs.");
@@ -349,6 +389,7 @@ if (!sitemap.includes("<loc>https://mineraldigger.com/</loc>")) fail("Sitemap is
 if (sitemap.includes("mineraldigger.co.uk")) fail("Sitemap still points at mineraldigger.co.uk.");
 if (!sitemap.includes("<loc>https://mineraldigger.com/privacy/</loc>")) fail("Sitemap is missing the privacy page.");
 if (sitemap.includes("/thanks/payment")) fail("Thank-you page must stay out of the sitemap.");
+if (sitemap.includes("<loc>https://mineraldigger.com/thanks/</loc>")) fail("Sign-up thank-you page must stay out of the sitemap.");
 if (sitemap.includes("404")) fail("404 page must stay out of the sitemap.");
 const privacy = await readFile(join(dist, "privacy/index.html"), "utf8");
 if (!privacy.includes("<title>Privacy | MineralDigger</title>")) fail("Privacy title is wrong.");
@@ -361,6 +402,12 @@ if (!privacy.includes("Cloudflare")) fail("Privacy page does not name Cloudflare
 if (!privacy.includes('href="https://www.dataprotection.ie/"')) fail("Privacy page does not point at the Irish DPC.");
 if (!privacy.includes('href="/submit/"')) fail("Privacy page does not link the submit form.");
 if (!privacy.includes('href="/digest/"')) fail("Privacy page does not link the Friday email.");
+if (/Nothing is sent yet|does not ask you to sign up|once that email is connected/i.test(privacy)) {
+  fail("Privacy page still says the Friday email is not connected.");
+}
+if (!privacy.includes("your postcode if you choose to give it")) {
+  fail("Privacy page does not mention the optional Friday email postcode.");
+}
 if (/fairdigger|auctiondigger|alanconlon\.com/i.test(privacy)) fail("Privacy page names a sister site.");
 if (privacy.includes("UK & Ireland") || privacy.includes("UK+IE") || privacy.includes("Eircode")) {
   fail("Privacy page uses Fair's geography.");
@@ -404,6 +451,24 @@ if (!thanks.includes("logo") || !thanks.includes("one-line message") || !thanks.
 }
 if (!thanks.includes(">Home</a>") || !thanks.includes(">Upcoming shows</a>")) {
   fail("Thank-you page is missing the home and upcoming-shows links.");
+}
+const signedUp = await readFile(join(dist, "thanks/index.html"), "utf8");
+if (!signedUp.includes("<title>Check your inbox | MineralDigger</title>")) fail("Sign-up thank-you title is wrong.");
+if (!signedUp.includes('rel="canonical" href="https://mineraldigger.com/thanks/"')) {
+  fail("Sign-up thank-you canonical is not https://mineraldigger.com/thanks/.");
+}
+if (!signedUp.includes('name="robots" content="noindex"')) fail("Sign-up thank-you page is missing noindex.");
+if (!signedUp.includes("Nearly there")) fail("Sign-up thank-you page is missing Nearly there.");
+if (!signedUp.includes("<h1>Check your inbox to confirm</h1>")) fail("Sign-up thank-you heading is wrong.");
+if (!signedUp.includes("short email from MineralDigger")) fail("Sign-up thank-you page does not name MineralDigger.");
+if (!signedUp.includes("Friday show email")) fail("Sign-up thank-you page does not name the Friday show email.");
+if (!signedUp.includes("spam or Promotions")) fail("Sign-up thank-you page does not mention spam or Promotions.");
+if (!signedUp.includes("you won't hear from us")) fail("Sign-up thank-you page is missing the ignore note.");
+if (!signedUp.includes('href="/">Upcoming shows</a>') || !signedUp.includes('href="/?when=weekend">This weekend</a>')) {
+  fail("Sign-up thank-you page is missing the show links.");
+}
+if (signedUp.includes("Payment received") || signedUp.includes("Stripe receipt")) {
+  fail("Sign-up thank-you page is using the payment copy.");
 }
 
 const catalogue = JSON.parse(await readFile(join(root, "data/shows.json"), "utf8"));

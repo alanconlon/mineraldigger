@@ -25,8 +25,9 @@ npm run dev
 - `/show/…/` one page per show, plus an `event.ics` calendar file
 - `/feature/` free listing, featured show £15, year pass £99, site sponsor £25 a month, Friday email £12 an issue. The four paid cards link to live Stripe checkout.
 - `/thanks/payment/` post-payment thank-you page. It is `noindex` and is not in the sitemap. This site does not ping IndexNow.
+- `/thanks/` after a Friday email sign-up. It is `noindex` and is not in the sitemap.
 - `/submit/` organiser form
-- `/digest/` a preview of the Friday email. The page itself sends nothing. Drafts are made with the scripts in Friday email drafts below.
+- `/digest/` the Friday email. Visitors sign up through Buttondown, and the page lists the coming Friday to Sunday. The page does not send the issue. Drafts are made with the scripts in Friday email drafts below.
 - `/about/` how shows are listed
 - `/privacy/` what the site collects, who handles it, and how to ask about it
 
@@ -164,14 +165,14 @@ python3 scripts/digest.py
 python3 scripts/buttondown_draft.py
 ```
 
-`out/` is generated and is not committed. The public `/digest/` page stays a preview. These scripts do not mail the list.
+`out/` is generated and is not committed. Sign-up on `/digest/` posts to Buttondown. These scripts create a draft only. They do not send or schedule the list.
 
 ## Still to do before a public launch
 
 - Keep `mineraldigger.co.uk` on the same Pages project as `mineraldigger.com`, with no redirect between them
 - In Email Routing, verify the destination `mineraldigger.hq@gmail.com`, then run `npx wrangler deploy` from `workers/submit/`
 
-Not in this version: DNS, mailing the Friday list automatically, Facebook scraping, mind-body-spirit listings, and Ireland. The Friday email scripts above create a Buttondown draft only. Live Stripe checkout for the four products is on `/feature/`. Facebook and Bluesky are linked from the footer.
+Not in this version: DNS, mailing the Friday list automatically, Facebook scraping, mind-body-spirit listings, and Ireland. Sign-up is on `/digest/` through Buttondown. The Friday email scripts above create a Buttondown draft only. Live Stripe checkout for the four products is on `/feature/`. Facebook and Bluesky are linked from the footer.
 
 ## Brand
 

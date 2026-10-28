@@ -755,6 +755,8 @@ export function renderAbout({ site, generated }) {
   });
 }
 
+const DIGEST_DESCRIPTION = "The Friday email: a free weekly list of UK rock, gem, mineral, fossil and bead shows for the coming weekend.";
+
 export function renderDigest({ site, shows, sponsors, generated, today, stripe }) {
   const weekend = digestWeekend(today);
   const rows = shows.filter((show) => overlaps(show, weekend.start, weekend.end));
@@ -770,21 +772,53 @@ export function renderDigest({ site, shows, sponsors, generated, today, stripe }
     ? `<ul>${rows.map((show) => `<li><a href="/show/${esc(show.slug)}/">${esc(show.name)}</a>, ${esc(formatRange(show.start, show.end))}, ${esc(show.venue.town)}. ${esc(show.entry.label)}.</li>`).join("")}</ul>`
     : `<p>No shows in the list fall on that weekend.</p>`;
   const body = `<article class="page"><div class="wrap-narrow prose">
-      <p class="eyebrow">Not sent yet</p>
-      <h1>Friday email</h1>
-      <p class="lede">A preview of the Friday email. Nothing is sent yet. Mail is still to be connected.</p>
-      <h2>${esc(formatRange(weekend.start, weekend.end))}</h2>
+      <p class="eyebrow">Free weekly email</p>
+      <h1>The Friday email</h1>
+      <p class="lede">Every Friday morning: a free email of the UK rock, gem, mineral, fossil and bead shows on that weekend.</p>
+      <form class="nl" action="https://buttondown.com/api/emails/embed-subscribe/mineraldigger" method="post" data-thanks="/thanks/">
+        <input type="email" name="email" required placeholder="you@example.com" aria-label="Email" autocomplete="email">
+        <input type="text" name="metadata__postcode" placeholder="Your postcode (optional)" aria-label="Postcode" autocomplete="postal-code" maxlength="12">
+        <input type="hidden" name="embed" value="1">
+        <button class="pay" type="submit">Sign me up</button>
+        <p class="small muted">A free Friday email of upcoming UK rock, gem, mineral, fossil and bead shows. No spam, unsubscribe any time. You'll get a short email to confirm.</p>
+      </form>
+      <h2>This weekend's shows</h2>
+      <p>${esc(formatRange(weekend.start, weekend.end))}</p>
       ${sponsor}
       ${list}
       <p class="fine">The Friday email covers the coming Friday to Sunday. On a Saturday or Sunday it looks ahead to the next weekend.</p>
-    </div></article>`;
+    </div></article>
+    <script src="/js/newsletter.js"></script>`;
   return layout({
     site,
     path: "/digest/",
-    title: "Friday email | MineralDigger",
-    description: "A preview of the MineralDigger Friday email. Mail is not sent yet.",
+    title: "The Friday email | MineralDigger",
+    description: DIGEST_DESCRIPTION,
     body,
     generated,
+  });
+}
+
+export function renderSignupThanks({ site, generated }) {
+  const body = `<article class="page"><div class="wrap-narrow prose">
+      <p class="eyebrow">Nearly there</p>
+      <h1>Check your inbox to confirm</h1>
+      <p class="lede">We've just sent you a short email from MineralDigger. Tap the confirm link in it and you're on the list for the Friday show email.</p>
+      <p>It can take a minute or two to arrive. If you can't see it, check your spam or Promotions folder.</p>
+      <p class="fine">Signed up by mistake? Just ignore that email and you won't hear from us.</p>
+      <div class="actions">
+        <a href="/">Upcoming shows</a>
+        <a href="/?when=weekend">This weekend</a>
+      </div>
+    </div></article>`;
+  return layout({
+    site,
+    path: "/thanks/",
+    title: "Check your inbox | MineralDigger",
+    description: "Confirm your MineralDigger Friday email sign-up.",
+    body,
+    generated,
+    robots: "noindex",
   });
 }
 
@@ -793,7 +827,7 @@ export function renderPrivacy({ site, generated }) {
   const body = `<article class="page"><div class="wrap-narrow prose">
       <p class="eyebrow">Privacy</p>
       <h1>Privacy</h1>
-      <p class="fine">Last updated: 26 October 2026</p>
+      <p class="fine">Last updated: 28 October 2026</p>
       <p class="lede">MineralDigger (mineraldigger.com) is run by Alan Conlon in Ireland. This page explains what information we collect, why, who handles it for us, and how long we keep it. Questions or requests: <a href="mailto:${esc(email)}">${esc(email)}</a>.</p>
       <h2>Browsing the site</h2>
       <p>You do not need an account to use MineralDigger. MineralDigger does not use analytics, advertising trackers or its own cookies. Cloudflare may set a short-lived security cookie if it needs to check that a visitor is not a bot.</p>
@@ -802,7 +836,7 @@ export function renderPrivacy({ site, generated }) {
         <li><strong>Search and maps.</strong> The town and postcode box filters shows already loaded on the page. It does not send that search to another service. Maps load tiles from OpenStreetMap, which sees your IP address when your browser requests a tile. The map code is served from this site.</li>
       </ul>
       <h2>The Friday email</h2>
-      <p>The <a href="/digest/">Friday email</a> is a preview. Nothing is sent yet, and the site does not ask you to sign up today. When the Friday email is connected, sign-ups and sending will be handled by Buttondown. We will collect the email address you give us so we can send the weekly list. Every email will have an unsubscribe link. We will keep your address until you unsubscribe.</p>
+      <p>If you <a href="/digest/">sign up for the Friday email</a>, we collect your email address, and your postcode if you choose to give it, so we can send the weekly list of shows. Sign-ups and sending are handled by Buttondown. Every email has an unsubscribe link. We keep your address until you unsubscribe.</p>
       <h2>Submitting a show</h2>
       <p>The <a href="/submit/">submit form</a> asks for the show details (name, types, dates, times, venue, street, town, postcode, entry and website) and the organiser's name, email and phone. We use this to check and list the show, and to contact you about it. The form is sent by email to <a href="mailto:${esc(email)}">${esc(email)}</a> through Cloudflare. The show details are published on the site. Your email address is not. We keep submission emails while the show is listed and for a reasonable time afterwards in case of questions, and will delete them sooner if you ask.</p>
       <h2>Payments</h2>
@@ -811,7 +845,7 @@ export function renderPrivacy({ site, generated }) {
       <p>If you email <a href="mailto:${esc(email)}">${esc(email)}</a>, your message and email address are stored in Google's Gmail. We use them only to reply and to deal with your request.</p>
       <h2>Who handles your information</h2>
       <ul>
-        <li><strong>Buttondown</strong>: Friday email sign-ups and sending, once that email is connected.</li>
+        <li><strong>Buttondown</strong>: Friday email sign-ups and sending.</li>
         <li><strong>Stripe</strong>: payments for featured shows and sponsorships.</li>
         <li><strong>Cloudflare</strong>: hosting, and passing on the submission form.</li>
         <li><strong>Google (Gmail)</strong>: our email inbox.</li>
@@ -819,7 +853,7 @@ export function renderPrivacy({ site, generated }) {
       <p>Some of these services are based in, or process data in, the US. They rely on the EU-US Data Privacy Framework or standard contractual clauses, as set out in their own terms.</p>
       <p>We do not sell your information or share it with anyone beyond the services named on this page.</p>
       <h2>Your rights</h2>
-      <p>Under the GDPR you can ask us for a copy of the information we hold about you, ask us to correct it, or ask us to delete it. Email <a href="mailto:${esc(email)}">${esc(email)}</a>. When the Friday email is running, you can unsubscribe at any time using the link in any email. If you are unhappy with how we have handled your information, you can complain to Ireland's Data Protection Commission at <a href="https://www.dataprotection.ie/" rel="noopener">dataprotection.ie</a>.</p>
+      <p>Under the GDPR you can ask us for a copy of the information we hold about you, ask us to correct it, or ask us to delete it. Email <a href="mailto:${esc(email)}">${esc(email)}</a>. You can unsubscribe from the Friday email at any time using the link in any email. If you are unhappy with how we have handled your information, you can complain to Ireland's Data Protection Commission at <a href="https://www.dataprotection.ie/" rel="noopener">dataprotection.ie</a>.</p>
     </div></article>`;
   return layout({
     site,

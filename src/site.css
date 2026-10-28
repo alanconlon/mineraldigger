@@ -347,6 +347,21 @@ button.pay[disabled], .pay[aria-disabled="true"] {
   font-weight: 600;
 }
 
+form.nl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  margin: 1rem 0 0.35rem;
+}
+form.nl input[type="email"],
+form.nl input[type="text"] {
+  flex: 1 1 12rem;
+  width: auto;
+  min-width: 0;
+}
+form.nl button.pay { margin-top: 0; cursor: pointer; }
+form.nl p { flex-basis: 100%; margin: 0.15rem 0 0; }
 form.stack { display: grid; gap: 0.85rem; }
 .field { display: grid; gap: 0.3rem; }
 .field span { font-weight: 600; }
