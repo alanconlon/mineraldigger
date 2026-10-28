@@ -376,6 +376,10 @@ for (const file of files) {
   if (!foot.includes('href="/feature/">Feature your show</a>')) fail(`Feature label missing in ${file}`);
   if (!foot.includes('href="/about/">How we list shows</a>')) fail(`About label missing in ${file}`);
   if (!foot.includes('href="/digest/">Friday email</a>')) fail(`Friday email link missing in ${file}`);
+  if (!foot.includes('href="/app/">Add to your phone</a>')) fail(`Add to your phone link missing in ${file}`);
+  if (!raw.includes('<link rel="manifest" href="/manifest.webmanifest">')) fail(`Manifest link missing in ${file}`);
+  if (!raw.includes('<meta name="theme-color" content="#143f36">')) fail(`Theme colour missing in ${file}`);
+  if (!raw.includes('src="/pwa.js"')) fail(`pwa.js missing in ${file}`);
   const headerEnd = raw.indexOf("</header>");
   const header = headerEnd > 0 ? raw.slice(0, headerEnd) : "";
   if (!/href="\/digest\/"(?: aria-current="page")?>Friday email<\/a>/.test(header)) {
@@ -389,7 +393,7 @@ for (const file of files) {
     fail(`Bluesky link missing in ${file}`);
   }
   if (!foot.includes("© 2026 MineralDigger.") || !foot.includes("Show data retrieved ")) fail(`Footer credit line missing in ${file}`);
-  if (/Ireland|UK\s*&|UK\s*\+|fairdigger|auctiondigger|alanconlon\.com|\/newsletter\/|\/app\//i.test(foot)) {
+  if (/Ireland|UK\s*&|UK\s*\+|fairdigger|auctiondigger|alanconlon\.com|\/newsletter\//i.test(foot)) {
     fail(`Footer in ${file} has a banned link or a non-UK blurb`);
   }
 }
@@ -408,6 +412,8 @@ if (!redirects.includes("/newsletter /digest/ 301") || !redirects.includes("/new
   fail("/newsletter/ should redirect to /digest/.");
 }
 if (sitemap.includes("404")) fail("404 page must stay out of the sitemap.");
+if (!sitemap.includes("<loc>https://mineraldigger.com/app/</loc>")) fail("Sitemap is missing the add-to-phone page.");
+if (sitemap.includes("/offline")) fail("Offline page must stay out of the sitemap.");
 const privacy = await readFile(join(dist, "privacy/index.html"), "utf8");
 if (!privacy.includes("<title>Privacy | MineralDigger</title>")) fail("Privacy title is wrong.");
 if (!privacy.includes('rel="canonical" href="https://mineraldigger.com/privacy/"')) fail("Privacy canonical is wrong.");
@@ -429,6 +435,46 @@ if (/fairdigger|auctiondigger|alanconlon\.com/i.test(privacy)) fail("Privacy pag
 if (privacy.includes("UK & Ireland") || privacy.includes("UK+IE") || privacy.includes("Eircode")) {
   fail("Privacy page uses Fair's geography.");
 }
+if (!privacy.includes("saved on that phone")) fail("Privacy page does not mention pages saved on the phone.");
+const app = await readFile(join(dist, "app/index.html"), "utf8");
+if (!app.includes("<title>Add MineralDigger to your phone</title>")) fail("Add-to-phone title is wrong.");
+if (!app.includes('rel="canonical" href="https://mineraldigger.com/app/"')) fail("Add-to-phone canonical is wrong.");
+if (!app.includes("<h1>Add MineralDigger to your phone</h1>")) fail("Add-to-phone heading is wrong.");
+if (!app.includes("<h2 class=\"mt\">iPhone or iPad</h2>") || !app.includes("<h2 class=\"mt\">Android</h2>")) {
+  fail("Add-to-phone steps are missing.");
+}
+if (!app.includes("Add to Home Screen") || !app.includes("Add to Home screen")) fail("Add-to-phone is missing the home screen steps.");
+if (!app.includes("Play Protect") || !app.includes("Skip <strong>Install app</strong>")) fail("Add-to-phone should warn about the Android install prompt.");
+if (!app.includes('id="a2hs-done"') || !app.includes('id="a2hs-install"')) fail("Add-to-phone is missing the install hooks.");
+if (!app.includes('src="/icons/icon-192.png"')) fail("Add-to-phone is missing the icon.");
+const offline = await readFile(join(dist, "offline/index.html"), "utf8");
+if (!offline.includes("<h1>You're offline</h1>")) fail("Offline heading is wrong.");
+if (!offline.includes('name="robots" content="noindex"')) fail("Offline page is missing noindex.");
+if (!offline.includes("md-pages-")) fail("Offline page does not read the saved-page cache.");
+const manifest = JSON.parse(await readFile(join(dist, "manifest.webmanifest"), "utf8"));
+if (manifest.short_name !== "MineralDigger" || !manifest.name.includes("MineralDigger")) fail("Manifest name is wrong.");
+if (manifest.display !== "standalone" || manifest.start_url !== "/" || manifest.lang !== "en-GB") fail("Manifest display settings are wrong.");
+if (manifest.theme_color !== "#143f36" || manifest.background_color !== "#143f36") fail("Manifest colours are not the Mineral green.");
+const iconSrcs = (manifest.icons || []).map((icon) => icon.src);
+for (const src of ["/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-maskable-512.png"]) {
+  if (!iconSrcs.includes(src)) fail(`Manifest is missing ${src}.`);
+}
+if (!manifest.shortcuts?.some((item) => item.url === "/?when=weekend") || !manifest.shortcuts?.some((item) => item.url === "/digest/")) {
+  fail("Manifest shortcuts should offer this weekend and the Friday email.");
+}
+const pwaJs = await readFile(join(dist, "pwa.js"), "utf8");
+if (!pwaJs.includes('serviceWorker.register("/sw.js"')) fail("pwa.js does not register the service worker.");
+if (!pwaJs.includes("beforeinstallprompt") || !pwaJs.includes("a2hs-install")) fail("pwa.js does not hold the install prompt for /app/.");
+if (!pwaJs.includes("if (android) return;")) fail("pwa.js should not offer the install prompt on Android.");
+const swJs = await readFile(join(dist, "sw.js"), "utf8");
+if (swJs.includes("__MD_VERSION__")) fail("Service worker version was not stamped.");
+if (!swJs.includes('PREFIX = "md-"') || !swJs.includes('"/offline/"')) fail("Service worker is not the MineralDigger offline cache.");
+const icon192 = pngSize(await readFile(join(dist, "icons/icon-192.png")));
+const icon512 = pngSize(await readFile(join(dist, "icons/icon-512.png")));
+const iconMask = pngSize(await readFile(join(dist, "icons/icon-maskable-512.png")));
+if (!icon192 || icon192.width !== 192 || icon192.height !== 192) fail("icon-192.png should be 192x192.");
+if (!icon512 || icon512.width !== 512 || icon512.height !== 512) fail("icon-512.png should be 512x512.");
+if (!iconMask || iconMask.width !== 512 || iconMask.height !== 512) fail("icon-maskable-512.png should be 512x512.");
 const missing = await readFile(join(dist, "404.html"), "utf8");
 if (!missing.includes("<title>Page not found | MineralDigger</title>")) fail("404 title changed.");
 if (!missing.includes("<h1>That page is not on the map.</h1>")) fail("404 heading changed.");
@@ -452,6 +498,9 @@ if (!faviconSize || faviconSize.length !== 1 || faviconSize[0].width !== 32 || f
 if (!(await readFile(join(dist, "favicon.svg"), "utf8")).includes("#143f36")) fail("favicon.svg lost the Mineral green.");
 const headers = await readFile(join(dist, "_headers"), "utf8");
 if (!headers.includes("X-Robots-Tag: noindex")) fail("Thank-you page is missing the noindex response header.");
+if (!headers.includes("/offline/\n  X-Robots-Tag: noindex")) fail("Offline page is missing the noindex response header.");
+if (!headers.includes("Content-Type: application/manifest+json")) fail("Manifest content type is missing.");
+if (!headers.includes("/sw.js\n  Cache-Control: no-cache")) fail("Service worker should not be cached.");
 const thanks = await readFile(join(dist, "thanks/payment/index.html"), "utf8");
 if (!thanks.includes("<title>Payment received | MineralDigger</title>")) fail("Thank-you page title is wrong.");
 if (!thanks.includes('rel="canonical" href="https://mineraldigger.com/thanks/payment/"')) {

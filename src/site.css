@@ -490,6 +490,11 @@ textarea { min-height: 7rem; resize: vertical; }
   .foot > :first-child { grid-column: 1 / -1; }
 }
 
+.app-mark { display: block; width: 72px; height: 72px; border-radius: 16px; }
+.share-icon { vertical-align: -2px; }
+h2.mt { margin-top: 1.5rem; }
+button.pay { cursor: pointer; }
+
 @media print {
   .site-header, .filters, .map-col, .actions, .site-footer { display: none; }
   body { background: white; }

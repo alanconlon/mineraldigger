@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -5,10 +6,12 @@ import { addDays, iso, parseISO } from "../src/js/format.js";
 import { featuredIds } from "./feature.mjs";
 import {
   renderAbout,
+  renderApp,
   renderDigest,
   renderFeature,
   renderHome,
   renderNotFound,
+  renderOffline,
   renderPrivacy,
   renderShow,
   renderSignupThanks,
@@ -120,9 +123,15 @@ async function copyAssets() {
   await cp(join(root, "public/apple-touch-icon.png"), join(dist, "apple-touch-icon.png"));
   await cp(join(root, "public/og-image.jpg"), join(dist, "og-image.jpg"));
   await cp(join(root, "public/logo.png"), join(dist, "logo.png"));
+  await cp(join(root, "public/manifest.webmanifest"), join(dist, "manifest.webmanifest"));
+  await cp(join(root, "public/pwa.js"), join(dist, "pwa.js"));
+  await cp(join(root, "public/icons"), join(dist, "icons"), { recursive: true });
+  const swSource = await readFile(join(root, "public/sw.js"), "utf8");
+  const swVersion = createHash("sha256").update(swSource).digest("hex").slice(0, 12);
+  await writeFile(join(dist, "sw.js"), swSource.replaceAll("__MD_VERSION__", swVersion));
   await writeFile(
     join(dist, "_headers"),
-    "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Frame-Options: SAMEORIGIN\n\n/thanks/\n  X-Robots-Tag: noindex\n\n/thanks/*\n  X-Robots-Tag: noindex\n\n/thanks/payment/*\n  X-Robots-Tag: noindex\n",
+    "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Frame-Options: SAMEORIGIN\n\n/thanks/\n  X-Robots-Tag: noindex\n\n/thanks/*\n  X-Robots-Tag: noindex\n\n/thanks/payment/*\n  X-Robots-Tag: noindex\n\n/offline/\n  X-Robots-Tag: noindex\n\n/sw.js\n  Cache-Control: no-cache\n\n/manifest.webmanifest\n  Content-Type: application/manifest+json\n",
   );
   await writeFile(join(dist, "_redirects"), "/newsletter /digest/ 301\n/newsletter/ /digest/ 301\n");
 }
@@ -159,11 +168,13 @@ async function main() {
   await writePage("submit/index.html", renderSubmit({ site, generated }));
   await writePage("about/index.html", renderAbout({ site, generated }));
   await writePage("digest/index.html", renderDigest({ site, shows: upcoming, sponsors, generated, today, stripe }));
+  await writePage("app/index.html", renderApp({ site, generated }));
+  await writePage("offline/index.html", renderOffline({ site, generated }));
   await writePage("privacy/index.html", renderPrivacy({ site, generated }));
   await writePage("404.html", renderNotFound({ site, generated }));
 
-  // /thanks/ and /thanks/payment/ are noindex and stay out of the sitemap. This site does not ping IndexNow.
-  const paths = ["/", "/feature/", "/submit/", "/digest/", "/about/", "/privacy/", "/rock/", "/gem/", "/mineral/", "/fossil/", "/bead/"];
+  // /thanks/, /thanks/payment/ and /offline/ are noindex and stay out of the sitemap. /newsletter/ redirects to /digest/. This site does not ping IndexNow.
+  const paths = ["/", "/feature/", "/submit/", "/digest/", "/app/", "/about/", "/privacy/", "/rock/", "/gem/", "/mineral/", "/fossil/", "/bead/"];
   for (const show of shows) {
     await writePage(`show/${show.slug}/index.html`, renderShow({ site, show, generated, todayISO }));
     await writePage(`show/${show.slug}/event.ics`, ics(show, todayISO, site));
