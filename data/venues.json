@@ -1,5 +1,5 @@
 {
-  "_note": "Postcode centroids from postcodes.io on 25 October 2026. Town labels are the place a visitor would use. place_note is set when the postcode parish is not that town.",
+  "_note": "Postcode centroids from postcodes.io. Town labels are the place a visitor would use. place_note is set when the postcode parish is not that town. Looked up on 25 October 2026, with CO6 1EH on 28 October 2026.",
   "TW16 5AQ": {
     "lat": 51.418928,
     "lng": -0.407472,
@@ -134,6 +134,13 @@
     "lng": -0.110314,
     "town": "Haywards Heath",
     "county": "West Sussex",
+    "nation": "England"
+  },
+  "CO6 1EH": {
+    "lat": 51.87523,
+    "lng": 0.781389,
+    "town": "Marks Tey",
+    "county": "Essex",
     "nation": "England"
   }
 }
