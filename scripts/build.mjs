@@ -124,6 +124,7 @@ async function copyAssets() {
     join(dist, "_headers"),
     "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Frame-Options: SAMEORIGIN\n\n/thanks/\n  X-Robots-Tag: noindex\n\n/thanks/*\n  X-Robots-Tag: noindex\n\n/thanks/payment/*\n  X-Robots-Tag: noindex\n",
   );
+  await writeFile(join(dist, "_redirects"), "/newsletter /digest/ 301\n/newsletter/ /digest/ 301\n");
 }
 
 async function main() {

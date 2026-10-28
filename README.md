@@ -28,6 +28,7 @@ npm run dev
 - `/thanks/` after a Friday email sign-up. It is `noindex` and is not in the sitemap.
 - `/submit/` organiser form
 - `/digest/` the Friday email. Visitors sign up through Buttondown, and the page lists the coming Friday to Sunday. The page does not send the issue. Drafts are made with the scripts in Friday email drafts below.
+- `/newsletter/` redirects to `/digest/`.
 - `/about/` how shows are listed
 - `/privacy/` what the site collects, who handles it, and how to ask about it
 

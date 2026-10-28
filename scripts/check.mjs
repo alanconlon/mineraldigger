@@ -84,6 +84,15 @@ if (!index.includes(`<meta name="description" content="${homeDescription}">`)) f
 if (!index.includes(`property="og:title" content="${homeOgTitle}"`)) fail("Homepage og:title is wrong.");
 if (!index.includes(`property="og:description" content="${homeOgDescription}"`)) fail("Homepage og:description is wrong.");
 if (!index.includes(footer)) fail("Homepage is missing the footer line.");
+if (!index.includes('id="newsletter"')) fail("Homepage is missing the Friday email sign-up.");
+if (!index.includes('action="https://buttondown.com/api/emails/embed-subscribe/mineraldigger"')) {
+  fail("Homepage form does not post to Buttondown.");
+}
+if (!index.includes('data-thanks="/thanks/"')) fail("Homepage form does not point at /thanks/.");
+if (!index.includes('src="/js/newsletter.js"')) fail("Homepage is missing the sign-up script.");
+if (/Not sent yet|Nothing is sent yet|Mail is still to be connected/i.test(index)) {
+  fail("Homepage still says mail is not connected.");
+}
 const hubs = {
   rock: {
     heading: "Rock shows",
@@ -235,6 +244,9 @@ if (!digest.includes('data-thanks="/thanks/"')) fail("Digest form does not send 
 if (!digest.includes(">Sign me up</button>")) fail("Digest button should say Sign me up.");
 if (!digest.includes("unsubscribe any time")) fail("Digest is missing the unsubscribe note.");
 if (!digest.includes("<h2>This weekend's shows</h2>")) fail("Digest is missing the weekend preview heading.");
+if (!digest.includes("The Friday email covers the coming Friday to Sunday. On a Saturday or Sunday it looks ahead to the next weekend.")) {
+  fail("Digest fine print changed.");
+}
 if (!digest.includes('src="/js/newsletter.js"')) fail("Digest is missing the sign-up script.");
 const builtToday = new Date();
 const builtWeekend = digestWeekend(builtToday);
@@ -340,7 +352,7 @@ for (const file of files) {
   }
   const foot = raw.slice(footStart, footEnd);
   if (!foot.includes('class="wrap foot"')) fail(`Multi-column footer missing in ${file}`);
-  if (!foot.includes(">Browse</h2>") || !foot.includes(">Organisers</h2>") || !foot.includes(">Show types</h2>")) {
+  if (!foot.includes(">Browse</h2>") || !foot.includes(">Organisers</h2>") || !foot.includes(">Show types</h2>") || !foot.includes(">Stay in touch</h2>")) {
     fail(`Footer columns missing in ${file}`);
   }
   for (const href of [
@@ -390,6 +402,11 @@ if (sitemap.includes("mineraldigger.co.uk")) fail("Sitemap still points at miner
 if (!sitemap.includes("<loc>https://mineraldigger.com/privacy/</loc>")) fail("Sitemap is missing the privacy page.");
 if (sitemap.includes("/thanks/payment")) fail("Thank-you page must stay out of the sitemap.");
 if (sitemap.includes("<loc>https://mineraldigger.com/thanks/</loc>")) fail("Sign-up thank-you page must stay out of the sitemap.");
+if (sitemap.includes("/newsletter")) fail("Newsletter alias must stay out of the sitemap.");
+const redirects = await readFile(join(dist, "_redirects"), "utf8");
+if (!redirects.includes("/newsletter /digest/ 301") || !redirects.includes("/newsletter/ /digest/ 301")) {
+  fail("/newsletter/ should redirect to /digest/.");
+}
 if (sitemap.includes("404")) fail("404 page must stay out of the sitemap.");
 const privacy = await readFile(join(dist, "privacy/index.html"), "utf8");
 if (!privacy.includes("<title>Privacy | MineralDigger</title>")) fail("Privacy title is wrong.");

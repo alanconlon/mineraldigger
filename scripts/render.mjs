@@ -75,6 +75,9 @@ function footer(generated) {
       <div>
         <h2>Show types</h2>
         ${types}
+      </div>
+      <div>
+        <h2>Stay in touch</h2>
         <a href="/digest/">Friday email</a>
       </div>
     </div>
@@ -166,6 +169,7 @@ function layout({ site, path, title, description, ogTitle, ogDescription, body, 
   <main id="main">${body}</main>
   ${footer(generated)}
   ${map ? '<script type="module" src="/js/site.js"></script>' : ""}
+  <script defer src="/js/newsletter.js"></script>
 </body>
 </html>
 `;
@@ -233,6 +237,27 @@ function typeLinks(current) {
   return all + rest;
 }
 
+function signupForm() {
+  return `<form class="nl" action="https://buttondown.com/api/emails/embed-subscribe/mineraldigger" method="post" data-thanks="/thanks/">
+        <input type="email" name="email" required placeholder="you@example.com" aria-label="Email" autocomplete="email">
+        <input type="text" name="metadata__postcode" placeholder="Your postcode (optional)" aria-label="Postcode" autocomplete="postal-code" maxlength="12">
+        <input type="hidden" name="embed" value="1">
+        <button class="pay" type="submit">Sign me up</button>
+        <p class="small muted">A free Friday email of upcoming UK rock, gem, mineral, fossil and bead shows. No spam, unsubscribe any time. You'll get a short email to confirm.</p>
+      </form>`;
+}
+
+function homeSignup() {
+  return `<section class="wrap newsletter" id="newsletter">
+      <div>
+        <p class="eyebrow">Stay in touch</p>
+        <h2>The Friday email</h2>
+        <p>Every Friday morning: a free email of the UK rock, gem, mineral, fossil and bead shows on that weekend. One email a week.</p>
+      </div>
+      ${signupForm()}
+    </section>`;
+}
+
 export function renderListing({ site, path, title, description, ogTitle, ogDescription, heading, lede, shows, generated, home = false, typeLock = null }) {
   const featured = shows.filter((show) => show.featured);
   const rest = shows.filter((show) => !show.featured);
@@ -281,7 +306,8 @@ export function renderListing({ site, path, title, description, ogTitle, ogDescr
           <p class="map-note">Green pins are confirmed dates. Copper pins are provisional. The pin sits on the venue postcode.</p>
         </aside>
       </div>
-    </div>`;
+    </div>
+    ${home ? homeSignup() : ""}`;
   return layout({
     site,
     path,
@@ -775,20 +801,13 @@ export function renderDigest({ site, shows, sponsors, generated, today, stripe }
       <p class="eyebrow">Free weekly email</p>
       <h1>The Friday email</h1>
       <p class="lede">Every Friday morning: a free email of the UK rock, gem, mineral, fossil and bead shows on that weekend.</p>
-      <form class="nl" action="https://buttondown.com/api/emails/embed-subscribe/mineraldigger" method="post" data-thanks="/thanks/">
-        <input type="email" name="email" required placeholder="you@example.com" aria-label="Email" autocomplete="email">
-        <input type="text" name="metadata__postcode" placeholder="Your postcode (optional)" aria-label="Postcode" autocomplete="postal-code" maxlength="12">
-        <input type="hidden" name="embed" value="1">
-        <button class="pay" type="submit">Sign me up</button>
-        <p class="small muted">A free Friday email of upcoming UK rock, gem, mineral, fossil and bead shows. No spam, unsubscribe any time. You'll get a short email to confirm.</p>
-      </form>
+      ${signupForm()}
       <h2>This weekend's shows</h2>
       <p>${esc(formatRange(weekend.start, weekend.end))}</p>
       ${sponsor}
       ${list}
       <p class="fine">The Friday email covers the coming Friday to Sunday. On a Saturday or Sunday it looks ahead to the next weekend.</p>
-    </div></article>
-    <script src="/js/newsletter.js"></script>`;
+    </div></article>`;
   return layout({
     site,
     path: "/digest/",
