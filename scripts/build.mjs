@@ -11,6 +11,7 @@ import {
   renderNotFound,
   renderPrivacy,
   renderShow,
+  renderSignupThanks,
   renderSitemap,
   renderSubmit,
   renderThanks,
@@ -112,6 +113,7 @@ async function copyAssets() {
   await cp(join(root, "src/js/format.js"), join(dist, "js/format.js"));
   await cp(join(root, "src/js/site.js"), join(dist, "js/site.js"));
   await cp(join(root, "src/js/submit.js"), join(dist, "js/submit.js"));
+  await cp(join(root, "src/js/newsletter.js"), join(dist, "js/newsletter.js"));
   await cp(join(root, "functions/api/validate.js"), join(dist, "js/validate.js"));
   await cp(join(root, "public/favicon.svg"), join(dist, "favicon.svg"));
   await cp(join(root, "public/favicon.ico"), join(dist, "favicon.ico"));
@@ -120,8 +122,9 @@ async function copyAssets() {
   await cp(join(root, "public/logo.png"), join(dist, "logo.png"));
   await writeFile(
     join(dist, "_headers"),
-    "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Frame-Options: SAMEORIGIN\n\n/thanks/payment/*\n  X-Robots-Tag: noindex\n",
+    "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Frame-Options: SAMEORIGIN\n\n/thanks/\n  X-Robots-Tag: noindex\n\n/thanks/*\n  X-Robots-Tag: noindex\n\n/thanks/payment/*\n  X-Robots-Tag: noindex\n",
   );
+  await writeFile(join(dist, "_redirects"), "/newsletter /digest/ 301\n/newsletter/ /digest/ 301\n");
 }
 
 async function main() {
@@ -151,6 +154,7 @@ async function main() {
     await writePage(`${key}/index.html`, renderType(ctx, key));
   }
   await writePage("feature/index.html", renderFeature({ site, stripe, generated }));
+  await writePage("thanks/index.html", renderSignupThanks({ site, generated }));
   await writePage("thanks/payment/index.html", renderThanks({ site, generated }));
   await writePage("submit/index.html", renderSubmit({ site, generated }));
   await writePage("about/index.html", renderAbout({ site, generated }));
@@ -158,7 +162,7 @@ async function main() {
   await writePage("privacy/index.html", renderPrivacy({ site, generated }));
   await writePage("404.html", renderNotFound({ site, generated }));
 
-  // /thanks/payment/ is noindex and stays out of the sitemap. This site does not ping IndexNow.
+  // /thanks/ and /thanks/payment/ are noindex and stay out of the sitemap. This site does not ping IndexNow.
   const paths = ["/", "/feature/", "/submit/", "/digest/", "/about/", "/privacy/", "/rock/", "/gem/", "/mineral/", "/fossil/", "/bead/"];
   for (const show of shows) {
     await writePage(`show/${show.slug}/index.html`, renderShow({ site, show, generated, todayISO }));

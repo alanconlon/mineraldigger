@@ -103,6 +103,10 @@ const server = createServer(async (request, response) => {
     if (request.method !== "GET" && request.method !== "HEAD") {
       return send(response, 405, JSON.stringify({ ok: false, errors: ["Method not allowed."] }));
     }
+    if (url.pathname === "/newsletter" || url.pathname === "/newsletter/") {
+      response.writeHead(301, { location: "/digest/" });
+      return response.end();
+    }
     const path = (await fileFor(url.pathname)) || join(dist, "404.html");
     const status = path.endsWith("404.html") && url.pathname !== "/404.html" ? 404 : 200;
     const type = types[extname(path)] || "application/octet-stream";
