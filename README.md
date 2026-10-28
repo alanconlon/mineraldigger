@@ -27,7 +27,7 @@ npm run dev
 - `/thanks/payment/` post-payment thank-you page. It is `noindex` and is not in the sitemap. This site does not ping IndexNow.
 - `/thanks/` after a Friday email sign-up. It is `noindex` and is not in the sitemap.
 - `/submit/` organiser form
-- `/digest/` the Friday email. Visitors sign up through Buttondown, and the page lists the coming Friday to Sunday. The page does not send the issue. Drafts are made with the scripts in Friday email drafts below.
+- `/digest/` the Friday email. Visitors sign up through Buttondown. After the form, the page goes to the site footer. It does not send the issue. Drafts are made with the scripts in Friday email drafts below.
 - `/newsletter/` redirects to `/digest/`.
 - `/app/` how to add MineralDigger to a phone home screen. Nothing to install from an app store.
 - `/offline/` shown when there is no signal and that page has not been saved on the phone. It is `noindex` and is not in the sitemap.
@@ -87,7 +87,7 @@ Prices on `/feature/`:
 | Site sponsor | £25 a month |
 | Friday email | £12 an issue |
 
-The four live Payment Links are in `data/stripe.json` under `links`. Prices stay in `prices`. On `/feature/`, a non-empty `https://` URL is a pay button (`Pay £… with Stripe`). An empty link still says "Coming soon" and is not a buy button. With `links.friday_email` set, the Friday email invites a sponsor for that issue.
+The four live Payment Links are in `data/stripe.json` under `links`. Prices stay in `prices`. On `/feature/`, a non-empty `https://` URL is a pay button (`Pay £… with Stripe`). An empty link still says "Coming soon" and is not a buy button.
 
 | Product | Price key | Link |
 | --- | --- | --- |
@@ -110,7 +110,7 @@ After payment, Stripe customers should land on `https://mineraldigger.com/thanks
 Paid placement data, still empty:
 
 - `data/featured.json` for a show id or an organiser id, with an inclusive `until` date
-- `data/sponsors.json` for a site sponsor, or a Friday sponsor whose `issue` is that Friday (`YYYY-MM-DD`)
+- `data/sponsors.json` for a site sponsor, or a Friday sponsor whose `issue` is that Friday (`YYYY-MM-DD`). The Friday sponsor is written into the email draft. The sign-up page does not show it.
 
 ## Submit form
 
@@ -157,7 +157,7 @@ The home screen install uses `manifest.webmanifest`, `pwa.js` and `sw.js` at the
 
 ## Friday email drafts
 
-`scripts/digest.py` reads `data/shows.json` and writes `out/newsletter-YYYY-MM-DD.md`. The date is the coming Friday. On a Saturday or Sunday it looks ahead to the next weekend, the same window as `/digest/`.
+`scripts/digest.py` reads `data/shows.json` and writes `out/newsletter-YYYY-MM-DD.md`. The date is the coming Friday. On a Saturday or Sunday it looks ahead to the next weekend. That list is for the email draft. `/digest/` is the sign-up page and does not print it.
 
 The note lists shows that weekend and for the next couple of weeks (the two weekends after it): date, venue, times and entry when the catalogue already has them. It does not invent a price or a show. A weekend with nothing on is left out. If that whole window is empty and later shows are still listed, the file is a short coming-up note. If nothing is upcoming, it writes nothing.
 

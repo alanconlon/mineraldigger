@@ -1,7 +1,6 @@
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { digestWeekend, formatRange, iso, overlaps } from "../src/js/format.js";
 import { featuredIds, stripeReady } from "./feature.mjs";
 import { offerValidFrom, renderFeature } from "./render.mjs";
 import { validateSubmission } from "../functions/api/validate.js";
@@ -90,6 +89,9 @@ if (!index.includes('action="https://buttondown.com/api/emails/embed-subscribe/m
 }
 if (!index.includes('data-thanks="/thanks/"')) fail("Homepage form does not point at /thanks/.");
 if (!index.includes('src="/js/newsletter.js"')) fail("Homepage is missing the sign-up script.");
+if (!index.includes('Emails are sent by <a href="https://buttondown.com/" rel="noopener">Buttondown</a>; you\'ll get a link to confirm.')) {
+  fail("Homepage sign-up fine print should name Buttondown and the confirm link.");
+}
 if (/Not sent yet|Nothing is sent yet|Mail is still to be connected/i.test(index)) {
   fail("Homepage still says mail is not connected.");
 }
@@ -223,7 +225,12 @@ for (const label of ["Pay £15 with Stripe", "Pay £99 with Stripe", "Pay £25 a
 }
 const digest = await readFile(join(dist, "digest/index.html"), "utf8");
 const digestDescription = "The Friday email: a free weekly list of UK rock, gem, mineral, fossil and bead shows for the coming weekend.";
-if (!digest.includes("Sponsor one issue for £12")) fail("Digest should invite the live Friday sponsor payment.");
+const digestFinePrint = 'A free Friday email of upcoming UK rock, gem, mineral, fossil and bead shows. Unsubscribe any time. Emails are sent by <a href="https://buttondown.com/" rel="noopener">Buttondown</a>; you\'ll get a link to confirm.';
+if (digest.includes("This weekend's shows")) fail("Digest should not list this weekend's shows under the form.");
+if (digest.includes("Friday email sponsor") || digest.includes("Sponsor one issue") || digest.includes("No sponsor for this issue")) {
+  fail("Digest should not show a sponsor box under the form.");
+}
+if (digest.includes("No shows in the list fall on that weekend.")) fail("Digest should not preview an empty weekend.");
 if (digest.includes("Friday email sponsorship is coming soon")) fail("Digest still says Friday sponsorship is coming soon.");
 if (/Not sent yet|Nothing is sent yet|Mail is not sent yet|Mail is still to be connected|mail is not connected/i.test(digest)) {
   fail("Digest still says mail is not connected.");
@@ -242,25 +249,18 @@ if (!digest.includes('name="metadata__postcode"')) fail("Digest form is missing 
 if (!digest.includes('type="hidden" name="embed" value="1"')) fail("Digest form is missing the hidden embed field.");
 if (!digest.includes('data-thanks="/thanks/"')) fail("Digest form does not send sign-ups to /thanks/.");
 if (!digest.includes(">Sign me up</button>")) fail("Digest button should say Sign me up.");
-if (!digest.includes("unsubscribe any time")) fail("Digest is missing the unsubscribe note.");
-if (!digest.includes("<h2>This weekend's shows</h2>")) fail("Digest is missing the weekend preview heading.");
-if (!digest.includes("The Friday email covers the coming Friday to Sunday. On a Saturday or Sunday it looks ahead to the next weekend.")) {
-  fail("Digest fine print changed.");
-}
+if (!digest.includes(digestFinePrint)) fail("Digest fine print should name Buttondown and the confirm link.");
 if (!digest.includes('src="/js/newsletter.js"')) fail("Digest is missing the sign-up script.");
-const builtToday = new Date();
-const builtWeekend = digestWeekend(builtToday);
-const weekendLabel = formatRange(builtWeekend.start, builtWeekend.end);
-if (!digest.includes(weekendLabel)) fail(`Digest weekend range should be ${weekendLabel}.`);
-const digestCatalogue = JSON.parse(await readFile(join(root, "data/shows.json"), "utf8"));
-const digestToday = iso(builtToday);
-const digestShows = digestCatalogue.shows.filter((show) => show.end >= digestToday && overlaps(show, builtWeekend.start, builtWeekend.end));
-if (digestShows.length) {
-  for (const show of digestShows) {
-    if (!digest.includes(`/show/${show.slug}/`)) fail(`Digest weekend list is missing ${show.slug}.`);
-  }
-} else if (!digest.includes("No shows in the list fall on that weekend.")) {
-  fail("Digest should say when that weekend has no shows.");
+const digestFormEnd = digest.indexOf("</form>");
+const digestFooter = digest.indexOf('<footer class="site-footer">');
+if (digestFormEnd < 0 || digestFooter < digestFormEnd) fail("Digest form should sit above the footer.");
+const digestAfterForm = digest.slice(digestFormEnd, digestFooter);
+if (/<h[1-6]|<ul|<ol|<aside|<article/i.test(digestAfterForm)) {
+  fail("Digest should go from the sign-up form to the footer.");
+}
+const digestFoot = digest.slice(digestFooter, digest.indexOf("</footer>"));
+if (!digestFoot.includes(">Stay in touch</h2>") || !digestFoot.includes('href="/app/">Add to your phone</a>')) {
+  fail("Digest footer should still include Stay in touch and Add to your phone.");
 }
 const newsletterJs = await readFile(join(dist, "js/newsletter.js"), "utf8");
 if (!newsletterJs.includes('location.href = f.getAttribute("data-thanks") || "/thanks/"')) {
