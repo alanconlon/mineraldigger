@@ -1,0 +1,33 @@
+{
+  "id": "/",
+  "name": "MineralDigger: UK rock, gem and mineral shows",
+  "short_name": "MineralDigger",
+  "description": "Rock, gem, mineral, fossil and bead shows across the UK, on one map.",
+  "lang": "en-GB",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#143f36",
+  "background_color": "#143f36",
+  "categories": ["lifestyle", "shopping"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Shows this weekend",
+      "short_name": "This weekend",
+      "url": "/?when=weekend",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Friday email",
+      "short_name": "Friday email",
+      "url": "/digest/",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

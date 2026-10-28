@@ -79,6 +79,7 @@ function footer(generated) {
       <div>
         <h2>Stay in touch</h2>
         <a href="/digest/">Friday email</a>
+        <a href="/app/">Add to your phone</a>
       </div>
     </div>
     <div class="wrap muted small">© 2026 MineralDigger. Show data retrieved ${esc(formatDay(generated))}. <a href="/privacy/">Privacy</a></div>
@@ -140,6 +141,12 @@ function layout({ site, path, title, description, ogTitle, ogDescription, body, 
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#143f36">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="MineralDigger">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta property="og:title" content="${esc(openTitle)}">
   <meta property="og:description" content="${esc(openDescription)}">
   <meta property="og:type" content="website">
@@ -170,6 +177,7 @@ function layout({ site, path, title, description, ogTitle, ogDescription, body, 
   ${footer(generated)}
   ${map ? '<script type="module" src="/js/site.js"></script>' : ""}
   <script defer src="/js/newsletter.js"></script>
+  <script defer src="/pwa.js" data-app="MineralDigger"></script>
 </body>
 </html>
 `;
@@ -853,6 +861,7 @@ export function renderPrivacy({ site, generated }) {
       <ul>
         <li><strong>Hosting.</strong> The site is hosted by Cloudflare. Like any web host, Cloudflare handles the technical details of each visit (such as your IP address and browser type) to deliver pages and protect the site from abuse.</li>
         <li><strong>Search and maps.</strong> The town and postcode box filters shows already loaded on the page. It does not send that search to another service. Maps load tiles from OpenStreetMap, which sees your IP address when your browser requests a tile. The map code is served from this site.</li>
+        <li><strong>On your phone.</strong> If you add MineralDigger to your home screen, pages you open are saved on that phone so they still open with a weak signal. That copy stays on your device. We do not receive it.</li>
       </ul>
       <h2>The Friday email</h2>
       <p>If you <a href="/digest/">sign up for the Friday email</a>, we collect your email address, and your postcode if you choose to give it, so we can send the weekly list of shows. Sign-ups and sending are handled by Buttondown. Every email has an unsubscribe link. We keep your address until you unsubscribe.</p>
@@ -894,6 +903,84 @@ export function renderNotFound({ site, generated }) {
     path: "/404.html",
     title: "Page not found | MineralDigger",
     description: "That page is not on MineralDigger.",
+    body,
+    generated,
+    robots: "noindex",
+  });
+}
+
+const SHARE_ICON = `<svg class="share-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M5 11v9h14v-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+export function renderApp({ site, generated }) {
+  const body = `<article class="page"><div class="wrap-narrow prose">
+      <p class="eyebrow">Home screen</p>
+      <h1>Add MineralDigger to your phone</h1>
+      <p class="lede">Put MineralDigger on your home screen and it opens in one tap, full screen, like any other icon on your phone. There's nothing to download from an app store and nothing to pay. It's the same website, so it's always up to date.</p>
+      <p><img class="app-mark" src="/icons/icon-192.png" alt="MineralDigger icon" width="72" height="72"></p>
+      <p id="a2hs-done" hidden><strong>You're using MineralDigger from your home screen already.</strong></p>
+      <div id="a2hs-install" hidden><p><button type="button" class="pay">Add MineralDigger to this phone</button></p></div>
+      <h2 class="mt">iPhone or iPad</h2>
+      <ol>
+        <li>Open <strong>mineraldigger.com</strong> in your browser.</li>
+        <li>Tap the <strong>Share</strong> button ${SHARE_ICON} (or the browser's menu).</li>
+        <li>Tap <strong>Add to Home Screen</strong> (you may need to scroll down), then <strong>Add</strong>.</li>
+      </ol>
+      <h2 class="mt">Android</h2>
+      <ol>
+        <li>Open <strong>mineraldigger.com</strong> in your browser.</li>
+        <li>Tap the menu (<strong>⋮</strong>).</li>
+        <li>Tap <strong>Add to Home screen</strong>, then confirm.</li>
+      </ol>
+      <p>Skip <strong>Install app</strong> if it appears in the menu. That path (and any in-page Install / Add to phone button that uses it) can trigger Google Play Protect with an "Unsafe app" warning. <strong>Add to Home screen</strong> is the one that works.</p>
+      <p class="muted">Pages you've already looked at stay saved on your phone, so they still open with a weak signal. To remove it, press and hold the icon and choose Remove (or Uninstall).</p>
+    </div></article>`;
+  return layout({
+    site,
+    path: "/app/",
+    title: "Add MineralDigger to your phone",
+    description: "Put MineralDigger on your phone's home screen: how to add it on iPhone, iPad and Android. Free, no app store.",
+    body,
+    generated,
+  });
+}
+
+export function renderOffline({ site, generated }) {
+  const body = `<article class="page"><div class="wrap-narrow prose">
+      <p class="eyebrow">No signal</p>
+      <h1>You're offline</h1>
+      <p class="lede">MineralDigger needs a signal to show the latest listings. Pages you've opened recently are saved on your phone.</p>
+      <ul id="saved-pages"><li><a href="/">Home</a></li></ul>
+      <p class="muted">Saved pages may be out of date. Always check with the organiser before you travel.</p>
+      <p><a class="pay" href="">Try again</a></p>
+    </div></article>
+    <script>(function () {
+      if (!window.caches) return;
+      caches.keys().then(function (ks) {
+        var k = ks.filter(function (n) { return n.indexOf("md-pages-") === 0; })[0];
+        if (!k) return;
+        return caches.open(k).then(function (c) { return c.keys(); }).then(function (rs) {
+          var ul = document.getElementById("saved-pages");
+          var seen = { "/": 1 };
+          rs.reverse().slice(0, 25).forEach(function (r) {
+            var u = new URL(r.url);
+            if (seen[u.pathname] || u.pathname === "/offline/") return;
+            seen[u.pathname] = 1;
+            var a = document.createElement("a");
+            a.href = u.pathname + u.search;
+            var label = u.pathname === "/" ? "Home" : decodeURIComponent(u.pathname).split("/").filter(Boolean).join(", ").split("-").join(" ");
+            a.textContent = label;
+            var li = document.createElement("li");
+            li.appendChild(a);
+            ul.appendChild(li);
+          });
+        });
+      });
+    })();</script>`;
+  return layout({
+    site,
+    path: "/offline/",
+    title: "Offline | MineralDigger",
+    description: "MineralDigger needs a signal to show the latest listings. Pages you have already opened stay on your phone.",
     body,
     generated,
     robots: "noindex",

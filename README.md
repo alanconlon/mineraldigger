@@ -29,6 +29,8 @@ npm run dev
 - `/submit/` organiser form
 - `/digest/` the Friday email. Visitors sign up through Buttondown, and the page lists the coming Friday to Sunday. The page does not send the issue. Drafts are made with the scripts in Friday email drafts below.
 - `/newsletter/` redirects to `/digest/`.
+- `/app/` how to add MineralDigger to a phone home screen. Nothing to install from an app store.
+- `/offline/` shown when there is no signal and that page has not been saved on the phone. It is `noindex` and is not in the sitemap.
 - `/about/` how shows are listed
 - `/privacy/` what the site collects, who handles it, and how to ask about it
 
@@ -149,7 +151,9 @@ npx wrangler pages deploy dist --project-name mineraldigger --branch main
 
 `dist` is the Pages root for that command. Wrangler also picks up `functions/` beside it. Dashboard drag and drop of a zip publishes the static files only and does not compile `functions/`. The public `/api/submit` mail path is the worker route above, not the Pages function.
 
-`dist/_headers` sets a few basic response headers. `robots.txt` points at `https://mineraldigger.com/sitemap.xml`.
+`dist/_headers` sets a few basic response headers, including `application/manifest+json` for `manifest.webmanifest` and `no-cache` for `sw.js`. `dist/_redirects` sends `/newsletter/` to `/digest/`. `robots.txt` points at `https://mineraldigger.com/sitemap.xml`.
+
+The home screen install uses `manifest.webmanifest`, `pwa.js` and `sw.js` at the site root, plus `icons/icon-192.png`, `icons/icon-512.png` and `icons/icon-maskable-512.png`. On Android the in-page install button stays hidden, because that prompt can trigger Play Protect. The `/app/` steps use Add to Home screen instead.
 
 ## Friday email drafts
 
