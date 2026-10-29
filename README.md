@@ -179,7 +179,7 @@ The home screen install uses `manifest.webmanifest`, `pwa.js` and `sw.js` at the
 
 `scripts/digest.py` reads `data/shows.json` and writes `out/newsletter-YYYY-MM-DD.md`. The date is the coming Friday. On a Saturday or Sunday it looks ahead to the next weekend. That list is for the email draft. `/digest/` is the sign-up page and does not print it.
 
-If that Friday has no sponsor in `data/sponsors.json`, the draft adds one line: a shop can sponsor the email for £12 an issue, or the site for £25 a month, linking to `https://mineraldigger.com/feature/`. A booked Friday sponsor replaces that line.
+If that Friday has no sponsor in `data/sponsors.json`, the draft adds one sponsor line, as its own paragraph straight after the opening intro: this week's sponsor slot is free, this Friday email is £12, or the site is £25 a month, linking to `https://mineraldigger.com/feature/`. A booked Friday sponsor replaces that line.
 
 The note lists shows that weekend and for the next couple of weeks (the two weekends after it): date, venue, times and entry when the catalogue already has them. It does not invent a price or a show. A weekend with nothing on is left out. If that whole window is empty and later shows are still listed, the file is a short coming-up note. If nothing is upcoming, it writes nothing.
 

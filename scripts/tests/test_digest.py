@@ -30,8 +30,13 @@ from digest import (  # noqa: E402
 TODAY = date(2026, 10, 28)
 SHOWS = load_json(ROOT / "data" / "shows.json")["shows"]
 SITE = "https://mineraldigger.com"
+INTRO = (
+    "A Friday list of UK rock, gem, mineral, fossil and bead shows. "
+    "Dates, venues, times and entry come from the MineralDigger catalogue, "
+    "checked against organiser websites. Confirm with the organiser before you travel."
+)
 EMPTY_FRIDAY = (
-    "Run a rock, gem or lapidary shop? Sponsor this email for £12 an issue, "
+    "**This week's sponsor slot is free.** Sponsor this Friday email for £12, "
     "or the site for £25 a month: "
     "[see the sponsor options](https://mineraldigger.com/feature/)."
 )
@@ -75,8 +80,10 @@ class DigestTests(unittest.TestCase):
         self.assertIn(f"# {subject_for(friday)}", markdown)
         self.assertFalse(banned(markdown))
         self.assertNotIn("Sponsored", markdown)
+        self.assertNotIn("Run a rock, gem or lapidary shop?", markdown)
         self.assertEqual(markdown.count(EMPTY_FRIDAY), 1)
-        self.assertIn(EMPTY_FRIDAY + "\n\n## This weekend", markdown)
+        self.assertEqual(markdown.count("**This week's sponsor slot is free.**"), 1)
+        self.assertIn(f"{INTRO}\n\n{EMPTY_FRIDAY}\n\n## This weekend", markdown)
         self.assertNotIn("www.rockngem.co", markdown)
         self.assertNotIn("07712", markdown)
         self.assertNotIn("fills quickly", markdown)
@@ -142,7 +149,10 @@ class DigestTests(unittest.TestCase):
         }
         featured = {"shows": [{"id": "rockngem-2026-10-31-tw165aq", "until": "2026-12-01"}], "organisers": []}
         _, markdown = render_newsletter(SHOWS, TODAY, SITE, sponsors, featured)
-        self.assertIn("Sponsored. [Northstone Lapidary](https://example.com/northstone). Rough and slabs.", markdown)
+        booked_line = "Sponsored. [Northstone Lapidary](https://example.com/northstone). Rough and slabs."
+        self.assertIn(booked_line, markdown)
+        self.assertIn(f"{INTRO}\n\n{booked_line}\n\n## This weekend", markdown)
+        self.assertNotIn(EMPTY_FRIDAY, markdown)
         sunbury = paragraph_for(markdown, "rock-gem-and-bead-show-sunbury-on-thames-2026-10-31")
         self.assertTrue(sunbury.startswith("Featured. "))
         other = paragraph_for(markdown, "rock-gem-and-bead-show-worcester-2026-11-07")
@@ -160,6 +170,7 @@ class DigestTests(unittest.TestCase):
         stripe = load_json(ROOT / "data" / "stripe.json")
         self.assertEqual(stripe["prices"]["friday_email"], 12)
         self.assertEqual(stripe["prices"]["site_sponsor"], 25)
+        self.assertNotIn("Run a rock, gem or lapidary shop?", EMPTY_FRIDAY)
         self.assertNotIn("!", EMPTY_FRIDAY)
         self.assertNotIn("\u2014", EMPTY_FRIDAY)
         self.assertNotIn("\u2013", EMPTY_FRIDAY)
@@ -174,7 +185,9 @@ class DigestTests(unittest.TestCase):
         ):
             _, markdown = render_newsletter(SHOWS, TODAY, SITE, sponsors)
             self.assertEqual(markdown.count(EMPTY_FRIDAY), 1)
+            self.assertIn(f"{INTRO}\n\n{EMPTY_FRIDAY}\n\n", markdown)
             self.assertNotIn("Sponsored", markdown)
+            self.assertNotIn("Run a rock, gem or lapidary shop?", markdown)
             self.assertNotIn("example.com", markdown)
             self.assertFalse(banned(markdown))
 
@@ -192,7 +205,7 @@ class DigestTests(unittest.TestCase):
         self.assertNotIn(EMPTY_FRIDAY, named)
 
         _, later = render_newsletter(SHOWS, date(2026, 12, 4), SITE, {"friday": None})
-        self.assertIn(EMPTY_FRIDAY + "\n\n## Coming up", later)
+        self.assertIn(f"{INTRO}\n\n{EMPTY_FRIDAY}\n\n## Coming up", later)
 
         _, markdown = render_newsletter(SHOWS, TODAY, SITE, {"friday": None})
         _, body = buttondown_draft.split_subject(markdown)
