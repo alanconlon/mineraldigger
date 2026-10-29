@@ -232,6 +232,16 @@ p { margin: 0 0 0.8rem; }
 }
 .search button:hover { background: var(--green-2); }
 #search-status { flex-basis: 100%; margin: 0; }
+#search-status .hint-place {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--green-2);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
 
 .layout {
   display: grid;

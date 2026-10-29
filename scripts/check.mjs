@@ -255,10 +255,14 @@ if (!featureJs.includes('heading.textContent = "Feature: " + name')) fail("Featu
 if (!featureJs.includes('client_reference_id')) fail("Featured payment link should pass the show as client_reference_id.");
 const siteJs = await readFile(join(dist, "js/site.js"), "utf8");
 if (!siteJs.includes("Showing ") || !siteJs.includes(" near ")) fail("Search status should say Showing N shows near a place.");
-if (!siteJs.includes("No shows found near ")) fail("Search should say when no shows are near a place.");
-if (!siteJs.includes("Try a nearby town or browse by county.")) fail("No-match copy should suggest a nearby town or a county.");
+if (!siteJs.includes("No shows in or near ")) fail("A real place with no shows should say none are in or near it yet.");
+if (!siteJs.includes("Try a nearby town or ")) fail("No-match copy should suggest a nearby town.");
+if (!siteJs.includes('textContent = "browse by county"')) fail("No-match copy should link browse by county.");
+if (!siteJs.includes('href = "/county/"')) fail("Browse by county should open the county index.");
+if (!siteJs.includes("Did you mean ")) fail("An ambiguous place should ask which one was meant.");
+if (!siteJs.includes('relation: "in"')) fail("A county or region search should use in, not near.");
 if (!siteJs.includes("scrollIntoView")) fail("Search should scroll to the results.");
-if (!siteJs.includes("countyCentre")) fail("A county search should resolve like a place search.");
+if (!siteJs.includes("areaFromCards")) fail("A county search should resolve like a place search.");
 if (!siteJs.includes("shows match")) fail("A narrowed list should say how many of the total match.");
 if (!siteJs.includes("dataset.total")) fail("The intro count should keep the full total.");
 const siteCss = await readFile(join(dist, "site.css"), "utf8");
@@ -804,6 +808,16 @@ if ((worcesterCopy.match(/Check with organiser/g) || []).length !== 1) {
   fail("Worcester should say Check with organiser once.");
 }
 if (worcester.includes(">Unknown<")) fail("Worcester entry badge still says Unknown.");
+const freeShows = catalogue.shows.filter((show) => show.entry?.kind === "free" || show.entry?.adult_gbp === 0);
+if (!freeShows.length) fail("Expected a free show to check entry text.");
+for (const show of freeShows) {
+  const page = await readFile(join(dist, "show", show.slug, "index.html"), "utf8");
+  const visible = page.replace(/<script[\s\S]*?<\/script>/gi, "");
+  if (visible.includes("Free entrance")) fail(`${show.slug} still says Free entrance.`);
+  if (visible.includes("Free. Free")) fail(`${show.slug} repeats free entry.`);
+  if (!visible.includes(">Free entry<")) fail(`${show.slug} should say Free entry once in the badge.`);
+  if ((visible.match(/>Free entry</g) || []).length !== 1) fail(`${show.slug} should say Free entry once.`);
+}
 const countyIndex = await readFile(join(dist, "county/index.html"), "utf8");
 if (!countyIndex.includes("<h1>Shows by county</h1>") || !countyIndex.includes('href="/county/surrey/"')) {
   fail("County index is missing Surrey.");
