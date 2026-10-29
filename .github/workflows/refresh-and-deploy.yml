@@ -1,0 +1,61 @@
+name: Refresh and deploy
+
+# Daily show-data refresh for the Cloudflare Pages project mineraldigger.
+# GitHub schedules are UTC. 05:15 UTC is 05:15 in winter (GMT) and 06:15 in
+# summer (BST), early morning in Europe/London.
+# This does not run on push. Merging the workflow file does not deploy.
+
+on:
+  schedule:
+    - cron: "15 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-and-deploy
+  cancel-in-progress: false
+
+jobs:
+  refresh-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Refresh show data
+        run: python3 scripts/refresh.py --live --write
+
+      - name: Commit refreshed show data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/shows.json
+          if git diff --cached --quiet; then
+            echo "Show data is unchanged."
+          else
+            git commit -m "Refresh show data."
+            git push origin HEAD
+          fi
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install and build
+        run: npm ci && npm run build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name mineraldigger --branch main

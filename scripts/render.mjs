@@ -136,7 +136,7 @@ function footer(generated) {
         <a href="/app/">Add to your phone</a>
       </div>
     </div>
-    <div class="wrap muted small">© 2026 MineralDigger. Show data retrieved ${esc(formatDay(generated))}. <a href="/privacy/">Privacy</a></div>
+    <div class="wrap muted small">© 2026 MineralDigger. Show data retrieved ${esc(formatDay(generated))}. <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></div>
   </footer>`;
 }
 
@@ -842,7 +842,7 @@ export function renderFeature({ site, stripe, generated }) {
             <li>Pinned at the top of the list for 28 days, or until the show date if that is sooner</li>
             <li>A highlighted pin on the map</li>
             <li>A Featured label on the list and the show page</li>
-            <li>In the featured slot of the Friday email the weekend it runs</li>
+            <li>Featured in the Friday email sent the week of your show</li>
           </ul>
           ${payControl(links.featured_show, `Pay £${prices.featured_show} with Stripe`, ready.featured_show)}
         </section>
@@ -870,11 +870,12 @@ export function renderFeature({ site, stripe, generated }) {
           <p class="price">£${prices.friday_email} <small>an issue</small></p>
           <ul>
             <li>The only sponsor in that Friday email</li>
-            <li>One issue. You pick the Friday.</li>
+            <li>Sponsor any Friday you choose (not tied to a show date)</li>
           </ul>
           ${payControl(links.friday_email, `Pay £${prices.friday_email} with Stripe`, ready.friday_email)}
         </section>
       </div>
+      <p>See the <a href="/terms/">terms</a> for what is included, when it goes live, renewals and refunds.</p>
       ${copy.notice}
       <h2>How it works</h2>
       ${copy.featureSteps}
@@ -905,7 +906,9 @@ export function renderThanks({ site, generated }) {
       <p class="eyebrow">Payment received</p>
       <h1>Thank you</h1>
       <p class="lede">Thank you. Your payment has gone through. You get a Stripe receipt by email. We feature the show within one working day (with a year pass, all of that organiser's shows for 12 months from the day you pay), and we email if we need anything else.</p>
+      <p>Featured show: Featured in the Friday email sent the week of your show. Friday email: Sponsor any Friday you choose (not tied to a show date).</p>
       <p><strong>Sponsoring the site or the Friday email?</strong> Please email your logo, a one-line message, and which package you paid for to ${sponsors}. Your slot is live within one working day of receiving your logo and message.</p>
+      <p>See the <a href="/terms/">terms</a> for what is included, when it goes live, renewals and refunds.</p>
       <p class="fine">Questions about your listing? Reply to the Stripe receipt or email ${mailLink(email)}.</p>
       <div class="actions">
         <a href="/">Home</a>
@@ -1104,6 +1107,64 @@ export function renderPrivacy({ site, generated }) {
     path: "/privacy/",
     title: "Privacy | MineralDigger",
     description: "How MineralDigger handles personal information for the UK show list, the submit form, Stripe payments and the Friday email.",
+    body,
+    generated,
+  });
+}
+
+export function renderTerms({ site, stripe, generated }) {
+  const prices = stripe.prices;
+  const email = mailLink(site.email);
+  const sponsors = mailLink(SPONSORS_EMAIL);
+  const body = `<article class="page"><div class="wrap-narrow prose">
+      <p class="eyebrow">Terms</p>
+      <h1>Terms</h1>
+      <p class="fine">Last updated: 29 October 2026</p>
+      <p class="lede">These terms cover featured listings and sponsorship on MineralDigger (mineraldigger.com). Listing on MineralDigger is free. These terms only apply when you pay for something.</p>
+      <h2>What you can buy</h2>
+      <ul>
+        <li>Featured show, £${prices.featured_show}: pinned at the top of the list for 28 days, or until the show date if that is sooner, a highlighted pin on the map, a Featured label on the list and the show page. Featured in the Friday email sent the week of your show.</li>
+        <li>Year pass, £${prices.year_pass} for 12 months: every show you organise is featured for 12 months from the day you pay, with the same pin, label and Friday slot as a single featured show.</li>
+        <li>Site sponsor, £${prices.site_sponsor} a month: your name, one short line and a link on the homepage and the type pages, labelled as a sponsor.</li>
+        <li>Friday email, £${prices.friday_email} an issue: the only sponsor in that Friday email. Sponsor any Friday you choose (not tied to a show date).</li>
+      </ul>
+      <h2>When it goes live</h2>
+      <ul>
+        <li>A featured show is featured within one working day of payment.</li>
+        <li>A sponsor slot is live within one working day of getting your logo and message.</li>
+      </ul>
+      <h2>Renewals and cancelling</h2>
+      <ul>
+        <li>Monthly options renew each month until you cancel. There is no contract.</li>
+        <li>To cancel, email ${sponsors}. Cancelling stops the next renewal, and your slot runs to the end of the period you have paid for.</li>
+      </ul>
+      <h2>Refunds</h2>
+      <ul>
+        <li>If we can't put your slot or featured show live, we refund you in full.</li>
+        <li>If the show is cancelled before your slot runs, tell us and we refund you in full.</li>
+        <li>Otherwise we don't refund part-used periods or slots that have already run.</li>
+      </ul>
+      <h2>Prices and payment</h2>
+      <ul>
+        <li>Prices are in pounds and are as shown at checkout.</li>
+        <li>Prices shown are the total you pay.</li>
+        <li>Payments are taken by Stripe, and you get a receipt by email.</li>
+      </ul>
+      <h2>Content</h2>
+      <ul>
+        <li>We can decline or remove anything misleading, unlawful or unsuitable, and refund you if we do.</li>
+        <li>We check details with organisers where we can, but always check with the organiser or auctioneer before you travel or bid.</li>
+      </ul>
+      <h2>Contact</h2>
+      <ul>
+        <li>Questions: ${email}. Sponsorship and featured listings: ${sponsors}.</li>
+      </ul>
+    </div></article>`;
+  return layout({
+    site,
+    path: "/terms/",
+    title: "Terms | MineralDigger",
+    description: "Terms for featured listings and sponsorship on MineralDigger.",
     body,
     generated,
   });
