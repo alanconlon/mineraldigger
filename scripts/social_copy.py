@@ -287,8 +287,16 @@ def place_phrase(show: dict) -> str:
     return name or town
 
 
+def listed_name(show: dict) -> str:
+    name = " ".join(str(show.get("name") or "").split())
+    town = " ".join(((show.get("venue") or {}).get("town") or "").split())
+    if town and not name.casefold().startswith(town.casefold()):
+        return f"{town}: {name}"
+    return name
+
+
 def show_detail(show: dict) -> str:
-    name = " ".join(str(show["name"]).split())
+    name = listed_name(show)
     place = place_phrase(show)
     when = format_range(parse_iso(show["start"]), parse_iso(show["end"]))
     where = f" at {place}" if place else ""
@@ -342,11 +350,9 @@ def extra_sentences(show: dict, short: bool) -> list[str]:
         lines.append("The organiser lists this date as provisional.")
     if show.get("year_inferred"):
         if short:
-            lines.append("The year was matched from the weekday.")
+            lines.append("The year matches the weekday on the organiser page.")
         else:
-            lines.append(
-                "The year was matched from the weekday, and the organiser page does not print the year."
-            )
+            lines.append("The date uses the year that matches the weekday on the organiser page.")
     return lines
 
 
