@@ -817,6 +817,8 @@ for (const show of freeShows) {
   if (visible.includes("Free. Free")) fail(`${show.slug} repeats free entry.`);
   if (!visible.includes(">Free entry<")) fail(`${show.slug} should say Free entry once in the badge.`);
   if ((visible.match(/>Free entry</g) || []).length !== 1) fail(`${show.slug} should say Free entry once.`);
+  const lede = visible.match(/<p class="lede">([^<]*)<\/p>/);
+  if (lede && /free entry/i.test(lede[1])) fail(`${show.slug} summary repeats the free entry badge.`);
 }
 const countyIndex = await readFile(join(dist, "county/index.html"), "utf8");
 if (!countyIndex.includes("<h1>Shows by county</h1>") || !countyIndex.includes('href="/county/surrey/"')) {

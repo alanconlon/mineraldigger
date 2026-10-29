@@ -82,7 +82,7 @@ def parse_oxford(html: str, today: date | None = None, retrieved: str | None = N
                 "source_url": SOURCE,
                 "source_retrieved": retrieved,
                 "source_notes": "Date card and entry conditions are on oxfordshows.co.uk.",
-                "summary": "Mineral and fossil show for collectors. The organiser also lists gems and rocks. Free entry.",
+                "summary": "Mineral and fossil show for collectors. The organiser also lists gems and rocks.",
             }
         )
     return rows

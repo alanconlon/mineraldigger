@@ -56,6 +56,13 @@ export function entryLabel(entry) {
   return entry.label;
 }
 
+function visitorSummary(show) {
+  let text = publicNote(show.summary);
+  const free = show.entry?.kind === "free" || show.entry?.adult_gbp === 0;
+  if (free) text = text.replace(/\s+Free(?:\s+(?:entry|entrance|admission))?\.?$/i, "").trim();
+  return text;
+}
+
 function entryDetail(entry) {
   const notes = publicNote(entry?.notes);
   if (!notes || FREE_NOTE.test(notes.trim())) return "";
@@ -720,7 +727,7 @@ function jsonLd(show, site, generated) {
     endDate: show.end,
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     eventStatus: "https://schema.org/EventScheduled",
-    description: publicNote(show.summary) || undefined,
+    description: visitorSummary(show) || undefined,
     image: [new URL("/og-image.jpg", site.url).href],
     url: pageUrl,
     location: {
@@ -847,7 +854,7 @@ export function renderShow({ site, show, generated, todayISO, places = null }) {
       ${crumbs.html}
       <h1>${esc(label)}</h1>
       <p class="show-date">${esc(formatRange(show.start, show.end))}</p>
-      <p class="lede">${esc(publicNote(show.summary))}</p>
+      <p class="lede">${esc(visitorSummary(show))}</p>
       <div class="pills">${pills(show, false)}</div>
       ${banners.join("")}
       <p>Types: ${types}</p>
@@ -874,7 +881,7 @@ export function renderShow({ site, show, generated, todayISO, places = null }) {
     site,
     path: `/show/${show.slug}/`,
     title: `${label}, ${formatRange(show.start, show.end)} | MineralDigger`,
-    description: `${show.summary} ${placeLine(show)}.`,
+    description: `${visitorSummary(show)} ${placeLine(show)}.`.trim(),
     body,
     map: true,
     generated,
