@@ -29,6 +29,8 @@ const SHARE_ALT = "MineralDigger: Rock, gem, mineral, fossil and bead shows acro
 const SITE_BLURB = "Rock, gem, mineral, fossil and bead shows across the UK, on one map.";
 const SPONSORS_EMAIL = "sponsors@mineraldigger.com";
 
+const NEWSLETTER_PATH = "/newsletter/";
+
 export function slugify(value) {
   return String(value ?? "")
     .toLowerCase()
@@ -36,6 +38,14 @@ export function slugify(value) {
     .replace(/['’]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+// Town first in lists and headings. The catalogue name stays on structured data.
+export function listedName(show) {
+  const name = String(show?.name || "").trim();
+  const town = String(show?.venue?.town || "").trim();
+  if (!town || name.toLowerCase().startsWith(town.toLowerCase())) return name;
+  return `${town}: ${name}`;
 }
 
 export function entryLabel(entry) {
@@ -95,22 +105,22 @@ function nav(path) {
     ["/", "Shows"],
     ["/feature/", "Feature"],
     ["/submit/", "Submit a show"],
-    ["/digest/", "Friday email"],
+    [NEWSLETTER_PATH, "Friday email"],
     ["/about/", "About"],
   ];
   return items
     .map(([href, label]) => `<a href="${href}"${href === path ? ' aria-current="page"' : ""}>${label}</a>`)
-    .join("");
+    .join("\n");
 }
 
 function footer(generated) {
-  const types = TYPES.map(([, label, href]) => `<a href="${href}">${label}</a>`).join("");
+  const types = TYPES.map(([, label, href]) => `<a href="${href}">${label}</a>`).join("\n");
   return `<footer class="site-footer">
     <div class="wrap foot">
       <div>
         <a class="logo" href="/">Mineral<span>Digger</span></a>
         <p class="muted">Rock, gem, mineral, fossil and bead shows across the UK. On one map.<br>Dates checked against organiser websites. Always confirm with the organiser before you travel.</p>
-        <p class="social"><a href="https://www.facebook.com/people/MineralDigger/61595681170967/" rel="me noopener" target="_blank">Facebook</a><a href="https://bsky.app/profile/mineraldigger.com" rel="me noopener" target="_blank">Bluesky</a></p>
+        <p class="social"><a href="https://www.facebook.com/people/MineralDigger/61595681170967/" rel="me noopener" target="_blank">Facebook</a> <a href="https://bsky.app/profile/mineraldigger.com" rel="me noopener" target="_blank">Bluesky</a></p>
       </div>
       <div>
         <h2>Browse</h2>
@@ -132,11 +142,11 @@ function footer(generated) {
       </div>
       <div>
         <h2>Stay in touch</h2>
-        <a href="/digest/">Friday email</a>
+        <a href="${NEWSLETTER_PATH}">Friday email</a>
         <a href="/app/">Add to your phone</a>
       </div>
     </div>
-    <div class="wrap muted small">© 2026 MineralDigger. Show data retrieved ${esc(formatDay(generated))}. <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></div>
+    <div class="wrap muted small">© 2026 MineralDigger. Data last refreshed ${esc(String(generated).slice(0, 10))}. <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></div>
   </footer>`;
 }
 
@@ -222,9 +232,10 @@ function layout({ site, path, title, description, ogTitle, ogDescription, body, 
 <body>
   <a class="skip" href="#main">Skip to content</a>
   <header class="site-header">
-    <div class="wrap">
+    <div class="wrap bar">
       <a class="logo" href="/">Mineral<span>Digger</span></a>
-      <nav class="nav" aria-label="Primary">${nav(path)}</nav>
+      <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="primary-nav">Menu</button>
+      <nav id="primary-nav" class="nav" aria-label="Primary">${nav(path)}</nav>
     </div>
   </header>
   <main id="main">${body}</main>
@@ -232,28 +243,56 @@ function layout({ site, path, title, description, ogTitle, ogDescription, body, 
   ${map ? '<script type="module" src="/js/site.js"></script>' : ""}
   <script defer src="/js/newsletter.js"></script>
   <script defer src="/pwa.js" data-app="MineralDigger"></script>
+  <script>
+    (function () {
+      var button = document.querySelector(".nav-toggle");
+      var menu = document.getElementById("primary-nav");
+      if (!button || !menu) return;
+      function setOpen(open) {
+        menu.classList.toggle("is-open", open);
+        button.setAttribute("aria-expanded", open ? "true" : "false");
+        button.textContent = open ? "Close" : "Menu";
+      }
+      button.addEventListener("click", function () {
+        setOpen(!menu.classList.contains("is-open"));
+      });
+      menu.addEventListener("click", function (event) {
+        if (event.target.closest("a")) setOpen(false);
+      });
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") setOpen(false);
+      });
+    })();
+  </script>
 </body>
 </html>
 `;
 }
 
-function pills(show) {
+function pills(show, withTypes = true) {
   const bits = [`<span class="pill pill-${esc(show.entry.kind)}">${esc(entryLabel(show.entry))}</span>`];
   if (show.provisional) bits.push('<span class="pill pill-provisional">Provisional</span>');
   if (show.featured) bits.push('<span class="pill pill-featured">Featured</span>');
-  for (const type of show.types) bits.push(`<span class="pill">${esc(type)}</span>`);
-  return bits.join("");
+  if (withTypes) {
+    for (const type of show.types) bits.push(`<span class="pill">${esc(type)}</span>`);
+  }
+  return bits.join(" ");
+}
+
+function byDate(shows) {
+  return [...shows].sort((a, b) => a.start.localeCompare(b.start) || a.name.localeCompare(b.name, "en-GB") || String(a.id).localeCompare(String(b.id)));
 }
 
 function card(show) {
   const stack = shortStack(show.start, show.end);
   const place = [show.venue.town, show.venue.county].filter(Boolean).join(", ");
-  const search = [show.name, show.venue.name, show.venue.town, show.venue.county, show.venue.postcode, show.organiser.name]
+  const label = listedName(show);
+  const search = [show.name, label, show.venue.name, show.venue.town, show.venue.county, show.venue.postcode, show.organiser.name]
     .join(" ")
     .toLowerCase();
   const times = show.times.summary ? `<p class="meta">${esc(show.times.summary)}</p>` : "";
   const dealers = show.dealers ? `<p class="dealers">${esc(show.dealers)} dealers</p>` : "";
-  return `<article class="card${show.featured ? " featured" : ""}" data-start="${esc(show.start)}" data-end="${esc(show.end)}" data-lat="${esc(show.venue.lat)}" data-lng="${esc(show.venue.lng)}" data-name="${esc(show.name)}" data-place="${esc(`${show.venue.name}, ${place}`)}" data-href="/show/${esc(show.slug)}/" data-provisional="${show.provisional ? "1" : "0"}" data-featured="${show.featured ? "1" : "0"}" data-search="${esc(search)}">
+  return `<article class="card${show.featured ? " featured" : ""}" data-start="${esc(show.start)}" data-end="${esc(show.end)}" data-lat="${esc(show.venue.lat)}" data-lng="${esc(show.venue.lng)}" data-town="${esc(show.venue.town)}" data-county="${esc(show.venue.county)}" data-name="${esc(label)}" data-place="${esc(`${show.venue.name}, ${place}`)}" data-href="/show/${esc(show.slug)}/" data-provisional="${show.provisional ? "1" : "0"}" data-featured="${show.featured ? "1" : "0"}" data-search="${esc(search)}">
     <a class="card-link" href="/show/${esc(show.slug)}/">
       <div class="when-block">
         <span class="wd">${esc(stack.wd)}</span>
@@ -262,7 +301,7 @@ function card(show) {
         ${stack.span ? `<span class="span">${esc(stack.span)}</span>` : ""}
       </div>
       <div>
-        <h3>${esc(show.name)}</h3>
+        <h3>${esc(label)}</h3>
         <p class="where">${esc(show.venue.name)}, ${esc(place)}</p>
         ${times}
         ${dealers}
@@ -295,8 +334,8 @@ function typeLinks(current) {
   const rest = TYPES.map(([key, label, href]) => {
     const here = current === key ? ' aria-current="page"' : "";
     return `<a class="chip" href="${href}"${here}>${label}</a>`;
-  }).join("");
-  return all + rest;
+  });
+  return [all, ...rest].join("\n");
 }
 
 function signupForm() {
@@ -331,8 +370,9 @@ function browseLinks() {
 }
 
 export function renderListing({ site, path, title, description, ogTitle, ogDescription, heading, lede, shows, generated, home = false, typeLock = null, eyebrow = null, preface = "" }) {
-  const featured = shows.filter((show) => show.featured);
-  const rest = shows.filter((show) => !show.featured);
+  const ordered = byDate(shows);
+  const featured = ordered.filter((show) => show.featured);
+  const rest = ordered.filter((show) => !show.featured);
   const note = shows.some((show) => show.provisional)
     ? `<p class="fine">Dates marked provisional are printed that way by the organiser. Rock, Gem &amp; Bead Shows mark their 2027 list as provisional.</p>`
     : "";
@@ -348,21 +388,31 @@ export function renderListing({ site, path, title, description, ogTitle, ogDescr
     <div class="wrap">
       ${preface}
       <div class="filters">
-        <div class="chip-row" role="group" aria-label="Date window">
+        <div class="chip-row" role="group" aria-label="Show filters">
           <button type="button" class="chip" data-when="all" aria-pressed="true">All upcoming</button>
           <button type="button" class="chip" data-when="weekend" aria-pressed="false">This weekend</button>
           <button type="button" class="chip" data-when="later" aria-pressed="false">Coming later</button>
+          ${typeLinks(typeLock)}
         </div>
-        <div class="chip-row" aria-label="Type">${typeLinks(typeLock)}</div>
-        <input id="q" type="search" aria-label="Town or postcode" placeholder="Town or postcode">
+        <form id="search" class="search" role="search" action="" method="get">
+          <input id="q" name="q" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" aria-label="Postcode or town" placeholder="Postcode or town, e.g. RH16">
+          <select id="radius" name="r" aria-label="Distance">
+            <option value="15">15 miles</option>
+            <option value="30" selected>30 miles</option>
+            <option value="60">60 miles</option>
+            <option value="100">100 miles</option>
+          </select>
+          <button id="go" type="submit">Search</button>
+        </form>
+        <p id="search-status" class="muted small" aria-live="polite"></p>
       </div>
       ${note}
       <div class="layout">
         <div>
           <noscript><p class="noscript">The map and the weekend filter need JavaScript. The list below is every upcoming show on this page.</p></noscript>
           <div id="empty" class="empty" hidden>
-            <h2>Nothing listed for this weekend.</h2>
-            <p>Coming later has the next published dates.</p>
+            <p id="empty-title"></p>
+            <p id="empty-copy"></p>
           </div>
           <div id="show-list">
             ${featured.length ? `<section class="month"><h2>Featured</h2>${featured.map(card).join("")}</section>` : ""}
@@ -445,8 +495,8 @@ function weekendBlock(title, range, shows) {
 export function renderWeekend(ctx) {
   const weekend = thisWeekend(ctx.today);
   const next = shiftWeekend(weekend, 7);
-  const now = ctx.shows.filter((show) => overlaps(show, weekend.start, weekend.end));
-  const later = ctx.shows.filter((show) => overlaps(show, next.start, next.end));
+  const now = byDate(ctx.shows.filter((show) => overlaps(show, weekend.start, weekend.end)));
+  const later = byDate(ctx.shows.filter((show) => overlaps(show, next.start, next.end)));
   const span = formatRange(weekend.start, weekend.end);
   const noun = now.length === 1 ? "show" : "shows";
   const body = `<section class="hero"><div class="wrap">
@@ -461,7 +511,7 @@ export function renderWeekend(ctx) {
           <noscript><p class="noscript">The map needs JavaScript. The list on this page is complete without it.</p></noscript>
           ${weekendBlock("This weekend", weekend, now)}
           ${weekendBlock("Next weekend", next, later)}
-          <p class="fine"><a href="/">All upcoming shows</a> has dates after that.</p>
+          <p class="fine"><a href="/">All upcoming shows</a> have dates after that.</p>
         </div>
         <aside class="map-col">
           <div class="map-frame"><div id="map" role="region" aria-label="Map of shows"></div></div>
@@ -677,12 +727,57 @@ function whereLinks(show, places) {
   return [town, county, esc(show.venue.nation)].filter(Boolean).join(", ");
 }
 
+const INTERNAL_NOTE = /year is matched|year was matched|does not print the year|does not print them|college contact page|organiser homepage|date line does not|printed under the heading|provisional 2027 dates|satnav postcode|venue-supplements|source note/i;
+
+function publicNote(value) {
+  const text = String(value || "").trim();
+  if (!text || INTERNAL_NOTE.test(text)) return "";
+  return text;
+}
+
+function breadcrumb(show, site, places) {
+  const crumbs = [{ name: "Home", href: "/" }];
+  if (show.venue.county) {
+    const slug = slugify(show.venue.county);
+    crumbs.push({ name: show.venue.county, href: places?.counties?.has(slug) ? `/county/${slug}/` : "" });
+  }
+  if (show.venue.town) {
+    const slug = slugify(show.venue.town);
+    crumbs.push({ name: show.venue.town, href: places?.towns?.has(slug) ? `/town/${slug}/` : "" });
+  }
+  const html = `<nav class="crumbs" aria-label="Breadcrumb">${crumbs
+    .map((crumb, index) => {
+      const label = crumb.href ? `<a href="${crumb.href}">${esc(crumb.name)}</a>` : `<span>${esc(crumb.name)}</span>`;
+      const sep = index ? `<span class="crumb-sep" aria-hidden="true">&gt;</span> ` : "";
+      return `${sep}${label}`;
+    })
+    .join(" ")}</nav>`;
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: crumbs.map((crumb, index) => {
+      const item = { "@type": "ListItem", position: index + 1, name: crumb.name };
+      if (crumb.href) item.item = new URL(crumb.href, site.url).href;
+      return item;
+    }),
+  };
+  const script = `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
+  return { html, script };
+}
+
+function mapsDirections(show) {
+  const destination = [show.venue.name, show.venue.street, show.venue.town, show.venue.postcode].filter(Boolean).join(", ");
+  const query = destination || (Number.isFinite(Number(show.venue.lat)) ? `${show.venue.lat},${show.venue.lng}` : "");
+  if (!query) return "";
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
+}
+
 export function renderShow({ site, show, generated, todayISO, places = null }) {
   const past = show.end < todayISO;
   const banners = [];
   if (past) banners.push(`<div class="callout past"><p>This date has passed. Check the organiser for the next one.</p></div>`);
   if (show.provisional) banners.push(`<div class="callout"><p>The organiser lists this date as provisional. Check their site before you travel.</p></div>`);
-  if (show.year_inferred) banners.push(`<div class="callout"><p>${esc(show.source.notes)}</p></div>`);
+  if (show.year_inferred) banners.push(`<div class="callout"><p>The date uses the year that matches the weekday on the organiser page.</p></div>`);
   const address = [show.venue.street, placeLine(show), show.venue.postcode].filter(Boolean).join(", ");
   const facts = [
     ["When", `${formatRange(show.start, show.end)}${show.times.summary ? `. ${show.times.summary}` : ""}${show.times.notes ? ` ${show.times.notes}` : ""}`],
@@ -706,12 +801,16 @@ export function renderShow({ site, show, generated, todayISO, places = null }) {
     .map((item) => `<p>Also: <a href="${esc(item.url)}">${esc(item.url)}</a></p>`)
     .join("");
   const types = show.types.map((type) => `<a href="/${esc(type)}/">${esc(type)}</a>`).join(", ");
-  const osm = `https://www.openstreetmap.org/directions?to=${show.venue.lat}%2C${show.venue.lng}`;
+  const directions = mapsDirections(show);
+  const crumbs = breadcrumb(show, site, places);
+  const placeNote = publicNote(show.venue.place_note);
+  const label = listedName(show);
   const body = `<article class="page"><div class="wrap-narrow">
-      <p class="eyebrow"><a href="/">Shows</a></p>
-      <h1>${esc(show.name)}</h1>
+      ${crumbs.html}
+      <h1>${esc(label)}</h1>
+      <p class="show-date">${esc(formatRange(show.start, show.end))}</p>
       <p class="lede">${esc(show.summary)}</p>
-      <div class="pills">${pills(show)}</div>
+      <div class="pills">${pills(show, false)}</div>
       ${banners.join("")}
       <p>Types: ${types}</p>
       <p>Where: ${whereLinks(show, places)}</p>
@@ -721,22 +820,22 @@ export function renderShow({ site, show, generated, todayISO, places = null }) {
       ${website}
       <div class="actions">
         <a href="/show/${esc(show.slug)}/event.ics">Add to calendar</a>
-        <a href="${esc(osm)}">Directions</a>
-        <a href="/feature/">Feature this show</a>
+        ${directions ? `<a href="${esc(directions)}" rel="noopener" target="_blank">Directions</a>` : ""}
+        <a href="/feature/?show=${esc(show.slug)}">Feature this show</a>
       </div>
       <div class="map-frame" style="height:320px;min-height:0"><div id="detail-map" data-lat="${esc(show.venue.lat)}" data-lng="${esc(show.venue.lng)}" role="region" aria-label="Map of the venue"></div></div>
-      <p class="map-note">The pin is the venue postcode, not a surveyed entrance.${show.venue.place_note ? ` ${esc(show.venue.place_note)}` : ""}</p>
+      <p class="map-note">The pin is the venue postcode, not a surveyed entrance.${placeNote ? ` ${esc(placeNote)}` : ""}</p>
       <h2>Where this date came from</h2>
-      <p>${esc(show.source.notes)}</p>
       ${retrieved}
       ${also}
       <p>Always check the organiser's page for times, tickets and any changes before you set off.</p>
     </div></article>
-    ${jsonLd(show, site, generated)}`;
+    ${jsonLd(show, site, generated)}
+    ${crumbs.script}`;
   return layout({
     site,
     path: `/show/${show.slug}/`,
-    title: `${show.name}, ${formatRange(show.start, show.end)} | MineralDigger`,
+    title: `${label}, ${formatRange(show.start, show.end)} | MineralDigger`,
     description: `${show.summary} ${placeLine(show)}.`,
     body,
     map: true,
@@ -824,6 +923,7 @@ export function renderFeature({ site, stripe, generated }) {
       <p class="eyebrow">For organisers and sponsors</p>
       <h1>Feature a show</h1>
       <p class="lede">Put your show in front of people looking for rock, gem, mineral, fossil and bead shows. Listing is free. Featuring and sponsorship are optional, and they are labelled when they are on.</p>
+      <div id="feature-pick" class="callout" hidden></div>
       <div class="ladder">
         <section class="price-card">
           <h2>Free listing</h2>
@@ -839,7 +939,7 @@ export function renderFeature({ site, stripe, generated }) {
           <h2>Featured show</h2>
           <p class="price">£${prices.featured_show}</p>
           <ul>
-            <li>Pinned at the top of the list for 28 days, or until the show date if that is sooner</li>
+            <li>Pinned at the top of the list for 4 weeks, or until the show date if that is sooner</li>
             <li>A highlighted pin on the map</li>
             <li>A Featured label on the list and the show page</li>
             <li>Featured in the Friday email sent the week of your show</li>
@@ -888,7 +988,8 @@ export function renderFeature({ site, stripe, generated }) {
       <h2>How sponsoring works</h2>
       ${copy.sponsorSteps}
       <p>Sponsors are labelled, and the link is marked as sponsored. We take sponsors that suit collectors of rocks, gems, minerals, fossils and beads.</p>
-    </div></article>`;
+    </div></article>
+    <script src="/js/feature.js" defer></script>`;
   return layout({
     site,
     path: "/feature/",
@@ -932,7 +1033,7 @@ export function renderSubmit({ site, generated }) {
   ).join("");
   const body = `<article class="page"><div class="wrap-narrow">
       <p class="eyebrow">Free listing</p>
-      <h1>Submit a show</h1>
+      <h1>Add your show</h1>
       <p class="lede">Tell us about a rock, gem, mineral, fossil or bead show. We check the organiser website before it goes on the map.</p>
       <p>Read <a href="/about/">how we list shows</a>.</p>
       <div id="form-errors" class="errors" hidden></div>
@@ -1037,7 +1138,7 @@ export function renderDigest({ site, generated }) {
     </div></article>`;
   return layout({
     site,
-    path: "/digest/",
+    path: NEWSLETTER_PATH,
     title: "The Friday email | MineralDigger",
     description: DIGEST_DESCRIPTION,
     body,
@@ -1073,17 +1174,17 @@ export function renderPrivacy({ site, generated }) {
   const body = `<article class="page"><div class="wrap-narrow prose">
       <p class="eyebrow">Privacy</p>
       <h1>Privacy</h1>
-      <p class="fine">Last updated: 28 October 2026</p>
+      <p class="fine">Last updated: 29 October 2026</p>
       <p class="lede">MineralDigger (mineraldigger.com) is run by Alan Conlon in Ireland. This page explains what information we collect, why, who handles it for us, and how long we keep it. Questions or requests: <a href="mailto:${esc(email)}">${esc(email)}</a>.</p>
       <h2>Browsing the site</h2>
-      <p>You do not need an account to use MineralDigger. MineralDigger does not use analytics, advertising trackers or its own cookies. Cloudflare may set a short-lived security cookie if it needs to check that a visitor is not a bot.</p>
+      <p>You do not need an account to use MineralDigger. We use Cloudflare Web Analytics, which is cookieless and does not track you across sites. It counts page views and gives rough visitor numbers. MineralDigger does not use advertising trackers or its own cookies. Cloudflare may set a short-lived security cookie if it needs to check that a visitor is not a bot.</p>
       <ul>
-        <li><strong>Hosting.</strong> The site is hosted by Cloudflare. Like any web host, Cloudflare handles the technical details of each visit (such as your IP address and browser type) to deliver pages and protect the site from abuse.</li>
-        <li><strong>Search and maps.</strong> The town and postcode box filters shows already loaded on the page. It does not send that search to another service. Maps load tiles from OpenStreetMap, which sees your IP address when your browser requests a tile. The map code is served from this site.</li>
+        <li><strong>Hosting.</strong> The site is hosted by Cloudflare. Like any web host, Cloudflare handles the technical details of each visit (such as your IP address and browser type) to deliver pages and protect the site from abuse. Cloudflare Web Analytics is part of that hosting. It is cookieless and does not track you across sites.</li>
+        <li><strong>Search and maps.</strong> A postcode search, or a place name that is not already a town on the page, is sent to postcodes.io so shows can be sorted by distance. postcodes.io sees your IP address and the place you search for. A town that is already listed is matched on this page. Maps load tiles from OpenStreetMap, which sees your IP address when your browser requests a tile. The map code is served from this site.</li>
         <li><strong>On your phone.</strong> If you add MineralDigger to your home screen, pages you open are saved on that phone so they still open with a weak signal. That copy stays on your device. We do not receive it.</li>
       </ul>
       <h2>The Friday email</h2>
-      <p>If you <a href="/digest/">sign up for the Friday email</a>, we collect your email address, and your postcode if you choose to give it, so we can send the weekly list of shows. Sign-ups and sending are handled by Buttondown. Every email has an unsubscribe link. We keep your address until you unsubscribe.</p>
+      <p>If you <a href="${NEWSLETTER_PATH}">sign up for the Friday email</a>, we collect your email address, and your postcode if you choose to give it, so we can send the weekly list of shows. Sign-ups and sending are handled by Buttondown. Every email has an unsubscribe link. We keep your address until you unsubscribe.</p>
       <h2>Submitting a show</h2>
       <p>The <a href="/submit/">submit form</a> asks for the show details (name, types, dates, times, venue, street, town, postcode, entry and website) and the organiser's name, email and phone. We use this to check and list the show, and to contact you about it. The form is sent by email to <a href="mailto:${esc(email)}">${esc(email)}</a> through Cloudflare. The show details are published on the site. Your email address is not. We keep submission emails while the show is listed and for a reasonable time afterwards in case of questions, and will delete them sooner if you ask.</p>
       <h2>Payments</h2>
@@ -1094,7 +1195,8 @@ export function renderPrivacy({ site, generated }) {
       <ul>
         <li><strong>Buttondown</strong>: Friday email sign-ups and sending.</li>
         <li><strong>Stripe</strong>: payments for featured shows and sponsorships.</li>
-        <li><strong>Cloudflare</strong>: hosting, and passing on the submission form.</li>
+        <li><strong>Cloudflare</strong>: hosting, Web Analytics, and passing on the submission form.</li>
+        <li><strong>postcodes.io</strong>: postcode and place lookups when you search by distance.</li>
         <li><strong>Google (Gmail)</strong>: our email inbox.</li>
       </ul>
       <p>Some of these services are based in, or process data in, the US. They rely on the EU-US Data Privacy Framework or standard contractual clauses, as set out in their own terms.</p>
@@ -1123,7 +1225,7 @@ export function renderTerms({ site, stripe, generated }) {
       <p class="lede">These terms cover featured listings and sponsorship on MineralDigger (mineraldigger.com). Listing on MineralDigger is free. These terms only apply when you pay for something.</p>
       <h2>What you can buy</h2>
       <ul>
-        <li>Featured show, £${prices.featured_show}: pinned at the top of the list for 28 days, or until the show date if that is sooner, a highlighted pin on the map, a Featured label on the list and the show page. Featured in the Friday email sent the week of your show.</li>
+        <li>Featured show, £${prices.featured_show}: pinned at the top of the list for 4 weeks, or until the show date if that is sooner, a highlighted pin on the map, a Featured label on the list and the show page. Featured in the Friday email sent the week of your show.</li>
         <li>Year pass, £${prices.year_pass} for 12 months: every show you organise is featured for 12 months from the day you pay, with the same pin, label and Friday slot as a single featured show.</li>
         <li>Site sponsor, £${prices.site_sponsor} a month: your name, one short line and a link on the homepage and the type pages, labelled as a sponsor.</li>
         <li>Friday email, £${prices.friday_email} an issue: the only sponsor in that Friday email. Sponsor any Friday you choose (not tied to a show date).</li>

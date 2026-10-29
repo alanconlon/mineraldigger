@@ -182,6 +182,16 @@ if (sameAs !== "https://www.facebook.com/people/MineralDigger/61595681170967/\nh
 if (!Array.isArray(org?.areaServed) || org.areaServed.join(",") !== "GB") fail("Organization areaServed should be GB.");
 if (index.includes("Also from us")) fail("Homepage should not include a sister-site footer.");
 if (!index.includes("Kempton Park")) fail("Homepage is missing the Rockngem Kempton show.");
+if (!index.includes('class="nav-toggle"') || !index.includes('id="primary-nav"')) fail("Homepage is missing the mobile menu.");
+if (!index.includes('href="#main">Skip to content</a>')) fail("Skip to content link is missing.");
+if (!index.includes(">Search</button>")) fail("Search button is missing.");
+if (!index.includes('placeholder="Postcode or town, e.g. RH16"')) fail("Search placeholder is wrong.");
+if (!index.includes('aria-label="Show filters"')) fail("Filter buttons should be one group.");
+if (index.includes('aria-label="Date window"') || index.includes('aria-label="Type"')) fail("The two filter rows are still separate.");
+if (index.includes("<h2>Nothing listed for this weekend.</h2>")) fail("Homepage still has the hidden weekend heading.");
+if (!index.includes("<h3>Haywards Heath: Sussex Mineral, Crystal &amp; Fossil Show</h3>")) fail("Homepage show names should lead with the town.");
+const monthKeys = [...index.matchAll(/data-month="(\d{4}-\d{2})"/g)].map((match) => match[1]);
+if (!monthKeys.length || new Set(monthKeys).size !== monthKeys.length) fail("Homepage should have one heading per month.");
 if (!/Oxford Mineral|Sussex Mineral|Bakewell Rock Exchange|South of England Mineral Show/.test(index)) {
   fail("Homepage is missing an independent show.");
 }
@@ -206,6 +216,11 @@ if (feature.includes("Stripe link still to be added") || feature.includes("disab
 }
 if (feature.includes("REPLACE_ME")) fail("Feature page still has a Stripe placeholder.");
 if (!feature.includes("Free listing") || !feature.includes("Submit a show")) fail("Feature page is missing the free listing.");
+if (!feature.includes("for 4 weeks")) fail("Feature page should describe featuring as 4 weeks.");
+if (feature.includes("28 days")) fail("Feature page still says 28 days.");
+if (!feature.includes('id="feature-pick"') || !feature.includes('src="/js/feature.js"')) {
+  fail("Feature page should be able to show the show passed in the query.");
+}
 if (!feature.includes("Pay by card through Stripe") || !feature.includes("We feature the show within one working day")) {
   fail("Feature page is missing the live checkout steps.");
 }
@@ -240,7 +255,7 @@ if (payLinks.join("\n") !== expectedPayLinks.join("\n")) {
 for (const label of ["Pay £15 with Stripe", "Pay £99 with Stripe", "Pay £25 a month with Stripe", "Pay £12 with Stripe"]) {
   if (!feature.includes(label)) fail(`Feature page is missing ${label}.`);
 }
-const digest = await readFile(join(dist, "digest/index.html"), "utf8");
+const digest = await readFile(join(dist, "newsletter/index.html"), "utf8");
 const digestDescription = "The Friday email: a free weekly list of UK rock, gem, mineral, fossil and bead shows for the coming weekend.";
 const digestFinePrint = 'A free Friday email of upcoming UK rock, gem, mineral, fossil and bead shows. Unsubscribe any time. Emails are sent by <a href="https://buttondown.com/" rel="noopener">Buttondown</a>; you\'ll get a link to confirm.';
 if (digest.includes("This weekend's shows")) fail("Digest should not list this weekend's shows under the form.");
@@ -256,6 +271,7 @@ if (/Not sent yet|Nothing is sent yet|Mail is not sent yet|Mail is still to be c
   fail("Digest still says mail is not connected.");
 }
 if (!digest.includes("<h1>The Friday email</h1>")) fail("Digest heading should be The Friday email.");
+if (!digest.includes('rel="canonical" href="https://mineraldigger.com/newsletter/"')) fail("Friday email canonical should be /newsletter/.");
 if (!digest.includes("<title>The Friday email | MineralDigger</title>")) fail("Digest title is wrong.");
 if (!digest.includes(`<meta name="description" content="${digestDescription}">`)) fail("Digest meta description is wrong.");
 if (!digest.includes(`property="og:description" content="${digestDescription}"`)) fail("Digest og:description is wrong.");
@@ -340,6 +356,7 @@ if (/2 working days|two working days/i.test(unwired)) fail("Unpaid feature page 
 
 const submit = await readFile(join(dist, "submit/index.html"), "utf8");
 if (!submit.includes("<form") || !submit.includes('action="/api/submit"')) fail("Submit form is missing.");
+if (!submit.includes("<h1>Add your show</h1>")) fail("Submit page heading should be Add your show.");
 const submitJs = await readFile(join(dist, "js/submit.js"), "utf8");
 if (!submitJs.includes("Mail is not connected")) fail("Submit fallback should still say mail is not connected.");
 if (!submitJs.includes('href="mailto:hello@mineraldigger.com"')) fail("Submit fallback is missing a mailto to hello@mineraldigger.com.");
@@ -398,7 +415,7 @@ for (const file of files) {
     "/submit/",
     "/feature/",
     "/about/",
-    "/digest/",
+    "/newsletter/",
     "/rock/",
     "/gem/",
     "/mineral/",
@@ -412,14 +429,14 @@ for (const file of files) {
   if (!foot.includes('href="/submit/">Submit your show</a>')) fail(`Submit label missing in ${file}`);
   if (!foot.includes('href="/feature/">Feature your show</a>')) fail(`Feature label missing in ${file}`);
   if (!foot.includes('href="/about/">How we list shows</a>')) fail(`About label missing in ${file}`);
-  if (!foot.includes('href="/digest/">Friday email</a>')) fail(`Friday email link missing in ${file}`);
+  if (!foot.includes('href="/newsletter/">Friday email</a>')) fail(`Friday email link missing in ${file}`);
   if (!foot.includes('href="/app/">Add to your phone</a>')) fail(`Add to your phone link missing in ${file}`);
   if (!raw.includes('<link rel="manifest" href="/manifest.webmanifest">')) fail(`Manifest link missing in ${file}`);
   if (!raw.includes('<meta name="theme-color" content="#143f36">')) fail(`Theme colour missing in ${file}`);
   if (!raw.includes('src="/pwa.js"')) fail(`pwa.js missing in ${file}`);
   const headerEnd = raw.indexOf("</header>");
   const header = headerEnd > 0 ? raw.slice(0, headerEnd) : "";
-  if (!/href="\/digest\/"(?: aria-current="page")?>Friday email<\/a>/.test(header)) {
+  if (!/href="\/newsletter\/"(?: aria-current="page")?>Friday email<\/a>/.test(header)) {
     fail(`Header nav in ${file} is missing the Friday email label.`);
   }
   if (raw.includes("Friday list")) fail(`Friday list label still in ${file}`);
@@ -431,12 +448,12 @@ for (const file of files) {
   if (!foot.includes('href="https://bsky.app/profile/mineraldigger.com" rel="me noopener" target="_blank">Bluesky</a>')) {
     fail(`Bluesky link missing in ${file}`);
   }
-  if (!foot.includes("© 2026 MineralDigger.") || !foot.includes("Show data retrieved ")) fail(`Footer credit line missing in ${file}`);
+  if (!foot.includes("© 2026 MineralDigger.") || !foot.includes("Data last refreshed ")) fail(`Footer credit line missing in ${file}`);
   if (!foot.includes('href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a>')) {
     fail(`Footer in ${file} should put Terms next to Privacy.`);
   }
   if (/\bVAT\b/i.test(textOnly(raw))) fail(`VAT wording in ${file}`);
-  if (/Ireland|UK\s*&|UK\s*\+|fairdigger|auctiondigger|alanconlon\.com|\/newsletter\//i.test(foot)) {
+  if (/Ireland|UK\s*&|UK\s*\+|fairdigger|auctiondigger|alanconlon\.com|\/digest\//i.test(foot)) {
     fail(`Footer in ${file} has a banned link or a non-UK blurb`);
   }
 }
@@ -450,10 +467,11 @@ if (!sitemap.includes("<loc>https://mineraldigger.com/privacy/</loc>")) fail("Si
 if (!sitemap.includes("<loc>https://mineraldigger.com/terms/</loc>")) fail("Sitemap is missing the terms page.");
 if (sitemap.includes("/thanks/payment")) fail("Thank-you page must stay out of the sitemap.");
 if (sitemap.includes("<loc>https://mineraldigger.com/thanks/</loc>")) fail("Sign-up thank-you page must stay out of the sitemap.");
-if (sitemap.includes("/newsletter")) fail("Newsletter alias must stay out of the sitemap.");
+if (!sitemap.includes("<loc>https://mineraldigger.com/newsletter/</loc>")) fail("Sitemap is missing the Friday email.");
+if (sitemap.includes("/digest")) fail("Digest alias must stay out of the sitemap.");
 const redirects = await readFile(join(dist, "_redirects"), "utf8");
-if (!redirects.includes("/newsletter /digest/ 301") || !redirects.includes("/newsletter/ /digest/ 301")) {
-  fail("/newsletter/ should redirect to /digest/.");
+if (!redirects.includes("/digest /newsletter/ 301") || !redirects.includes("/digest/ /newsletter/ 301")) {
+  fail("/digest/ should redirect to /newsletter/.");
 }
 if (!redirects.includes("/shows/surrey /county/surrey/ 301") || !redirects.includes("/shows/surrey/ /county/surrey/ 301")) {
   fail("/shows/surrey/ should redirect to the Surrey county page.");
@@ -473,7 +491,16 @@ if (!privacy.includes("Stripe")) fail("Privacy page does not name Stripe.");
 if (!privacy.includes("Cloudflare")) fail("Privacy page does not name Cloudflare.");
 if (!privacy.includes('href="https://www.dataprotection.ie/"')) fail("Privacy page does not point at the Irish DPC.");
 if (!privacy.includes('href="/submit/"')) fail("Privacy page does not link the submit form.");
-if (!privacy.includes('href="/digest/"')) fail("Privacy page does not link the Friday email.");
+if (!privacy.includes('href="/newsletter/"')) fail("Privacy page does not link the Friday email.");
+if (!privacy.includes("Cloudflare Web Analytics, which is cookieless and does not track you across sites.")) {
+  fail("Privacy page does not disclose Cloudflare Web Analytics.");
+}
+if (!privacy.includes("It counts page views and gives rough visitor numbers.")) {
+  fail("Privacy page does not describe what Cloudflare Web Analytics counts.");
+}
+if (/does not use analytics|doesn't use analytics|do not use analytics/i.test(privacy)) {
+  fail("Privacy page still says there are no analytics.");
+}
 if (/Nothing is sent yet|does not ask you to sign up|once that email is connected/i.test(privacy)) {
   fail("Privacy page still says the Friday email is not connected.");
 }
@@ -533,6 +560,8 @@ if (!terms.includes("<h2>Contact</h2>")) fail("Terms is missing Contact.");
 if (!terms.includes("Questions:") || !terms.includes('href="mailto:hello@mineraldigger.com"')) fail("Terms contact line is wrong.");
 if (!terms.includes("Sponsorship and featured listings:")) fail("Terms sponsorship contact is wrong.");
 if (!terms.includes("Last updated: 29 October 2026")) fail("Terms last updated date is wrong.");
+if (!terms.includes("for 4 weeks")) fail("Terms should describe featuring as 4 weeks.");
+if (terms.includes("28 days")) fail("Terms still says 28 days.");
 const termsArticle = terms.slice(terms.indexOf("<article"), terms.indexOf("</article>"));
 const termsHeadings = [...termsArticle.matchAll(/<h2>([^<]+)<\/h2>/g)].map((match) => match[1]);
 const expectedTermsHeadings = ["What you can buy", "When it goes live", "Renewals and cancelling", "Refunds", "Prices and payment", "Content", "Contact"];
@@ -562,7 +591,7 @@ const iconSrcs = (manifest.icons || []).map((icon) => icon.src);
 for (const src of ["/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-maskable-512.png"]) {
   if (!iconSrcs.includes(src)) fail(`Manifest is missing ${src}.`);
 }
-if (!manifest.shortcuts?.some((item) => item.url === "/this-weekend/") || !manifest.shortcuts?.some((item) => item.url === "/digest/")) {
+if (!manifest.shortcuts?.some((item) => item.url === "/this-weekend/") || !manifest.shortcuts?.some((item) => item.url === "/newsletter/")) {
   fail("Manifest shortcuts should offer this weekend and the Friday email.");
 }
 const pwaJs = await readFile(join(dist, "pwa.js"), "utf8");
@@ -697,6 +726,8 @@ const weekendPage = await readFile(join(dist, "this-weekend/index.html"), "utf8"
 if (!weekendPage.includes("<h1>Shows this weekend</h1>")) fail("This weekend page heading is wrong.");
 if (!weekendPage.includes('rel="canonical" href="https://mineraldigger.com/this-weekend/"')) fail("This weekend canonical is wrong.");
 if (!weekendPage.includes(">Next weekend</h2>")) fail("This weekend page is missing next weekend.");
+if (!weekendPage.includes("have dates after that.")) fail("Weekend page should say shows have dates after that.");
+if (weekendPage.includes("has dates after that.")) fail("Weekend page still says shows has dates after that.");
 const worcester = await readFile(join(dist, "show/rock-gem-and-bead-show-worcester-2026-11-07/index.html"), "utf8");
 if (!worcester.includes(">Check with organiser<")) fail("Worcester entry badge should say check with the organiser.");
 if (worcester.includes(">Unknown<")) fail("Worcester entry badge still says Unknown.");
@@ -757,7 +788,20 @@ for (const show of catalogue.shows) {
   }
   const event = parsed.events[0];
   const refreshed = show.source?.retrieved || catalogue.generated;
+  if (event.name !== show.name) fail(`${show.slug} structured data name should stay the catalogue name.`);
   if (event.url !== pageUrl) fail(`${show.slug} Event url is not the mineraldigger.com show page.`);
+  if (/year is matched|year was matched|does not print the year|college contact page/i.test(html)) {
+    fail(`${show.slug} publishes an internal note.`);
+  }
+  if (!html.includes('aria-label="Breadcrumb"') || !html.includes('"@type":"BreadcrumbList"')) {
+    fail(`${show.slug} is missing the breadcrumb.`);
+  }
+  if (!html.includes(">Home</a>")) fail(`${show.slug} breadcrumb should start at Home.`);
+  if (!html.includes("https://www.google.com/maps/dir/?api=1&amp;destination=")) {
+    fail(`${show.slug} directions are not Google Maps.`);
+  }
+  if (!html.includes(`href="/feature/?show=${show.slug}"`)) fail(`${show.slug} feature link should pass the show slug.`);
+  if (!html.includes('class="show-date"')) fail(`${show.slug} should show the date under the heading.`);
   if (JSON.stringify(event.image) !== JSON.stringify(["https://mineraldigger.com/og-image.jpg"])) {
     fail(`${show.slug} Event image is not the og-image array.`);
   }

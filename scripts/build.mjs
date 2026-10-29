@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { addDays, iso, parseISO } from "../src/js/format.js";
 import { featuredIds } from "./feature.mjs";
 import {
+  listedName,
   renderAbout,
   renderApp,
   renderDigest,
@@ -87,7 +88,7 @@ function ics(show, todayISO, site) {
     `DTSTAMP:${stamp}`,
     `DTSTART;VALUE=DATE:${start}`,
     `DTEND;VALUE=DATE:${end}`,
-    `SUMMARY:${icsEscape(show.name)}`,
+    `SUMMARY:${icsEscape(listedName(show))}`,
     `LOCATION:${icsEscape(location)}`,
   ];
   if (show.source.url) lines.push(`URL:${show.source.url}`);
@@ -124,6 +125,7 @@ async function copyAssets() {
   await cp(join(root, "src/js/site.js"), join(dist, "js/site.js"));
   await cp(join(root, "src/js/submit.js"), join(dist, "js/submit.js"));
   await cp(join(root, "src/js/newsletter.js"), join(dist, "js/newsletter.js"));
+  await cp(join(root, "src/js/feature.js"), join(dist, "js/feature.js"));
   await cp(join(root, "functions/api/validate.js"), join(dist, "js/validate.js"));
   await cp(join(root, "public/favicon.svg"), join(dist, "favicon.svg"));
   await cp(join(root, "public/favicon.ico"), join(dist, "favicon.ico"));
@@ -143,8 +145,8 @@ async function copyAssets() {
   await writeFile(
     join(dist, "_redirects"),
     [
-      "/newsletter /digest/ 301",
-      "/newsletter/ /digest/ 301",
+      "/digest /newsletter/ 301",
+      "/digest/ /newsletter/ 301",
       "/shows/surrey /county/surrey/ 301",
       "/shows/surrey/ /county/surrey/ 301",
       "/counties /county/ 301",
@@ -198,15 +200,15 @@ async function main() {
   await writePage("thanks/payment/index.html", renderThanks({ site, generated }));
   await writePage("submit/index.html", renderSubmit({ site, generated }));
   await writePage("about/index.html", renderAbout({ site, generated }));
-  await writePage("digest/index.html", renderDigest({ site, generated }));
+  await writePage("newsletter/index.html", renderDigest({ site, generated }));
   await writePage("app/index.html", renderApp({ site, generated }));
   await writePage("offline/index.html", renderOffline({ site, generated }));
   await writePage("privacy/index.html", renderPrivacy({ site, generated }));
   await writePage("terms/index.html", renderTerms({ site, stripe, generated }));
   await writePage("404.html", renderNotFound({ site, generated }));
 
-  // /thanks/, /thanks/payment/ and /offline/ are noindex and stay out of the sitemap. /newsletter/ redirects to /digest/. This site does not ping IndexNow.
-  const paths = ["/", "/this-weekend/", "/county/", "/towns/", "/feature/", "/submit/", "/digest/", "/app/", "/about/", "/privacy/", "/terms/", "/rock/", "/gem/", "/mineral/", "/fossil/", "/bead/"];
+  // /thanks/, /thanks/payment/ and /offline/ are noindex and stay out of the sitemap. /digest/ redirects to /newsletter/. This site does not ping IndexNow.
+  const paths = ["/", "/this-weekend/", "/county/", "/towns/", "/feature/", "/submit/", "/newsletter/", "/app/", "/about/", "/privacy/", "/terms/", "/rock/", "/gem/", "/mineral/", "/fossil/", "/bead/"];
   for (const county of places.counties.values()) paths.push(`/county/${county.slug}/`);
   for (const town of places.towns.values()) paths.push(`/town/${town.slug}/`);
   for (const show of shows) {
@@ -216,7 +218,15 @@ async function main() {
   }
   await writeFile(join(dist, "sitemap.xml"), renderSitemap(site, paths));
   await mkdir(join(dist, "data"), { recursive: true });
-  await writeFile(join(dist, "data/shows.json"), JSON.stringify({ generated, shows }, null, 2));
+  const published = shows.map((show) => {
+    const copy = structuredClone(show);
+    if (copy.source) {
+      delete copy.source.notes;
+      if (Array.isArray(copy.source.also)) copy.source.also = copy.source.also.map((item) => ({ url: item.url }));
+    }
+    return copy;
+  });
+  await writeFile(join(dist, "data/shows.json"), JSON.stringify({ generated, shows: published }, null, 2));
   console.log(`Built ${upcoming.length} upcoming shows, ${shows.length} pages, as of ${todayISO}`);
 }
 

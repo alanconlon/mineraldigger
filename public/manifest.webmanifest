@@ -26,7 +26,7 @@
     {
       "name": "Friday email",
       "short_name": "Friday email",
-      "url": "/digest/",
+      "url": "/newsletter/",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]

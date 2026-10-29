@@ -30,8 +30,8 @@ npm run dev
 - `/thanks/payment/` post-payment thank-you page. It is `noindex` and is not in the sitemap. This site does not ping IndexNow.
 - `/thanks/` after a Friday email sign-up. It is `noindex` and is not in the sitemap.
 - `/submit/` organiser form
-- `/digest/` the Friday email. Visitors sign up through Buttondown. After the form, the page goes to the site footer. It does not send the issue. Drafts are made with the scripts in Friday email drafts below.
-- `/newsletter/` redirects to `/digest/`.
+- `/newsletter/` the Friday email. Visitors sign up through Buttondown. After the form, the page goes to the site footer. It does not send the issue. Drafts are made with the scripts in Friday email drafts below.
+- `/digest/` redirects to `/newsletter/`.
 - `/app/` how to add MineralDigger to a phone home screen. Nothing to install from an app store.
 - `/offline/` shown when there is no signal and that page has not been saved on the phone. It is `noindex` and is not in the sitemap.
 - `/about/` how shows are listed
@@ -171,13 +171,13 @@ The workflow reads two repository secrets, the same names FairDigger uses:
 
 It does not deploy on a push. A merge of this workflow does not by itself publish the site.
 
-`dist/_headers` sets a few basic response headers, including `application/manifest+json` for `manifest.webmanifest` and `no-cache` for `sw.js`. `dist/_redirects` sends `/newsletter/` to `/digest/`. `robots.txt` points at `https://mineraldigger.com/sitemap.xml`.
+`dist/_headers` sets a few basic response headers, including `application/manifest+json` for `manifest.webmanifest` and `no-cache` for `sw.js`. `dist/_redirects` sends `/digest/` to `/newsletter/`. `robots.txt` points at `https://mineraldigger.com/sitemap.xml`.
 
 The home screen install uses `manifest.webmanifest`, `pwa.js` and `sw.js` at the site root, plus `icons/icon-192.png`, `icons/icon-512.png` and `icons/icon-maskable-512.png`. On Android the in-page install button stays hidden, because that prompt can trigger Play Protect. The `/app/` steps use Add to Home screen instead.
 
 ## Friday email drafts
 
-`scripts/digest.py` reads `data/shows.json` and writes `out/newsletter-YYYY-MM-DD.md`. The date is the coming Friday. On a Saturday or Sunday it looks ahead to the next weekend. That list is for the email draft. `/digest/` is the sign-up page and does not print it.
+`scripts/digest.py` reads `data/shows.json` and writes `out/newsletter-YYYY-MM-DD.md`. The date is the coming Friday. On a Saturday or Sunday it looks ahead to the next weekend. That list is for the email draft. `/newsletter/` is the sign-up page and does not print it.
 
 If that Friday has no sponsor in `data/sponsors.json`, the draft adds one sponsor line, as its own paragraph straight after the opening intro: this week's sponsor slot is free, this Friday email is £12, or the site is £25 a month, linking to `https://mineraldigger.com/feature/`. A booked Friday sponsor replaces that line.
 
@@ -192,7 +192,7 @@ python3 scripts/digest.py
 python3 scripts/buttondown_draft.py
 ```
 
-`out/` is generated and is not committed. Sign-up on `/digest/` posts to Buttondown. These scripts create a draft only. They do not send or schedule the list.
+`out/` is generated and is not committed. Sign-up on `/newsletter/` posts to Buttondown. These scripts create a draft only. They do not send or schedule the list.
 
 ## Facebook and Bluesky
 
@@ -227,7 +227,7 @@ Bluesky posts as `mineraldigger.com`. The app password is `MINERALDIGGER_BLUESKY
 - Keep `mineraldigger.co.uk` on the same Pages project as `mineraldigger.com`, with no redirect between them
 - In Email Routing, verify the destination `mineraldigger.hq@gmail.com`, then run `npx wrangler deploy` from `workers/submit/`
 
-Not in this version: DNS, mailing the Friday list automatically, Facebook scraping, mind-body-spirit listings, and Ireland. Sign-up is on `/digest/` through Buttondown. The Friday email scripts above create a Buttondown draft only. Weekly Facebook and Bluesky posts are drafted with the scripts above and go out only when someone runs both with `--publish` after Alan has OK'd the text. Live Stripe checkout for the four products is on `/feature/`. Facebook and Bluesky are linked from the footer.
+Not in this version: DNS, mailing the Friday list automatically, Facebook scraping, mind-body-spirit listings, and Ireland. Sign-up is on `/newsletter/` through Buttondown. The Friday email scripts above create a Buttondown draft only. Weekly Facebook and Bluesky posts are drafted with the scripts above and go out only when someone runs both with `--publish` after Alan has OK'd the text. Live Stripe checkout for the four products is on `/feature/`. Facebook and Bluesky are linked from the footer.
 
 ## Brand
 

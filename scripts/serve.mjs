@@ -104,8 +104,8 @@ const server = createServer(async (request, response) => {
       return send(response, 405, JSON.stringify({ ok: false, errors: ["Method not allowed."] }));
     }
     const redirects = {
-      "/newsletter": "/digest/",
-      "/newsletter/": "/digest/",
+      "/digest": "/newsletter/",
+      "/digest/": "/newsletter/",
       "/shows/surrey": "/county/surrey/",
       "/shows/surrey/": "/county/surrey/",
       "/counties": "/county/",

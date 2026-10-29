@@ -111,7 +111,9 @@ class DigestTests(unittest.TestCase):
         self.assertIn("Haywards Heath College, Harlands Road, Haywards Heath, RH16 1LT", sussex)
         self.assertIn("Entry £5", sussex)
         self.assertIn("Early entry £10", sussex)
-        self.assertIn("does not print the year", sussex)
+        self.assertIn("matches the weekday on the organiser page", sussex)
+        self.assertNotIn("does not print the year", sussex)
+        self.assertNotIn("year is matched", sussex)
 
         self.assertIn("## This weekend", markdown)
         self.assertIn("## The next couple of weeks", markdown)

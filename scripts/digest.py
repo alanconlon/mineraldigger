@@ -3,7 +3,7 @@
 
 Reads data/shows.json (the catalogue built from organiser pages) and writes
 out/newsletter-YYYY-MM-DD.md. The date is the issue Friday: the coming Friday,
-or the next Friday when today is Saturday or Sunday. /digest/ is the
+or the next Friday when today is Saturday or Sunday. /newsletter/ is the
 sign-up page and does not list that window.
 
 The note lists shows on that weekend and over the next couple of weeks
@@ -202,7 +202,7 @@ def show_bits(show: dict, featured: set[str]) -> list[str]:
     if show.get("provisional"):
         bits.append("The organiser lists this date as provisional")
     if show.get("year_inferred"):
-        bits.append("The year is matched from the weekday, and the organiser page does not print the year")
+        bits.append("The date uses the year that matches the weekday on the organiser page")
     if show.get("id") in featured:
         bits.insert(0, "Featured")
     return bits
@@ -212,9 +212,9 @@ def show_markdown(show: dict, site_url: str, featured: set[str]) -> str:
     slug = show["slug"]
     url = f"{site_url.rstrip('/')}/show/{slug}/"
     town = ((show.get("venue") or {}).get("town") or "").strip()
-    title = show["name"]
-    if town:
-        title = f"{title}, {town}"
+    title = " ".join(str(show["name"]).split())
+    if town and not title.casefold().startswith(town.casefold()):
+        title = f"{town}: {title}"
     sentence = ". ".join(show_bits(show, featured)) + "."
     return f"[{title}]({url})\n\n{sentence}\n"
 
