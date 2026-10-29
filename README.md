@@ -92,6 +92,8 @@ Prices on `/feature/`:
 | Site sponsor | £25 a month |
 | Friday email | £12 an issue |
 
+Featured show: Featured in the Friday email sent the week of your show. Friday email: Sponsor any Friday you choose (not tied to a show date).
+
 The four live Payment Links are in `data/stripe.json` under `links`. Prices stay in `prices`. On `/feature/`, a non-empty `https://` URL is a pay button (`Pay £… with Stripe`). An empty link still says "Coming soon" and is not a buy button.
 
 | Product | Price key | Link |

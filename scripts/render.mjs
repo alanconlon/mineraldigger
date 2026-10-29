@@ -842,7 +842,7 @@ export function renderFeature({ site, stripe, generated }) {
             <li>Pinned at the top of the list for 28 days, or until the show date if that is sooner</li>
             <li>A highlighted pin on the map</li>
             <li>A Featured label on the list and the show page</li>
-            <li>Also in the Friday email before your show's weekend (that date is set by the show, not picked)</li>
+            <li>Featured in the Friday email sent the week of your show</li>
           </ul>
           ${payControl(links.featured_show, `Pay £${prices.featured_show} with Stripe`, ready.featured_show)}
         </section>
@@ -851,7 +851,7 @@ export function renderFeature({ site, stripe, generated }) {
           <p class="price">£${prices.year_pass} <small>for 12 months</small></p>
           <ul>
             <li>Every show you organise is featured for 12 months from the day you pay</li>
-            <li>Same pin, label and Friday email slot as a single featured show (the Friday before that show's weekend, set by the show, not picked)</li>
+            <li>Same pin, label and Friday slot as a single featured show</li>
           </ul>
           ${payControl(links.year_pass, `Pay £${prices.year_pass} with Stripe`, ready.year_pass)}
         </section>
@@ -870,7 +870,7 @@ export function renderFeature({ site, stripe, generated }) {
           <p class="price">£${prices.friday_email} <small>an issue</small></p>
           <ul>
             <li>The only sponsor in that Friday email</li>
-            <li>One issue. You pick the Friday.</li>
+            <li>Sponsor any Friday you choose (not tied to a show date)</li>
           </ul>
           ${payControl(links.friday_email, `Pay £${prices.friday_email} with Stripe`, ready.friday_email)}
         </section>
@@ -906,7 +906,7 @@ export function renderThanks({ site, generated }) {
       <p class="eyebrow">Payment received</p>
       <h1>Thank you</h1>
       <p class="lede">Thank you. Your payment has gone through. You get a Stripe receipt by email. We feature the show within one working day (with a year pass, all of that organiser's shows for 12 months from the day you pay), and we email if we need anything else.</p>
-      <p>A featured show is also in the Friday email before your show's weekend (that date is set by the show, not picked). A Friday email sponsorship is one issue, and you pick the Friday.</p>
+      <p>Featured show: Featured in the Friday email sent the week of your show. Friday email: Sponsor any Friday you choose (not tied to a show date).</p>
       <p><strong>Sponsoring the site or the Friday email?</strong> Please email your logo, a one-line message, and which package you paid for to ${sponsors}. Your slot is live within one working day of receiving your logo and message.</p>
       <p>See the <a href="/terms/">terms</a> for what is included, when it goes live, renewals and refunds.</p>
       <p class="fine">Questions about your listing? Reply to the Stripe receipt or email ${mailLink(email)}.</p>
@@ -1123,10 +1123,10 @@ export function renderTerms({ site, stripe, generated }) {
       <p class="lede">These terms cover featured listings and sponsorship on MineralDigger (mineraldigger.com). Listing on MineralDigger is free. These terms only apply when you pay for something.</p>
       <h2>What you can buy</h2>
       <ul>
-        <li>Featured show, £${prices.featured_show}: pinned at the top of the list for 28 days, or until the show date if that is sooner, a highlighted pin on the map, a Featured label on the list and the show page, and also in the Friday email before your show's weekend (that date is set by the show, not picked).</li>
-        <li>Year pass, £${prices.year_pass} for 12 months: every show you organise is featured for 12 months from the day you pay, with the same pin, label and Friday email slot as a single featured show (the Friday before that show's weekend, set by the show, not picked).</li>
+        <li>Featured show, £${prices.featured_show}: pinned at the top of the list for 28 days, or until the show date if that is sooner, a highlighted pin on the map, a Featured label on the list and the show page. Featured in the Friday email sent the week of your show.</li>
+        <li>Year pass, £${prices.year_pass} for 12 months: every show you organise is featured for 12 months from the day you pay, with the same pin, label and Friday slot as a single featured show.</li>
         <li>Site sponsor, £${prices.site_sponsor} a month: your name, one short line and a link on the homepage and the type pages, labelled as a sponsor.</li>
-        <li>Friday email, £${prices.friday_email} an issue: the only sponsor in that Friday email. One issue. You pick the Friday.</li>
+        <li>Friday email, £${prices.friday_email} an issue: the only sponsor in that Friday email. Sponsor any Friday you choose (not tied to a show date).</li>
       </ul>
       <h2>When it goes live</h2>
       <ul>

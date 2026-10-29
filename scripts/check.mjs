@@ -212,14 +212,16 @@ if (!feature.includes("Pay by card through Stripe") || !feature.includes("We fea
 if (!feature.includes("Your slot is live within one working day of receiving your logo and message.")) {
   fail("Feature page sponsor turnaround is wrong.");
 }
-if (!feature.includes("Also in the Friday email before your show's weekend (that date is set by the show, not picked)")) {
-  fail("Featured show should say the Friday email date is set by the show.");
+if (!feature.includes("Featured in the Friday email sent the week of your show")) {
+  fail("Featured show Friday email line is wrong.");
 }
-if (feature.includes("Friday email the weekend it runs")) fail("Featured show still says the Friday email is the weekend it runs.");
-if (!feature.includes("the Friday before that show's weekend, set by the show, not picked")) {
-  fail("Year pass should use the same fixed Friday email slot as a featured show.");
+if (feature.includes("Friday email the weekend it runs") || feature.includes("You pick the Friday")) {
+  fail("Feature page still has the old Friday email lines.");
 }
-if (!feature.includes("One issue. You pick the Friday.")) fail("Friday email sponsorship should still say you pick the Friday.");
+if (!feature.includes("Same pin, label and Friday slot as a single featured show")) fail("Year pass Friday slot line changed.");
+if (!feature.includes("Sponsor any Friday you choose (not tied to a show date)")) {
+  fail("Friday email sponsorship line is wrong.");
+}
 if (!feature.includes('href="/terms/"')) fail("Feature page should link to the terms near the prices.");
 if (!feature.includes("logo") || !feature.includes("one-line message")) {
   fail("Feature page does not ask sponsors to email a logo and a one-line message.");
@@ -496,10 +498,13 @@ if (!terms.includes("Featured show, £15:")) fail("Terms is missing the featured
 if (!terms.includes("Year pass, £99 for 12 months:")) fail("Terms is missing the year pass.");
 if (!terms.includes("Site sponsor, £25 a month:")) fail("Terms is missing the site sponsor.");
 if (!terms.includes("Friday email, £12 an issue:")) fail("Terms is missing the Friday email product.");
-if (!terms.includes("and also in the Friday email before your show's weekend (that date is set by the show, not picked)")) {
-  fail("Terms featured show should say the Friday email date is set by the show.");
+if (!terms.includes("Featured in the Friday email sent the week of your show.")) {
+  fail("Terms featured show Friday email line is wrong.");
 }
-if (!terms.includes("You pick the Friday.")) fail("Terms Friday email product should say you pick the Friday.");
+if (!terms.includes("Sponsor any Friday you choose (not tied to a show date).")) {
+  fail("Terms Friday email product line is wrong.");
+}
+if (terms.includes("You pick the Friday") || terms.includes("weekend it runs")) fail("Terms still has the old Friday email lines.");
 if (!terms.includes("<h2>When it goes live</h2>")) fail("Terms is missing When it goes live.");
 if (!terms.includes("A featured show is featured within one working day of payment.")) fail("Terms featuring turnaround is wrong.");
 if (!terms.includes("A sponsor slot is live within one working day of getting your logo and message.")) fail("Terms sponsor turnaround is wrong.");
@@ -616,11 +621,15 @@ if (!thanks.includes("Stripe receipt") || !thanks.includes("one working day") ||
 if (!thanks.includes("logo") || !thanks.includes("one-line message") || !thanks.includes("within one working day of receiving your logo and message")) {
   fail("Thank-you page is missing the sponsor follow-up.");
 }
-if (!thanks.includes("in the Friday email before your show's weekend (that date is set by the show, not picked)")) {
-  fail("Thank-you page should say the featured Friday email date is set by the show.");
+if (!thanks.includes("Featured in the Friday email sent the week of your show.")) {
+  fail("Thank-you page featured show Friday line is wrong.");
 }
-if (!thanks.includes("you pick the Friday")) fail("Thank-you page should still say you pick the Friday for a Friday email sponsorship.");
-if (thanks.includes("Friday email the weekend it runs")) fail("Thank-you page still says the Friday email is the weekend it runs.");
+if (!thanks.includes("Sponsor any Friday you choose (not tied to a show date).")) {
+  fail("Thank-you page Friday email line is wrong.");
+}
+if (thanks.includes("You pick the Friday") || thanks.includes("weekend it runs")) {
+  fail("Thank-you page still has the old Friday email lines.");
+}
 if (!thanks.includes('href="/terms/"')) fail("Thank-you page should link to the terms near the payment copy.");
 if (!thanks.includes(">Home</a>") || !thanks.includes(">Upcoming shows</a>")) {
   fail("Thank-you page is missing the home and upcoming-shows links.");
