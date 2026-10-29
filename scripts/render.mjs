@@ -770,7 +770,7 @@ function paymentCopy(ready, prices) {
         <li>Choose the site, at £${prices.site_sponsor} a month, or one Friday email at £${prices.friday_email}.</li>
         <li>Pay by card through Stripe.</li>
         <li>Email your logo, a one-line message, and which package to ${sponsors}.</li>
-        <li>Your slot is live within 2 working days.</li>
+        <li>Your slot is live within one working day of receiving your logo and message.</li>
       </ol>`,
     };
   }
@@ -787,8 +787,8 @@ function paymentCopy(ready, prices) {
       sponsorSteps: `<ol>
         <li>Choose the site, at £${prices.site_sponsor} a month, or one Friday email at £${prices.friday_email}.</li>
         <li>Card payment is coming soon.</li>
-        <li>Email your name, a short line and your link to ${sponsors}.</li>
-        <li>You are live within two working days of payment.</li>
+        <li>Email your logo, a one-line message, and which package to ${sponsors}.</li>
+        <li>Your slot is live within one working day of receiving your logo and message.</li>
       </ol>`,
     };
   }
@@ -805,7 +805,7 @@ function paymentCopy(ready, prices) {
         <li>Choose the site, at £${prices.site_sponsor} a month, or one Friday email at £${prices.friday_email}.</li>
         <li>Pay by card through Stripe where a button is shown. Options marked coming soon are not open yet.</li>
         <li>Email your logo, a one-line message, and which package to ${sponsors}.</li>
-        <li>Your slot is live within 2 working days of payment.</li>
+        <li>Your slot is live within one working day of receiving your logo and message.</li>
       </ol>`,
   };
 }
@@ -905,7 +905,7 @@ export function renderThanks({ site, generated }) {
       <p class="eyebrow">Payment received</p>
       <h1>Thank you</h1>
       <p class="lede">Thank you. Your payment has gone through. You get a Stripe receipt by email. We feature the show within one working day (with a year pass, all of that organiser's shows for 12 months from the day you pay), and we email if we need anything else.</p>
-      <p><strong>Sponsoring the site or the Friday email?</strong> Please email your logo, a one-line message, and which package you paid for to ${sponsors}. Your slot starts within 2 working days.</p>
+      <p><strong>Sponsoring the site or the Friday email?</strong> Please email your logo, a one-line message, and which package you paid for to ${sponsors}. Your slot is live within one working day of receiving your logo and message.</p>
       <p class="fine">Questions about your listing? Reply to the Stripe receipt or email ${mailLink(email)}.</p>
       <div class="actions">
         <a href="/">Home</a>

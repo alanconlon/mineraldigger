@@ -109,7 +109,7 @@ These environment variables override the file at build time:
 
 Rebuild and upload `dist/` after changing a link. Do not invent Payment Link ids. There is no Gumroad path.
 
-After payment, Stripe customers should land on `https://mineraldigger.com/thanks/payment/`. That page is `noindex`, omitted from `sitemap.xml`, and not submitted anywhere else. It asks sponsors to email a logo, a one-line message, and which package to `sponsors@mineraldigger.com`. Questions about a listing go to `hello@mineraldigger.com`.
+After payment, Stripe customers should land on `https://mineraldigger.com/thanks/payment/`. That page is `noindex`, omitted from `sitemap.xml`, and not submitted anywhere else. It asks sponsors to email a logo, a one-line message, and which package to `sponsors@mineraldigger.com`. A featured listing is live within one working day. A sponsor slot is live within one working day of receiving the logo and message. Questions about a listing go to `hello@mineraldigger.com`.
 
 Paid placement data, still empty:
 

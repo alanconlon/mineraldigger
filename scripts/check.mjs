@@ -205,8 +205,11 @@ if (feature.includes("Stripe link still to be added") || feature.includes("disab
 }
 if (feature.includes("REPLACE_ME")) fail("Feature page still has a Stripe placeholder.");
 if (!feature.includes("Free listing") || !feature.includes("Submit a show")) fail("Feature page is missing the free listing.");
-if (!feature.includes("Pay by card through Stripe") || !feature.includes("within one working day")) {
+if (!feature.includes("Pay by card through Stripe") || !feature.includes("We feature the show within one working day")) {
   fail("Feature page is missing the live checkout steps.");
+}
+if (!feature.includes("Your slot is live within one working day of receiving your logo and message.")) {
+  fail("Feature page sponsor turnaround is wrong.");
 }
 if (!feature.includes("logo") || !feature.includes("one-line message")) {
   fail("Feature page does not ask sponsors to email a logo and a one-line message.");
@@ -309,6 +312,19 @@ if (!wired.includes('href="https://buy.stripe.com/test_example"')) fail("A fille
 if (!wired.includes("Pay £15 with Stripe")) fail("A filled Stripe URL did not become a pay button.");
 if ((wired.match(/class="soon"/g) || []).length !== 3) fail("Empty Stripe URLs should say coming soon.");
 if (wired.includes("Stripe link still to be added")) fail("Empty Stripe URLs should not use the old placeholder.");
+const sponsorTurnaround = "Your slot is live within one working day of receiving your logo and message.";
+if (!wired.includes(sponsorTurnaround)) fail("Partial Stripe feature page is missing the sponsor turnaround.");
+if (/2 working days|two working days/i.test(wired)) fail("Partial Stripe feature page still says 2 working days.");
+const unwired = renderFeature({
+  site: { name: "MineralDigger", url: "https://mineraldigger.com" },
+  stripe: {
+    prices: stripeFile.prices,
+    links: { featured_show: "", year_pass: "", site_sponsor: "", friday_email: "" },
+  },
+  generated: "2026-10-25",
+});
+if (!unwired.includes(sponsorTurnaround)) fail("Unpaid feature page is missing the sponsor turnaround.");
+if (/2 working days|two working days/i.test(unwired)) fail("Unpaid feature page still says 2 working days.");
 
 const submit = await readFile(join(dist, "submit/index.html"), "utf8");
 if (!submit.includes("<form") || !submit.includes('action="/api/submit"')) fail("Submit form is missing.");
@@ -340,6 +356,7 @@ for (const file of files) {
   const html = textOnly(raw);
   if (html.includes("\u2014")) fail(`Em dash in ${file}`);
   if (html.includes("!")) fail(`Exclamation mark in ${file}`);
+  if (/2 working days|two working days/i.test(raw)) fail(`Old working-day turnaround in ${file}`);
   if (/gumroad|crystaldigger/i.test(html)) fail(`Banned name in ${file}`);
   if (raw.includes("mineraldigger.hq@gmail.com")) fail(`Generated page still names the HQ Gmail: ${file}`);
   if (raw.includes("mineraldigger.co.uk")) fail(`mineraldigger.co.uk still linked in ${file}`);
@@ -529,7 +546,7 @@ if (thanks.includes("mineraldigger.hq@gmail.com")) fail("Thank-you page still na
 if (!thanks.includes("Stripe receipt") || !thanks.includes("one working day") || !thanks.includes("12 months")) {
   fail("Thank-you page is missing the receipt and featuring promise.");
 }
-if (!thanks.includes("logo") || !thanks.includes("one-line message") || !thanks.includes("2 working days")) {
+if (!thanks.includes("logo") || !thanks.includes("one-line message") || !thanks.includes("within one working day of receiving your logo and message")) {
   fail("Thank-you page is missing the sponsor follow-up.");
 }
 if (!thanks.includes(">Home</a>") || !thanks.includes(">Upcoming shows</a>")) {
