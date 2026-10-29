@@ -9,6 +9,8 @@ Examples:
 
 Live mode fetches HTML only. It does not read Facebook, Mineralica, or dealer diaries.
 Rock, Gem & Bead Shows robots.txt allows /. Their homepage is the source for their dates.
+rockexchange.uk is the one host fetched with unverified TLS and a browser user agent.
+If one organiser site fails, that organiser's previous shows are kept and the run continues.
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ import argparse
 import json
 import ssl
 import sys
+import urllib.parse
 import urllib.request
 from datetime import date
 from pathlib import Path
@@ -38,6 +41,14 @@ UA = (
     "Mozilla/5.0 (compatible; MineralDiggerRefresh/0.1; +https://mineraldigger.com) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
+# rockexchange.uk serves a self-signed certificate that expired in 2021, and it
+# answers 403 to the refresh user agent. A normal browser user agent with
+# unverified TLS is what returns the page.
+BROWSER_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
+UNVERIFIED_HOST = "rockexchange.uk"
 
 LIVE = {
     "rockngem": ["https://www.rockngem.co/"],
@@ -53,8 +64,19 @@ LIVE = {
 
 
 def fetch(url: str) -> str:
-    request = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "text/html"})
-    context = ssl.create_default_context()
+    host = (urllib.parse.urlparse(url).hostname or "").lower()
+    if host == UNVERIFIED_HOST:
+        print(f"  {UNVERIFIED_HOST}: unverified TLS and a browser user agent")
+        headers = {
+            "User-Agent": BROWSER_UA,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-GB,en;q=0.9",
+        }
+        context = ssl._create_unverified_context()
+    else:
+        headers = {"User-Agent": UA, "Accept": "text/html"}
+        context = ssl.create_default_context()
+    request = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(request, context=context, timeout=45) as response:
         charset = response.headers.get_content_charset() or "utf-8"
         return response.read().decode(charset, errors="replace")
@@ -86,28 +108,75 @@ def rows_from_fixtures(today: date) -> list[dict]:
     return rows
 
 
-def rows_from_live(keys: list[str], today: date) -> list[dict]:
+def parse_source(key: str, pages: list[str], today: date, retrieved: str) -> list[dict]:
+    if key == "rockngem":
+        return parse_rockngem(pages[0], today=today, retrieved=retrieved)
+    if key == "nature-unearthed":
+        home, exhibitors = pages
+        return parse_nature(home, exhibitors, today=today, retrieved=retrieved)
+    if key == "oxford-shows":
+        return parse_oxford(pages[0], today=today, retrieved=retrieved)
+    if key == "bakewell-rock-exchange":
+        return parse_rockexchange(pages[0], today=today, retrieved=retrieved)
+    if key == "smls":
+        return parse_smls(pages[0], today=today, retrieved=retrieved)
+    if key == "southampton-minfoss":
+        return parse_hampshire(pages[0], today=today, retrieved=retrieved)
+    raise KeyError(key)
+
+
+def rows_from_live(keys: list[str], today: date) -> tuple[list[dict], list[str]]:
+    """Fetch and parse each source. A failed source is listed, not fatal.
+
+    Returns assembled shows for the sources that succeeded, plus the source
+    keys that failed. Callers keep the previous shows for those keys.
+    """
     retrieved = today.isoformat()
-    pages = {}
+    shows = []
+    failed = []
     for key in keys:
         urls = LIVE[key]
         print(f"Fetching {key} ({len(urls)} page{'s' if len(urls) != 1 else ''})")
-        pages[key] = [fetch(url) for url in urls]
-    rows = []
-    if "rockngem" in pages:
-        rows.extend(parse_rockngem(pages["rockngem"][0], today=today, retrieved=retrieved))
-    if "nature-unearthed" in pages:
-        home, exhibitors = pages["nature-unearthed"]
-        rows.extend(parse_nature(home, exhibitors, today=today, retrieved=retrieved))
-    if "oxford-shows" in pages:
-        rows.extend(parse_oxford(pages["oxford-shows"][0], today=today, retrieved=retrieved))
-    if "bakewell-rock-exchange" in pages:
-        rows.extend(parse_rockexchange(pages["bakewell-rock-exchange"][0], today=today, retrieved=retrieved))
-    if "smls" in pages:
-        rows.extend(parse_smls(pages["smls"][0], today=today, retrieved=retrieved))
-    if "southampton-minfoss" in pages:
-        rows.extend(parse_hampshire(pages["southampton-minfoss"][0], today=today, retrieved=retrieved))
-    return rows
+        try:
+            pages = [fetch(url) for url in urls]
+            shows.extend(assemble(parse_source(key, pages, today, retrieved)))
+        except (Exception, SystemExit) as exc:
+            failed.append(key)
+            print(
+                f"Warning: {key} failed ({type(exc).__name__}: {exc}). "
+                "Keeping the previous shows for that organiser.",
+                file=sys.stderr,
+            )
+    return shows, failed
+
+
+def previous_shows() -> list[dict]:
+    if not OUT.exists():
+        return []
+    payload = json.loads(OUT.read_text(encoding="utf-8"))
+    shows = payload.get("shows") if isinstance(payload, dict) else None
+    return list(shows) if isinstance(shows, list) else []
+
+
+def merge_kept(fresh: list[dict], kept: list[dict]) -> list[dict]:
+    """Fresh rows win on id. A kept slug that clashes is given a numeric suffix."""
+    fresh_ids = {show.get("id") for show in fresh}
+    slugs = {show.get("slug") for show in fresh}
+    merged = list(fresh)
+    for show in kept:
+        if show.get("id") in fresh_ids:
+            continue
+        slug = show.get("slug") or ""
+        if slug in slugs:
+            show = dict(show)
+            suffix = 2
+            while f"{slug}-{suffix}" in slugs:
+                suffix += 1
+            show["slug"] = f"{slug}-{suffix}"
+        slugs.add(show.get("slug"))
+        merged.append(show)
+    merged.sort(key=lambda item: (item.get("start") or "", item.get("name") or "", item.get("id") or ""))
+    return merged
 
 
 def write_shows(shows: list[dict], today: date) -> None:
@@ -142,18 +211,31 @@ def main() -> None:
         parser.error("Choose one of --fixtures or --live")
     today = date.fromisoformat(args.today)
     if args.fixtures:
-        rows = rows_from_fixtures(today)
+        shows = assemble(rows_from_fixtures(today))
     else:
         keys = args.sources or list(LIVE)
         unknown = [key for key in keys if key not in LIVE]
         if unknown:
             parser.error("Unknown sources: " + ", ".join(unknown))
-        rows = rows_from_live(keys, today)
-    shows = assemble(rows)
+        shows, failed = rows_from_live(keys, today)
+        if failed:
+            kept = [
+                show
+                for show in previous_shows()
+                if isinstance(show, dict) and (show.get("organiser") or {}).get("id") in failed
+            ]
+            print(
+                f"Warning: kept {len(kept)} previous show{'s' if len(kept) != 1 else ''} "
+                f"for {', '.join(failed)}.",
+                file=sys.stderr,
+            )
+            shows = merge_kept(shows, kept)
     summarise(shows)
     if args.write:
         if args.live and args.sources:
             raise SystemExit("Refusing to --write a partial live refresh. Run --live --write with every source, or merge by hand.")
+        if not shows:
+            raise SystemExit("No shows to write.")
         write_shows(shows, today)
         print(f"Wrote {OUT}")
 
