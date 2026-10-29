@@ -88,11 +88,8 @@ function appendCountyBrowse(parent) {
   parent.append(link, document.createTextNode("."));
 }
 
-function fillNoShows(label) {
-  const status = document.getElementById("search-status");
-  if (!status) return;
-  status.replaceChildren(document.createTextNode(`No shows in or near ${label} yet. `));
-  appendCountyBrowse(status);
+function fillNoShows() {
+  setStatus("");
 }
 
 function renderSuggestions(labels) {
@@ -424,7 +421,7 @@ function applyFilters() {
       for (const month of document.querySelectorAll("#show-list > .month")) month.hidden = true;
     }
     if (ranked.length) setStatus(countLine(ranked.length, "near", origin.label));
-    else fillNoShows(origin.label);
+    else fillNoShows();
   } else {
     for (const month of document.querySelectorAll("#show-list > .month")) {
       const any = [...month.querySelectorAll(".card")].some((card) => !card.hidden);
@@ -434,8 +431,8 @@ function applyFilters() {
     else if (origin?.kind === "area") {
       const shownHere = visibleCards().length;
       if (shownHere) setStatus(countLine(shownHere, "in", origin.label));
-      else fillNoShows(origin.label);
-    } else if (origin?.kind === "empty") fillNoShows(origin.label);
+      else fillNoShows();
+    } else if (origin?.kind === "empty") fillNoShows();
     else setStatus(placeNote);
   }
 

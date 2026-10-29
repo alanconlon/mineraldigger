@@ -99,6 +99,8 @@ class FixtureTests(unittest.TestCase):
         self.assertTrue(assembled)
         self.assertTrue(all(show["entry"]["label"] == "Free entry" for show in assembled))
         self.assertTrue(all(show["entry"]["notes"] in (None, "") for show in assembled))
+        self.assertTrue(all(not show["summary"].lower().endswith("free entry.") for show in assembled))
+        self.assertTrue(all("free entry" not in show["summary"].lower() for show in assembled))
         self.assertTrue(all(row["end"] == row["start"] for row in rows))
         self.assertEqual(rows[0]["postcode"], "OX5 1AB")
         self.assertEqual(rows[0]["dealers"], "30+")
