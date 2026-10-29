@@ -27,6 +27,7 @@ const TYPE_DESCRIPTION = {
 
 const SHARE_ALT = "MineralDigger: Rock, gem, mineral, fossil and bead shows across the UK, on one map.";
 const SITE_BLURB = "Rock, gem, mineral, fossil and bead shows across the UK, on one map.";
+const SPONSORS_EMAIL = "sponsors@mineraldigger.com";
 
 export function slugify(value) {
   return String(value ?? "")
@@ -748,7 +749,12 @@ function payControl(href, label, ready) {
   return `<a class="pay" href="${esc(href)}">${esc(label)}</a>`;
 }
 
+function mailLink(address) {
+  return `<a href="mailto:${esc(address)}">${esc(address)}</a>`;
+}
+
 function paymentCopy(ready, prices) {
+  const sponsors = mailLink(SPONSORS_EMAIL);
   const open = Object.values(ready).filter(Boolean).length;
   const allOpen = open === Object.keys(ready).length;
   const noneOpen = open === 0;
@@ -763,7 +769,7 @@ function paymentCopy(ready, prices) {
       sponsorSteps: `<ol>
         <li>Choose the site, at £${prices.site_sponsor} a month, or one Friday email at £${prices.friday_email}.</li>
         <li>Pay by card through Stripe.</li>
-        <li>Email your logo, a one-line message, and which package to mineraldigger.hq@gmail.com.</li>
+        <li>Email your logo, a one-line message, and which package to ${sponsors}.</li>
         <li>Your slot is live within 2 working days.</li>
       </ol>`,
     };
@@ -771,24 +777,24 @@ function paymentCopy(ready, prices) {
   if (noneOpen) {
     return {
       notice: `<div class="notice">
-        <p>Card payment is coming soon. The prices above are the ones we will charge. Until then, email mineraldigger.hq@gmail.com.</p>
+        <p>Card payment is coming soon. The prices above are the ones we will charge. Until then, email ${sponsors}.</p>
       </div>`,
       featureSteps: `<ol>
         <li>Make sure the show is listed. If it is not, <a href="/submit/">submit it free</a> first.</li>
         <li>Card payment for a featured show or a year pass is coming soon.</li>
-        <li>Until then, email mineraldigger.hq@gmail.com with the show, or the organiser for a year pass.</li>
+        <li>Until then, email ${sponsors} with the show, or the organiser for a year pass.</li>
       </ol>`,
       sponsorSteps: `<ol>
         <li>Choose the site, at £${prices.site_sponsor} a month, or one Friday email at £${prices.friday_email}.</li>
         <li>Card payment is coming soon.</li>
-        <li>Email your name, a short line and your link to mineraldigger.hq@gmail.com.</li>
+        <li>Email your name, a short line and your link to ${sponsors}.</li>
         <li>You are live within two working days of payment.</li>
       </ol>`,
     };
   }
   return {
     notice: `<div class="notice">
-        <p>Some card payments are still coming soon. Pay only where a button is shown. For the rest, email mineraldigger.hq@gmail.com.</p>
+        <p>Some card payments are still coming soon. Pay only where a button is shown. For the rest, email ${sponsors}.</p>
       </div>`,
     featureSteps: `<ol>
         <li>Make sure the show is listed. If it is not, <a href="/submit/">submit it free</a> first.</li>
@@ -798,7 +804,7 @@ function paymentCopy(ready, prices) {
     sponsorSteps: `<ol>
         <li>Choose the site, at £${prices.site_sponsor} a month, or one Friday email at £${prices.friday_email}.</li>
         <li>Pay by card through Stripe where a button is shown. Options marked coming soon are not open yet.</li>
-        <li>Email your logo, a one-line message, and which package to mineraldigger.hq@gmail.com.</li>
+        <li>Email your logo, a one-line message, and which package to ${sponsors}.</li>
         <li>Your slot is live within 2 working days of payment.</li>
       </ol>`,
   };
@@ -894,12 +900,13 @@ export function renderFeature({ site, stripe, generated }) {
 
 export function renderThanks({ site, generated }) {
   const email = site.email;
+  const sponsors = mailLink(SPONSORS_EMAIL);
   const body = `<article class="page"><div class="wrap-narrow prose">
       <p class="eyebrow">Payment received</p>
       <h1>Thank you</h1>
       <p class="lede">Thank you. Your payment has gone through. You get a Stripe receipt by email. We feature the show within one working day (with a year pass, all of that organiser's shows for 12 months from the day you pay), and we email if we need anything else.</p>
-      <p><strong>Sponsoring the site or the Friday email?</strong> Please email your logo, a one-line message, and which package you paid for to <a href="mailto:${esc(email)}">${esc(email)}</a>. Your slot starts within 2 working days.</p>
-      <p class="fine">Questions about your listing? Reply to the Stripe receipt or email <a href="mailto:${esc(email)}">${esc(email)}</a>.</p>
+      <p><strong>Sponsoring the site or the Friday email?</strong> Please email your logo, a one-line message, and which package you paid for to ${sponsors}. Your slot starts within 2 working days.</p>
+      <p class="fine">Questions about your listing? Reply to the Stripe receipt or email ${mailLink(email)}.</p>
       <div class="actions">
         <a href="/">Home</a>
         <a href="/">Upcoming shows</a>
