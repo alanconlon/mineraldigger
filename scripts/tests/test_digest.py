@@ -32,8 +32,7 @@ TODAY = date(2026, 10, 28)
 SHOWS = load_json(ROOT / "data" / "shows.json")["shows"]
 SITE = "https://mineraldigger.com"
 INTRO = (
-    "A Friday list of UK rock, gem, mineral, fossil and bead shows. "
-    "Dates, venues, times and entry come from the MineralDigger catalogue, "
+    "A Friday list of UK rock, gem, mineral, fossil and bead shows, "
     "checked against organiser websites. Confirm with the organiser before you travel."
 )
 EMPTY_FRIDAY = (
@@ -76,11 +75,11 @@ class DigestTests(unittest.TestCase):
         # The subject window is that Friday to Sunday, even when the script runs on Wednesday or Saturday.
         self.assertEqual(
             subject_for(issue_friday(date(2026, 10, 28))),
-            "Mineral and fossil shows this weekend: Fri 30 Oct to Sun 1 Nov",
+            "Rock, gem and mineral shows this weekend: Fri 30 Oct to Sun 1 Nov",
         )
         self.assertEqual(
             subject_for(issue_friday(date(2026, 10, 31))),
-            "Mineral and fossil shows this weekend: Fri 6 Nov to Sun 8 Nov",
+            "Rock, gem and mineral shows this weekend: Fri 6 Nov to Sun 8 Nov",
         )
         self.assertNotIn("28 Oct", subject_for(issue_friday(date(2026, 10, 28))))
         self.assertNotIn("31 Oct", subject_for(issue_friday(date(2026, 10, 31))))
@@ -118,13 +117,13 @@ class DigestTests(unittest.TestCase):
         self.assertNotIn("£", worcester)
         self.assertNotIn("Unknown", worcester)
         self.assertNotIn("10:00", worcester)
-        self.assertIn("Times not yet published", worcester)
+        self.assertIn("Times not yet published. Check entry with the organiser.", worcester)
 
         newcastle = paragraph_for(markdown, "rock-gem-and-bead-show-newcastle-upon-tyne-2026-11-14")
         self.assertIn("Newcastle Racecourse, Newcastle upon Tyne, NE3 5HP", newcastle)
         self.assertNotIn("£", newcastle)
         self.assertNotIn("Unknown", newcastle)
-        self.assertIn("Times not yet published", newcastle)
+        self.assertIn("Times not yet published. Check entry with the organiser.", newcastle)
 
         sussex = paragraph_for(markdown, "sussex-mineral-crystal-and-fossil-show-haywards-heath-2026-11-14")
         self.assertIn("Haywards Heath College, Harlands Road, Haywards Heath, RH16 1LT", sussex)
@@ -144,8 +143,11 @@ class DigestTests(unittest.TestCase):
         self.assertIn("Further dates are on the map.", markdown)
         for hub in ("/rock/", "/gem/", "/mineral/", "/fossil/", "/bead/"):
             self.assertIn(f"{SITE}{hub}", markdown)
-        self.assertIn("You're getting this because you signed up at [mineraldigger.com](https://mineraldigger.com/).", markdown)
+        self.assertIn("Find more shows near you any time at [mineraldigger.com](https://mineraldigger.com/).", markdown)
+        self.assertIn("You're getting this because you signed up for MineralDigger's free Friday show email.", markdown)
         self.assertNotIn("Subscribe and find shows", markdown)
+        self.assertNotIn("signed up at", markdown)
+        self.assertNotIn("MineralDigger catalogue", markdown)
         self.assertNotIn("does not print the year", markdown)
         self.assertNotIn("year is matched", markdown)
         self.assertNotIn("college contact page", markdown)
@@ -344,7 +346,7 @@ class ButtondownTests(unittest.TestCase):
                 code, output = run_main(["--file", str(path), "--dry-run"])
             self.assertEqual(code, 0)
             self.assertIn("Dry run. No Buttondown request.", output)
-            self.assertIn("Mineral and fossil shows this weekend: Fri 30 Oct to Sun 1 Nov", output)
+            self.assertIn("Rock, gem and mineral shows this weekend: Fri 30 Oct to Sun 1 Nov", output)
             self.assertIn(
                 "Preview: Dates, venues and entry for UK rock, gem, mineral, fossil and bead shows, Fri 30 Oct to Sun 1 Nov.",
                 output,
@@ -430,7 +432,7 @@ class ButtondownTests(unittest.TestCase):
                 )
                 self.assertEqual(
                     server.emails[0]["subject"],
-                    "Mineral and fossil shows this weekend: Fri 30 Oct to Sun 1 Nov",
+                    "Rock, gem and mineral shows this weekend: Fri 30 Oct to Sun 1 Nov",
                 )
                 self.assertEqual(sum(call[0] == "POST" for call in server.calls), 1)
             finally:

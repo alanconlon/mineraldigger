@@ -9,14 +9,15 @@ sign-up page and does not list that window.
 The note lists shows on that weekend and over the next couple of weeks
 (the two weekends after it). Each line uses the date, venue, and entry
 already stored for that show. A door price is included only when the
-catalogue has one. A show with no opening times says "Times not yet published".
+catalogue has one. A show with no opening times says times are not yet published
+and to check entry with the organiser.
 Catalogue notes that explain how a date was read stay out of the email.
 Empty weekends are left out. If that window is empty
 and later shows are still on the list, the file is a short coming-up note.
 If nothing is upcoming, nothing is written.
 
 The subject names that Friday-to-Sunday window, not the day the script runs.
-A Wednesday 28 October 2026 run is "Mineral and fossil shows this weekend:
+A Wednesday 28 October 2026 run is "Rock, gem and mineral shows this weekend:
 Fri 30 Oct to Sun 1 Nov".
 
 This script does not send email. When sponsors.friday is empty, or its issue
@@ -135,7 +136,7 @@ def format_weekend(friday: date) -> str:
 
 
 def subject_for(friday: date) -> str:
-    return f"Mineral and fossil shows this weekend: {format_weekend(friday)}"
+    return f"Rock, gem and mineral shows this weekend: {format_weekend(friday)}"
 
 
 def preview_for(friday: date) -> str:
@@ -220,7 +221,7 @@ def time_bits(times: dict | None) -> list[str]:
     if notes and not INTERNAL_NOTE.search(notes):
         bits.append(notes)
     if not bits:
-        bits.append("Times not yet published")
+        bits.append("Times not yet published. Check entry with the organiser")
     return bits
 
 
@@ -305,9 +306,13 @@ def sponsor_markdown(sponsors: dict | None, friday: date, site_url: str = SITE_U
     return empty_friday_sponsor(site_url)
 
 
-def signoff(site_url: str) -> str:
+def signoff(site_url: str) -> list[str]:
     host = site_url.removeprefix("https://").removeprefix("http://").strip("/")
-    return f"You're getting this because you signed up at [{host}]({site_url}/)."
+    return [
+        f"Find more shows near you any time at [{host}]({site_url}/).",
+        "",
+        "You're getting this because you signed up for MineralDigger's free Friday show email.",
+    ]
 
 
 def hub_lines(shows: list[dict], site_url: str) -> list[str]:
@@ -367,8 +372,7 @@ def render_newsletter(
         f"# {subject_for(friday)}",
         "",
         (
-            "A Friday list of UK rock, gem, mineral, fossil and bead shows. "
-            "Dates, venues, times and entry come from the MineralDigger catalogue, "
+            "A Friday list of UK rock, gem, mineral, fossil and bead shows, "
             "checked against organiser websites. Confirm with the organiser before you travel."
         ),
         "",
@@ -406,7 +410,7 @@ def render_newsletter(
     blocks.extend(
         [
             "",
-            signoff(site_url),
+            *signoff(site_url),
             "",
         ]
     )
