@@ -48,9 +48,18 @@ export function listedName(show) {
   return `${town}: ${name}`;
 }
 
+const FREE_NOTE = /^(free|free entry|free entrance|entrance free|free admission|admission free)\.?$/i;
+
 export function entryLabel(entry) {
   if (!entry || entry.kind === "unknown" || !entry.label || entry.label === "Unknown") return "Check with organiser";
+  if (entry.kind === "free" || entry.adult_gbp === 0) return "Free entry";
   return entry.label;
+}
+
+function entryDetail(entry) {
+  const notes = publicNote(entry?.notes);
+  if (!notes || FREE_NOTE.test(notes.trim())) return "";
+  return notes;
 }
 
 export function groupPlaces(shows) {
@@ -806,13 +815,12 @@ export function renderShow({ site, show, generated, todayISO, places = null }) {
   const timeNotes = publicNote(show.times.notes);
   if (opening) whenBits.push(`<p>${esc(opening)}</p>`);
   if (timeNotes) whenBits.push(`<p>${esc(timeNotes)}</p>`);
-  const entryName = entryLabel(show.entry);
-  const entryNotes = publicNote(show.entry.notes);
+  const entryNotes = entryDetail(show.entry);
   const facts = [
     ["Venue", `${show.venue.name}, ${address}`],
     ["Organiser", show.organiser.name],
   ];
-  if (entryNotes) facts.unshift(["Entry", `${entryName}. ${entryNotes}`]);
+  if (entryNotes) facts.unshift(["Entry", `${entryLabel(show.entry)}. ${entryNotes}`]);
   if (show.dealers) facts.push(["Dealers", `${show.dealers} on the organiser page`]);
   const parking = publicNote(show.parking);
   const access = publicNote(show.access_notes);

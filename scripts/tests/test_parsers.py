@@ -95,6 +95,10 @@ class FixtureTests(unittest.TestCase):
         rows = parse_oxford((FIXTURES / "oxford.html").read_text(encoding="utf-8"), today=TODAY)
         self.assertEqual([row["start"] for row in rows], ["2027-03-21", "2027-05-23", "2027-07-25", "2026-11-29"])
         self.assertTrue(all(row["entry_kind"] == "free" for row in rows))
+        assembled = [show for show in assemble(rows_from_fixtures(TODAY)) if show["organiser"]["id"] == "oxford-shows"]
+        self.assertTrue(assembled)
+        self.assertTrue(all(show["entry"]["label"] == "Free entry" for show in assembled))
+        self.assertTrue(all(show["entry"]["notes"] in (None, "") for show in assembled))
         self.assertTrue(all(row["end"] == row["start"] for row in rows))
         self.assertEqual(rows[0]["postcode"], "OX5 1AB")
         self.assertEqual(rows[0]["dealers"], "30+")

@@ -21,11 +21,20 @@ def slugify(value: str) -> str:
     return text.strip("-")
 
 
+_FREE_NOTE = re.compile(
+    r"^(free|free entry|free entrance|entrance free|free admission|admission free)\.?$",
+    re.I,
+)
+
+
 def entry_fields(row: dict) -> dict:
     kind = row.get("entry_kind") or "unknown"
     amount = row.get("entry_adult_gbp")
     if kind == "free" or amount == 0:
-        return {"kind": "free", "label": "Free", "adult_gbp": 0, "notes": row.get("entry_notes")}
+        notes = row.get("entry_notes")
+        if isinstance(notes, str) and _FREE_NOTE.match(notes.strip()):
+            notes = None
+        return {"kind": "free", "label": "Free entry", "adult_gbp": 0, "notes": notes}
     if kind == "paid" and isinstance(amount, int) and amount > 0:
         return {
             "kind": "paid",

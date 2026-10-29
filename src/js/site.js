@@ -75,10 +75,44 @@ function setStatus(text) {
   if (status) status.textContent = text || "";
 }
 
-function nearStatus(count, label) {
-  if (!count) return `No shows found near ${label}. Try a nearby town or browse by county.`;
+function countLine(count, relation, label) {
   const noun = count === 1 ? "show" : "shows";
-  return `Showing ${count} ${noun} near ${label}.`;
+  return `Showing ${count} ${noun} ${relation} ${label}.`;
+}
+
+function appendCountyBrowse(parent) {
+  parent.append(document.createTextNode("Try a nearby town or "));
+  const link = document.createElement("a");
+  link.href = "/county/";
+  link.textContent = "browse by county";
+  parent.append(link, document.createTextNode("."));
+}
+
+function fillNoShows(label) {
+  const status = document.getElementById("search-status");
+  if (!status) return;
+  status.replaceChildren(document.createTextNode(`No shows in or near ${label} yet. `));
+  appendCountyBrowse(status);
+}
+
+function renderSuggestions(labels) {
+  const status = document.getElementById("search-status");
+  if (!status) return;
+  status.replaceChildren(document.createTextNode("Did you mean "));
+  labels.forEach((label, index) => {
+    if (index > 0) status.append(document.createTextNode(index === labels.length - 1 ? " or " : ", "));
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "hint-place";
+    button.textContent = label;
+    button.addEventListener("click", () => {
+      const input = document.getElementById("q");
+      if (input) input.value = label;
+      search({ scroll: true });
+    });
+    status.append(button);
+  });
+  status.append(document.createTextNode("?"));
 }
 
 function scrollToResults() {
@@ -90,8 +124,32 @@ function scrollToResults() {
 
 const homes = new Map();
 let origin = null;
+let suggestions = null;
 let requestSeq = 0;
 let placeNote = "";
+
+const KNOWN_COUNTIES = [
+  "Bedfordshire", "Berkshire", "Bristol", "Buckinghamshire", "Cambridgeshire", "Cheshire",
+  "Cornwall", "Cumbria", "Derbyshire", "Devon", "Dorset", "County Durham", "Durham",
+  "East Sussex", "East Riding of Yorkshire", "Essex", "Gloucestershire", "Greater London",
+  "Greater Manchester", "Hampshire", "Herefordshire", "Hertfordshire", "Isle of Wight",
+  "Kent", "Lancashire", "Leicestershire", "Lincolnshire", "London", "Merseyside",
+  "Norfolk", "North Yorkshire", "Northamptonshire", "Northumberland", "Nottinghamshire",
+  "Oxfordshire", "Rutland", "Shropshire", "Somerset", "South Yorkshire", "Staffordshire",
+  "Suffolk", "Surrey", "Sussex", "Tyne and Wear", "Warwickshire", "West Midlands",
+  "West Sussex", "West Yorkshire", "Wiltshire", "Worcestershire", "Yorkshire",
+  "Anglesey", "Blaenau Gwent", "Bridgend", "Caerphilly", "Cardiff", "Carmarthenshire",
+  "Ceredigion", "Conwy", "Denbighshire", "Flintshire", "Gwynedd", "Merthyr Tydfil",
+  "Monmouthshire", "Neath Port Talbot", "Newport", "Pembrokeshire", "Powys",
+  "Rhondda Cynon Taf", "Swansea", "Torfaen", "Vale of Glamorgan", "Wrexham",
+  "Aberdeenshire", "Angus", "Argyll and Bute", "Clackmannanshire", "Dumfries and Galloway",
+  "Dundee", "East Ayrshire", "East Dunbartonshire", "East Lothian", "East Renfrewshire",
+  "Edinburgh", "Falkirk", "Fife", "Glasgow", "Highland", "Inverclyde", "Midlothian",
+  "Moray", "North Ayrshire", "North Lanarkshire", "Orkney", "Perth and Kinross",
+  "Renfrewshire", "Scottish Borders", "Shetland", "South Ayrshire", "South Lanarkshire",
+  "Stirling", "West Dunbartonshire", "West Lothian", "Western Isles",
+  "Antrim", "Armagh", "Down", "Fermanagh", "Londonderry", "Tyrone",
+];
 
 function rememberHomes() {
   for (const card of document.querySelectorAll("#show-list .card")) {
@@ -153,15 +211,109 @@ function townCentre(raw) {
   return { lat, lng, label: hits[0].dataset.town };
 }
 
-function countyCentre(raw) {
+function countyNames() {
+  return [...new Set([...document.querySelectorAll(".card")].map((card) => card.dataset.county).filter(Boolean))];
+}
+
+function areaFromCards(raw) {
   const low = raw.toLowerCase();
-  const hits = [...document.querySelectorAll(".card")].filter((card) => {
-    return (card.dataset.county || "").toLowerCase() === low && Number.isFinite(Number(card.dataset.lat));
+  const counties = countyNames();
+  const exact = counties.find((name) => name.toLowerCase() === low);
+  if (exact) return { kind: "area", label: exact, counties: [exact], relation: "in" };
+  const parts = counties.filter((name) => name.toLowerCase().endsWith(` ${low}`));
+  if (!parts.length) return null;
+  const sample = parts[0];
+  const label = sample.slice(sample.length - raw.length);
+  return { kind: "area", label, counties: parts, relation: "in" };
+}
+
+function knownCounty(raw) {
+  const low = raw.toLowerCase();
+  return KNOWN_COUNTIES.find((name) => name.toLowerCase() === low) || "";
+}
+
+function showsWithin(lat, lng) {
+  const limit = radiusMiles();
+  return [...document.querySelectorAll(".card")].filter((card) => {
+    const lat2 = Number(card.dataset.lat);
+    const lng2 = Number(card.dataset.lng);
+    if (!Number.isFinite(lat2) || !Number.isFinite(lng2)) return false;
+    return milesBetween(lat, lng, lat2, lng2) <= limit;
+  }).length;
+}
+
+function townOptions(raw) {
+  const low = raw.toLowerCase();
+  const groups = new Map();
+  for (const card of document.querySelectorAll(".card")) {
+    const town = card.dataset.town || "";
+    const name = town.toLowerCase();
+    if (!town || !Number.isFinite(Number(card.dataset.lat))) continue;
+    if (name !== low && !name.startsWith(`${low} `) && !name.startsWith(`${low}-`)) continue;
+    if (!groups.has(town)) groups.set(town, []);
+    groups.get(town).push(card);
+  }
+  return [...groups.entries()].map(([label, cards]) => {
+    const lat = cards.reduce((sum, card) => sum + Number(card.dataset.lat), 0) / cards.length;
+    const lng = cards.reduce((sum, card) => sum + Number(card.dataset.lng), 0) / cards.length;
+    return {
+      label,
+      type: "town",
+      lat,
+      lng,
+      count: showsWithin(lat, lng),
+      origin: { lat, lng, label, kind: "near", relation: "near" },
+    };
   });
-  if (!hits.length) return null;
-  const lat = hits.reduce((sum, card) => sum + Number(card.dataset.lat), 0) / hits.length;
-  const lng = hits.reduce((sum, card) => sum + Number(card.dataset.lng), 0) / hits.length;
-  return { lat, lng, label: hits[0].dataset.county, kind: "county" };
+}
+
+function nameMatchesQuery(query, name) {
+  const wanted = query.toLowerCase();
+  const value = String(name || "").toLowerCase();
+  return value === wanted || value.startsWith(`${wanted} `) || value.startsWith(`${wanted}-`);
+}
+
+async function apiTowns(raw) {
+  const data = await (await fetch(`https://api.postcodes.io/places?limit=10&q=${encodeURIComponent(raw)}`)).json();
+  const results = Array.isArray(data?.result) ? data.result : [];
+  const allowed = new Set(["city", "town"]);
+  return results
+    .filter((item) => allowed.has(String(item?.local_type || "").toLowerCase()))
+    .filter((item) => nameMatchesQuery(raw, item.name_1))
+    .filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude))
+    .map((item) => ({
+      label: item.name_1,
+      type: String(item.local_type || "").toLowerCase(),
+      lat: item.latitude,
+      lng: item.longitude,
+      count: showsWithin(item.latitude, item.longitude),
+      origin: {
+        lat: item.latitude,
+        lng: item.longitude,
+        label: item.name_1,
+        kind: "near",
+        relation: "near",
+      },
+    }));
+}
+
+function mergeOptions(groups) {
+  const byName = new Map();
+  for (const item of groups.flat()) {
+    const key = item.label.toLowerCase();
+    const existing = byName.get(key);
+    if (!existing || (item.type === "city" && existing.type !== "city")) byName.set(key, item);
+  }
+  return [...byName.values()];
+}
+
+function biggerFirst(options) {
+  const rank = { city: 0, town: 1 };
+  return [...options].sort((a, b) => {
+    const type = (rank[a.type] ?? 2) - (rank[b.type] ?? 2);
+    if (type) return type;
+    return b.count - a.count || a.label.localeCompare(b.label, "en-GB");
+  });
 }
 
 async function lookupPlace(raw) {
@@ -176,30 +328,31 @@ async function lookupPlace(raw) {
     if (data?.result) return { lat: data.result.latitude, lng: data.result.longitude, label: data.result.outcode };
     return null;
   }
-  const town = townCentre(raw);
-  if (town) return town;
-  const county = countyCentre(raw);
-  if (county) return county;
-  const data = await (await fetch(`https://api.postcodes.io/places?limit=10&q=${encodeURIComponent(raw)}`)).json();
-  const results = Array.isArray(data?.result) ? data.result : [];
-  const order = ["city", "town", "village", "other settlement", "suburban area", "hamlet"];
-  const wanted = raw.toLowerCase();
-  const place = results
-    .filter((item) => String(item?.name_1 || "").trim().toLowerCase() === wanted)
-    .filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude))
-    .sort((a, b) => {
-      const ar = order.indexOf(String(a.local_type || "").toLowerCase());
-      const br = order.indexOf(String(b.local_type || "").toLowerCase());
-      return (ar < 0 ? order.length : ar) - (br < 0 ? order.length : br);
-    })[0];
-  if (!place) return null;
-  return { lat: place.latitude, lng: place.longitude, label: place.name_1 || raw };
+  const exactTown = townCentre(raw);
+  if (exactTown) return { ...exactTown, kind: "near", relation: "near" };
+  const area = areaFromCards(raw);
+  if (area) return area;
+  let remote = [];
+  try {
+    remote = await apiTowns(raw);
+  } catch {
+    remote = [];
+  }
+  const found = biggerFirst(mergeOptions([townOptions(raw), remote])).filter((item) => item.count > 0);
+  if (found.length > 1) return { suggestions: found.map((item) => item.label) };
+  if (found.length === 1) return found[0].origin;
+  const county = knownCounty(raw);
+  if (county) return { label: county, kind: "empty", relation: "in" };
+  const named = remote.find((item) => item.label.toLowerCase() === raw.toLowerCase());
+  if (named) return { label: named.label, kind: "empty", relation: "near" };
+  return null;
 }
 
 async function search(options = {}) {
   const seq = ++requestSeq;
   const raw = (document.getElementById("q")?.value || "").trim();
   origin = null;
+  suggestions = null;
   placeNote = "";
   if (!raw) {
     setStatus("");
@@ -210,7 +363,8 @@ async function search(options = {}) {
   try {
     const found = await lookupPlace(raw);
     if (seq !== requestSeq) return;
-    if (found) origin = found;
+    if (found?.suggestions) suggestions = found.suggestions;
+    else if (found) origin = found;
     else if (POSTCODE.test(raw.toUpperCase().replace(/\s+/g, "")) || OUTCODE.test(raw.toUpperCase().replace(/\s+/g, ""))) {
       placeNote = "Could not find that postcode. Try the outward part, or a town.";
     }
@@ -244,34 +398,44 @@ function applyFilters() {
     const compact = hay.replace(/\s+/g, "");
     const textOk = !queryRaw || hay.includes(queryRaw) || compact.includes(query);
     let nearOk = true;
-    if (origin) {
+    if (origin?.kind === "area") {
+      const names = new Set((origin.counties || []).map((name) => name.toLowerCase()));
+      nearOk = names.has((card.dataset.county || "").toLowerCase());
+    } else if (origin?.kind === "empty") {
+      nearOk = false;
+    } else if (origin) {
       const lat = Number(card.dataset.lat);
       const lng = Number(card.dataset.lng);
-      if (origin.kind === "county") {
-        nearOk = (card.dataset.county || "").toLowerCase() === origin.label.toLowerCase();
-      } else if (!Number.isFinite(lat) || !Number.isFinite(lng)) nearOk = false;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) nearOk = false;
       else {
         const miles = milesBetween(origin.lat, origin.lng, lat, lng);
         card.dataset.miles = String(miles);
         nearOk = miles <= limit;
       }
     }
-    card.hidden = ended || !whenOk || (origin ? !nearOk : !textOk);
+    const textFiltered = suggestions ? false : (origin ? !nearOk : !textOk);
+    card.hidden = ended || !whenOk || textFiltered;
   }
 
-  if (origin && origin.kind !== "county") {
+  if (origin && origin.kind !== "area" && origin.kind !== "empty") {
     const ranked = visibleCards().sort((a, b) => Number(a.dataset.miles) - Number(b.dataset.miles) || a.dataset.start.localeCompare(b.dataset.start));
     if (ranked.length) showDistances(ranked);
     else {
       for (const month of document.querySelectorAll("#show-list > .month")) month.hidden = true;
     }
-    setStatus(nearStatus(ranked.length, origin.label));
+    if (ranked.length) setStatus(countLine(ranked.length, "near", origin.label));
+    else fillNoShows(origin.label);
   } else {
     for (const month of document.querySelectorAll("#show-list > .month")) {
       const any = [...month.querySelectorAll(".card")].some((card) => !card.hidden);
       month.hidden = !any;
     }
-    if (origin?.kind === "county") setStatus(nearStatus(visibleCards().length, origin.label));
+    if (suggestions?.length) renderSuggestions(suggestions);
+    else if (origin?.kind === "area") {
+      const shownHere = visibleCards().length;
+      if (shownHere) setStatus(countLine(shownHere, "in", origin.label));
+      else fillNoShows(origin.label);
+    } else if (origin?.kind === "empty") fillNoShows(origin.label);
     else setStatus(placeNote);
   }
 
@@ -300,12 +464,9 @@ function applyFilters() {
     empty.hidden = shown.length !== 0;
     if (shown.length === 0) {
       if (origin) {
-        title.textContent = `No shows found near ${origin.label}.`;
-        copy.replaceChildren(document.createTextNode("Try a nearby town or "));
-        const county = document.createElement("a");
-        county.href = "/county/";
-        county.textContent = "browse by county";
-        copy.append(county, document.createTextNode("."));
+        title.textContent = `No shows in or near ${origin.label} yet.`;
+        copy.replaceChildren();
+        appendCountyBrowse(copy);
       } else if (when === "weekend") {
         title.textContent = "Nothing listed for this weekend.";
         copy.textContent = `This weekend is ${formatRange(weekend.start, weekend.end)}. Coming later has the next published dates.`;
@@ -407,6 +568,7 @@ function mountList() {
   input?.addEventListener("input", () => {
     if (!(input.value || "").trim()) {
       origin = null;
+      suggestions = null;
       placeNote = "";
       applyFilters();
     }
