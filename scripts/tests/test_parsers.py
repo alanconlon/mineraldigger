@@ -69,14 +69,19 @@ class FixtureTests(unittest.TestCase):
         later_kempton = next(row for row in rows if row["start"] == "2027-02-20")
         self.assertEqual(later_kempton["entry_kind"], "unknown")
         self.assertEqual(kempton["organiser_phone"], "07712 276041")
+        self.assertTrue(all(row["types"] == ["rock", "gem", "bead"] for row in rows))
 
     def test_nature_does_not_invent_an_undated_march(self):
         home = (FIXTURES / "nature-home.html").read_text(encoding="utf-8")
         only_home = parse_nature(home, "", today=TODAY)
         self.assertEqual([row["start"] for row in only_home], ["2026-10-17"])
         self.assertEqual(only_home[0]["entry_adult_gbp"], 5)
+        self.assertEqual(only_home[0]["types"], ["gem", "mineral", "fossil", "bead"])
         both = parse_nature(home, (FIXTURES / "nature-exhibitors.html").read_text(encoding="utf-8"), today=TODAY)
         self.assertEqual([row["start"] for row in both], ["2026-10-17", "2027-03-13", "2027-10-16"])
+        self.assertEqual(both[0]["types"], ["gem", "mineral", "fossil", "bead"])
+        self.assertEqual(both[1]["types"], ["gem", "mineral"])
+        self.assertEqual(both[2]["types"], ["mineral"])
         march = both[1]
         self.assertEqual(march["entry_kind"], "unknown")
         self.assertIsNone(march["times_summary"])
@@ -133,6 +138,13 @@ class FixtureTests(unittest.TestCase):
             self.assertFalse(banned(show["summary"]), show["id"])
             self.assertFalse(banned(show["name"]), show["id"])
             self.assertEqual(show["source"]["retrieved"], "2026-10-25")
+        for show in shows:
+            if show["entry"]["kind"] == "unknown":
+                self.assertEqual(show["entry"]["label"], "Check with organiser")
+            self.assertNotEqual(show["entry"]["label"], "Unknown")
+        rgbs = [show for show in shows if show["organiser"]["id"] == "rockngem"]
+        self.assertTrue(rgbs)
+        self.assertTrue(all(show["types"] == ["rock", "gem", "bead"] for show in rgbs))
         sussex = next(show for show in shows if show["organiser"]["id"] == "smls")
         bakewell_2027 = next(show for show in shows if show["id"] == "bakewell-rock-exchange-2027-10-09-de451ja")
         self.assertIsNone(bakewell_2027["organiser"]["url"])

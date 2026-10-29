@@ -1,4 +1,4 @@
-import { formatDay, formatRange, monthKey, monthLabel, shortStack } from "../src/js/format.js";
+import { addDays, formatDay, formatRange, iso, monthKey, monthLabel, overlaps, parseISO, shortStack, thisWeekend } from "../src/js/format.js";
 import { stripeReady } from "./feature.mjs";
 
 const TYPES = [
@@ -27,6 +27,57 @@ const TYPE_DESCRIPTION = {
 
 const SHARE_ALT = "MineralDigger: Rock, gem, mineral, fossil and bead shows across the UK, on one map.";
 const SITE_BLURB = "Rock, gem, mineral, fossil and bead shows across the UK, on one map.";
+
+export function slugify(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export function entryLabel(entry) {
+  if (!entry || entry.kind === "unknown" || !entry.label || entry.label === "Unknown") return "Check with organiser";
+  return entry.label;
+}
+
+export function groupPlaces(shows) {
+  const counties = new Map();
+  const towns = new Map();
+  for (const show of shows) {
+    const countyName = show.venue.county;
+    const townName = show.venue.town;
+    const nation = show.venue.nation || "UK";
+    if (countyName) {
+      const slug = slugify(countyName);
+      const existing = counties.get(slug);
+      if (existing && existing.name !== countyName) throw new Error(`County slug clash: ${slug}`);
+      if (!existing) counties.set(slug, { slug, name: countyName, nation, shows: [] });
+      counties.get(slug).shows.push(show);
+    }
+    if (townName) {
+      const slug = slugify(townName);
+      const existing = towns.get(slug);
+      if (existing && existing.name !== townName) throw new Error(`Town slug clash: ${slug}`);
+      if (!existing) towns.set(slug, { slug, name: townName, county: countyName, nation, shows: [] });
+      towns.get(slug).shows.push(show);
+    }
+  }
+  return { counties, towns };
+}
+
+const NATION_ORDER = ["England", "Wales", "Scotland", "Northern Ireland"];
+
+function byNation(items) {
+  return [...items].sort((a, b) => {
+    const ai = NATION_ORDER.indexOf(a.nation);
+    const bi = NATION_ORDER.indexOf(b.nation);
+    const nation = (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+    if (nation) return nation;
+    return a.name.localeCompare(b.name, "en-GB");
+  });
+}
 
 export function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
@@ -63,8 +114,10 @@ function footer(generated) {
       <div>
         <h2>Browse</h2>
         <a href="/">Upcoming shows</a>
-        <a href="/?when=weekend">This weekend</a>
+        <a href="/this-weekend/">This weekend</a>
         <a href="/?when=later">Coming later</a>
+        <a href="/county/">Counties</a>
+        <a href="/towns/">Towns</a>
       </div>
       <div>
         <h2>Organisers</h2>
@@ -184,7 +237,7 @@ function layout({ site, path, title, description, ogTitle, ogDescription, body, 
 }
 
 function pills(show) {
-  const bits = [`<span class="pill pill-${esc(show.entry.kind)}">${esc(show.entry.label)}</span>`];
+  const bits = [`<span class="pill pill-${esc(show.entry.kind)}">${esc(entryLabel(show.entry))}</span>`];
   if (show.provisional) bits.push('<span class="pill pill-provisional">Provisional</span>');
   if (show.featured) bits.push('<span class="pill pill-featured">Featured</span>');
   for (const type of show.types) bits.push(`<span class="pill">${esc(type)}</span>`);
@@ -266,27 +319,33 @@ function homeSignup() {
     </section>`;
 }
 
-export function renderListing({ site, path, title, description, ogTitle, ogDescription, heading, lede, shows, generated, home = false, typeLock = null }) {
+const SERIES_NOTE = `<p class="fine">Rock, Gem &amp; Bead Shows are one series. Those weekends are listed under rock, gem and bead, and not under mineral or fossil, because the date list does not split them.</p>`;
+
+function browseLinks() {
+  return `<div class="chip-row" aria-label="Browse">
+    <a class="chip" href="/this-weekend/">This weekend</a>
+    <a class="chip" href="/county/">Counties</a>
+    <a class="chip" href="/towns/">Towns</a>
+  </div>`;
+}
+
+export function renderListing({ site, path, title, description, ogTitle, ogDescription, heading, lede, shows, generated, home = false, typeLock = null, eyebrow = null, preface = "" }) {
   const featured = shows.filter((show) => show.featured);
   const rest = shows.filter((show) => !show.featured);
   const note = shows.some((show) => show.provisional)
     ? `<p class="fine">Dates marked provisional are printed that way by the organiser. Rock, Gem &amp; Bead Shows mark their 2027 list as provisional.</p>`
     : "";
-  const hero = home
-    ? `<section class="hero"><div class="wrap">
-        <p class="eyebrow">UK shows directory</p>
+  const eyebrowText = eyebrow || (home ? "UK shows directory" : "Show type");
+  const countTail = home ? " from organiser websites, on one map." : "";
+  const hero = `<section class="hero"><div class="wrap">
+        <p class="eyebrow">${esc(eyebrowText)}</p>
         <h1>${esc(heading)}</h1>
         <p class="lede">${esc(lede)}</p>
-        <p class="count-line"><strong id="result-count">${shows.length} shows</strong> from organiser websites, on one map.</p>
-      </div></section>`
-    : `<section class="hero"><div class="wrap">
-        <p class="eyebrow">Show type</p>
-        <h1>${esc(heading)}</h1>
-        <p class="lede">${esc(lede)}</p>
-        <p class="count-line"><strong id="result-count">${shows.length} shows</strong></p>
+        <p class="count-line"><strong id="result-count">${shows.length} ${shows.length === 1 ? "show" : "shows"}</strong>${countTail}</p>
       </div></section>`;
   const body = `${hero}
     <div class="wrap">
+      ${preface}
       <div class="filters">
         <div class="chip-row" role="group" aria-label="Date window">
           <button type="button" class="chip" data-when="all" aria-pressed="true">All upcoming</button>
@@ -299,7 +358,7 @@ export function renderListing({ site, path, title, description, ogTitle, ogDescr
       ${note}
       <div class="layout">
         <div>
-          <noscript><p class="noscript">The map and the weekend filter need Javascript. The list below is every upcoming show on this page.</p></noscript>
+          <noscript><p class="noscript">The map and the weekend filter need JavaScript. The list below is every upcoming show on this page.</p></noscript>
           <div id="empty" class="empty" hidden>
             <h2>Nothing listed for this weekend.</h2>
             <p>Coming later has the next published dates.</p>
@@ -342,6 +401,7 @@ export function renderHome(ctx) {
     lede: "Dates, venues and entry in one place. Check before you travel; always confirm with the organiser.",
     home: true,
     typeLock: null,
+    preface: browseLinks(),
   });
 }
 
@@ -358,6 +418,158 @@ export function renderType(ctx, key) {
     lede: TYPE_INTRO[key],
     home: false,
     typeLock: key,
+    preface: `${browseLinks()}${["rock", "gem", "bead"].includes(key) ? SERIES_NOTE : ""}`,
+  });
+}
+
+function shiftWeekend(range, days) {
+  return {
+    start: iso(addDays(parseISO(range.start), days)),
+    end: iso(addDays(parseISO(range.end), days)),
+  };
+}
+
+function weekendBlock(title, range, shows) {
+  const when = formatRange(range.start, range.end);
+  const list = shows.length
+    ? `<div class="month">${shows.map(card).join("")}</div>`
+    : `<p>Nothing listed for ${esc(title.toLowerCase())}.</p>`;
+  return `<section>
+      <h2>${esc(title)}</h2>
+      <p class="fine">${esc(when)}</p>
+      ${list}
+    </section>`;
+}
+
+export function renderWeekend(ctx) {
+  const weekend = thisWeekend(ctx.today);
+  const next = shiftWeekend(weekend, 7);
+  const now = ctx.shows.filter((show) => overlaps(show, weekend.start, weekend.end));
+  const later = ctx.shows.filter((show) => overlaps(show, next.start, next.end));
+  const span = formatRange(weekend.start, weekend.end);
+  const noun = now.length === 1 ? "show" : "shows";
+  const body = `<section class="hero"><div class="wrap">
+        <p class="eyebrow">This weekend</p>
+        <h1>Shows this weekend</h1>
+        <p class="lede">${esc(span)}. ${now.length} ${noun} across the UK, from organiser websites. Check with the organiser before you travel.</p>
+      </div></section>
+    <div class="wrap">
+      ${browseLinks()}
+      <div class="layout">
+        <div>
+          <noscript><p class="noscript">The map needs JavaScript. The list on this page is complete without it.</p></noscript>
+          ${weekendBlock("This weekend", weekend, now)}
+          ${weekendBlock("Next weekend", next, later)}
+          <p class="fine"><a href="/">All upcoming shows</a> has dates after that.</p>
+        </div>
+        <aside class="map-col">
+          <div class="map-frame"><div id="map" role="region" aria-label="Map of shows"></div></div>
+          <p class="map-note">Green pins are confirmed dates. Copper pins are provisional. The pin sits on the venue postcode.</p>
+        </aside>
+      </div>
+    </div>`;
+  return layout({
+    site: ctx.site,
+    path: "/this-weekend/",
+    title: `Shows this weekend (${span}) | MineralDigger`,
+    description: `Rock, gem, mineral, fossil and bead shows on ${span}. Dates, venues and entry from organiser sites.`,
+    body,
+    map: true,
+    generated: ctx.generated,
+  });
+}
+
+function indexPage({ site, path, title, description, eyebrow, heading, lede, generated, inner }) {
+  const body = `<section class="hero"><div class="wrap">
+        <p class="eyebrow">${esc(eyebrow)}</p>
+        <h1>${esc(heading)}</h1>
+        <p class="lede">${esc(lede)}</p>
+      </div></section>
+    <div class="wrap">
+      ${browseLinks()}
+      ${inner}
+    </div>`;
+  return layout({ site, path, title, description, body, generated });
+}
+
+export function renderCountyIndex(ctx, counties) {
+  const grouped = new Map();
+  for (const county of byNation(counties.values())) {
+    if (!grouped.has(county.nation)) grouped.set(county.nation, []);
+    grouped.get(county.nation).push(county);
+  }
+  const inner = [...grouped.entries()]
+    .map(([nation, list]) => {
+      const chips = list
+        .map((county) => `<a class="chip" href="/county/${county.slug}/">${esc(county.name)} <b>${county.shows.length}</b></a>`)
+        .join("");
+      return `<section class="month"><h2>${esc(nation)}</h2><div class="chip-row">${chips}</div></section>`;
+    })
+    .join("");
+  const count = counties.size;
+  return indexPage({
+    site: ctx.site,
+    path: "/county/",
+    title: "Shows by county | MineralDigger",
+    description: "UK rock, gem, mineral, fossil and bead shows by county. Dates and venues from organiser websites.",
+    eyebrow: "Places",
+    heading: "Shows by county",
+    lede: `${count} ${count === 1 ? "county has" : "counties have"} an upcoming show. Each listing is checked against the organiser's own site.`,
+    generated: ctx.generated,
+    inner,
+  });
+}
+
+export function renderTownIndex(ctx, towns) {
+  const chips = byNation(towns.values())
+    .map((town) => `<a class="chip" href="/town/${town.slug}/">${esc(town.name)} <b>${town.shows.length}</b></a>`)
+    .join("");
+  const count = towns.size;
+  return indexPage({
+    site: ctx.site,
+    path: "/towns/",
+    title: "Shows by town | MineralDigger",
+    description: "UK rock, gem, mineral, fossil and bead shows by town. Dates and venues from organiser websites.",
+    eyebrow: "Places",
+    heading: "Shows by town",
+    lede: `${count} ${count === 1 ? "town has" : "towns have"} an upcoming show. Open a town for the dates and the venue.`,
+    generated: ctx.generated,
+    inner: `<div class="chip-row">${chips}</div>`,
+  });
+}
+
+export function renderCounty(ctx, county, towns) {
+  const local = [...towns.values()]
+    .filter((town) => town.county === county.name)
+    .sort((a, b) => a.name.localeCompare(b.name, "en-GB"));
+  const townChips = local
+    .map((town) => `<a class="chip" href="/town/${town.slug}/">${esc(town.name)}</a>`)
+    .join("");
+  return renderListing({
+    ...ctx,
+    shows: county.shows,
+    path: `/county/${county.slug}/`,
+    title: `Shows in ${county.name} | MineralDigger`,
+    description: `Upcoming rock, gem, mineral, fossil and bead shows in ${county.name}. Dates, venues and entry from organiser sites.`,
+    heading: `Shows in ${county.name}`,
+    lede: `Upcoming shows in ${county.name}. Dates and venues come from organiser websites. Check with the organiser before you travel.`,
+    eyebrow: county.nation,
+    preface: `${browseLinks()}${townChips ? `<div class="chip-row" aria-label="Towns">${townChips}</div>` : ""}`,
+  });
+}
+
+export function renderTown(ctx, town) {
+  const countyBit = town.county ? `, ${town.county}` : "";
+  return renderListing({
+    ...ctx,
+    shows: town.shows,
+    path: `/town/${town.slug}/`,
+    title: `Shows in ${town.name} | MineralDigger`,
+    description: `Upcoming rock, gem, mineral, fossil and bead shows in ${town.name}${countyBit}. Dates, venues and entry from organiser sites.`,
+    heading: `Shows in ${town.name}`,
+    lede: `Upcoming shows in ${town.name}${countyBit}. Dates and venues come from organiser websites. Check with the organiser before you travel.`,
+    eyebrow: town.county || town.nation,
+    preface: `${browseLinks()}${town.county ? `<p class="fine"><a href="/county/${slugify(town.county)}/">${esc(town.county)}</a></p>` : ""}`,
   });
 }
 
@@ -452,7 +664,19 @@ function jsonLd(show, site, generated) {
   return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
 }
 
-export function renderShow({ site, show, generated, todayISO }) {
+function whereLinks(show, places) {
+  const townSlug = slugify(show.venue.town);
+  const countySlug = slugify(show.venue.county);
+  const town = places?.towns?.has(townSlug)
+    ? `<a href="/town/${townSlug}/">${esc(show.venue.town)}</a>`
+    : esc(show.venue.town);
+  const county = places?.counties?.has(countySlug)
+    ? `<a href="/county/${countySlug}/">${esc(show.venue.county)}</a>`
+    : esc(show.venue.county);
+  return [town, county, esc(show.venue.nation)].filter(Boolean).join(", ");
+}
+
+export function renderShow({ site, show, generated, todayISO, places = null }) {
   const past = show.end < todayISO;
   const banners = [];
   if (past) banners.push(`<div class="callout past"><p>This date has passed. Check the organiser for the next one.</p></div>`);
@@ -461,7 +685,7 @@ export function renderShow({ site, show, generated, todayISO }) {
   const address = [show.venue.street, placeLine(show), show.venue.postcode].filter(Boolean).join(", ");
   const facts = [
     ["When", `${formatRange(show.start, show.end)}${show.times.summary ? `. ${show.times.summary}` : ""}${show.times.notes ? ` ${show.times.notes}` : ""}`],
-    ["Entry", [show.entry.label, show.entry.notes].filter(Boolean).join(". ")],
+    ["Entry", [entryLabel(show.entry), show.entry.notes].filter(Boolean).join(". ")],
     ["Venue", `${show.venue.name}, ${address}`],
     ["Organiser", show.organiser.name],
   ];
@@ -489,6 +713,7 @@ export function renderShow({ site, show, generated, todayISO }) {
       <div class="pills">${pills(show)}</div>
       ${banners.join("")}
       <p>Types: ${types}</p>
+      <p>Where: ${whereLinks(show, places)}</p>
       <div class="facts">${factHtml}</div>
       ${phone}
       ${email}
@@ -738,7 +963,7 @@ export function renderSubmit({ site, generated }) {
         <div class="row-2">
           <label class="field">Entry
             <select name="entry_kind" required>
-              <option value="unknown">Unknown</option>
+              <option value="unknown">Check with organiser</option>
               <option value="free">Free</option>
               <option value="paid">Paid</option>
             </select>
@@ -771,6 +996,8 @@ export function renderAbout({ site, generated }) {
       <h1>How MineralDigger lists shows</h1>
       <p>MineralDigger lists rock, gem, mineral, fossil and bead shows across the UK. We pull dates from organiser websites and from shows submitted here, then put them on a map so you can see what is on this weekend and later in the year.</p>
       <p>We focus on trade and collector shows: Rock, Gem &amp; Bead circuits, society mineral and fossil shows, and gem expos. We do not list mind-body-spirit or psychic shows.</p>
+      <p>Rock, Gem &amp; Bead Shows publish one date list. Those weekends are tagged rock, gem and bead. A mineral or fossil page includes a show only when that programme names the type. If a page does not print a door price, the listing says check with the organiser.</p>
+      <p>Browse <a href="/this-weekend/">this weekend</a>, <a href="/county/">counties</a> and <a href="/towns/">towns</a>.</p>
       <p>Always check the organiser's page for times, tickets and any changes before you set off.</p>
       <h2>Where a date comes from</h2>
       <p>Each show page names the organiser URL and the day we read it. If a page prints a weekday and a day of the month but no year, we use that date only when the weekday matches, and we say so on the show page. If a date is unclear, we leave it off.</p>
@@ -817,7 +1044,7 @@ export function renderSignupThanks({ site, generated }) {
       <p class="fine">Signed up by mistake? Just ignore that email and you won't hear from us.</p>
       <div class="actions">
         <a href="/">Upcoming shows</a>
-        <a href="/?when=weekend">This weekend</a>
+        <a href="/this-weekend/">This weekend</a>
       </div>
     </div></article>`;
   return layout({

@@ -21,6 +21,9 @@ npm run dev
 ## Pages
 
 - `/` upcoming shows, with an OpenStreetMap map, type links, and date filters (this weekend, coming later). Pins sit on the venue postcode.
+- `/this-weekend/` the shows on this weekend, and the next weekend, as a real page
+- `/county/` and `/county/…/` upcoming shows by county. `/shows/surrey/` redirects to `/county/surrey/`
+- `/towns/` and `/town/…/` upcoming shows by town
 - `/rock/`, `/gem/`, `/mineral/`, `/fossil/`, `/bead/` type pages
 - `/show/…/` one page per show, plus an `event.ics` calendar file
 - `/feature/` free listing, featured show £15, year pass £99, site sponsor £25 a month, Friday email £12 an issue. The four paid cards link to live Stripe checkout.
@@ -54,7 +57,8 @@ Rules the parsers follow:
 - Dates come from the organiser's own HTML. Dealer diaries, Mineralica and Facebook are not sources.
 - Rockngem's homepage is the source for their dates. Their `robots.txt` allows `/`.
 - 2027 Rockngem dates are stored as provisional because the page headings say so.
-- A door price or a clock time is stored only when that page prints it for that weekend. Otherwise the list says Unknown.
+- A door price or a clock time is stored only when that page prints it for that weekend. Otherwise the list says check with the organiser.
+- Rock, Gem & Bead Shows are tagged rock, gem and bead. The date list does not assign mineral or fossil to each weekend, so those type pages are not a copy of that series. Nature Unearthed is tagged from the weekend the page actually describes.
 - The Sussex page prints "Saturday 14th November" and no year. 14 November 2026 is that Saturday, so the row uses it and the show page says the year was matched, not printed.
 - Haywards Heath College's street and postcode come from the college contact page, not from the show page. See `data/venue-supplements.json`.
 - Map coordinates are postcode centroids from postcodes.io, saved in `data/venues.json`.

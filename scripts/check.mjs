@@ -360,8 +360,10 @@ for (const file of files) {
   }
   for (const href of [
     "/",
-    "/?when=weekend",
+    "/this-weekend/",
     "/?when=later",
+    "/county/",
+    "/towns/",
     "/submit/",
     "/feature/",
     "/about/",
@@ -389,6 +391,8 @@ for (const file of files) {
     fail(`Header nav in ${file} is missing the Friday email label.`);
   }
   if (raw.includes("Friday list")) fail(`Friday list label still in ${file}`);
+  if (raw.includes("Javascript")) fail(`Javascript typo in ${file}`);
+  if (raw.includes(">Unknown<")) fail(`Visitor-facing Unknown label in ${file}`);
   if (!foot.includes('href="https://www.facebook.com/people/MineralDigger/61595681170967/" rel="me noopener" target="_blank">Facebook</a>')) {
     fail(`Facebook link missing in ${file}`);
   }
@@ -413,6 +417,9 @@ if (sitemap.includes("/newsletter")) fail("Newsletter alias must stay out of the
 const redirects = await readFile(join(dist, "_redirects"), "utf8");
 if (!redirects.includes("/newsletter /digest/ 301") || !redirects.includes("/newsletter/ /digest/ 301")) {
   fail("/newsletter/ should redirect to /digest/.");
+}
+if (!redirects.includes("/shows/surrey /county/surrey/ 301") || !redirects.includes("/shows/surrey/ /county/surrey/ 301")) {
+  fail("/shows/surrey/ should redirect to the Surrey county page.");
 }
 if (sitemap.includes("404")) fail("404 page must stay out of the sitemap.");
 if (!sitemap.includes("<loc>https://mineraldigger.com/app/</loc>")) fail("Sitemap is missing the add-to-phone page.");
@@ -462,7 +469,7 @@ const iconSrcs = (manifest.icons || []).map((icon) => icon.src);
 for (const src of ["/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-maskable-512.png"]) {
   if (!iconSrcs.includes(src)) fail(`Manifest is missing ${src}.`);
 }
-if (!manifest.shortcuts?.some((item) => item.url === "/?when=weekend") || !manifest.shortcuts?.some((item) => item.url === "/digest/")) {
+if (!manifest.shortcuts?.some((item) => item.url === "/this-weekend/") || !manifest.shortcuts?.some((item) => item.url === "/digest/")) {
   fail("Manifest shortcuts should offer this weekend and the Friday email.");
 }
 const pwaJs = await readFile(join(dist, "pwa.js"), "utf8");
@@ -533,7 +540,7 @@ if (!signedUp.includes("short email from MineralDigger")) fail("Sign-up thank-yo
 if (!signedUp.includes("Friday show email")) fail("Sign-up thank-you page does not name the Friday show email.");
 if (!signedUp.includes("spam or Promotions")) fail("Sign-up thank-you page does not mention spam or Promotions.");
 if (!signedUp.includes("you won't hear from us")) fail("Sign-up thank-you page is missing the ignore note.");
-if (!signedUp.includes('href="/">Upcoming shows</a>') || !signedUp.includes('href="/?when=weekend">This weekend</a>')) {
+if (!signedUp.includes('href="/">Upcoming shows</a>') || !signedUp.includes('href="/this-weekend/">This weekend</a>')) {
   fail("Sign-up thank-you page is missing the show links.");
 }
 if (signedUp.includes("Payment received") || signedUp.includes("Stripe receipt")) {
@@ -563,6 +570,51 @@ const bakewellIcs = await readFile(join(dist, "show/bakewell-rock-exchange-bakew
 if (bakewellIcs.includes("rockexchange.uk") || bakewellIcs.includes("URL:")) {
   fail("Bakewell 2027 calendar still links out.");
 }
+const rgbs = catalogue.shows.filter((show) => show.organiser?.id === "rockngem");
+if (rgbs.length < 20) fail(`Expected the Rock, Gem & Bead series, found ${rgbs.length}.`);
+for (const show of rgbs) {
+  if (JSON.stringify(show.types) !== JSON.stringify(["rock", "gem", "bead"])) {
+    fail(`${show.id} is still tagged with more than rock, gem and bead.`);
+  }
+}
+for (const show of catalogue.shows) {
+  if (show.entry?.label === "Unknown") fail(`${show.id} still labels entry as Unknown.`);
+  if (show.entry?.kind === "unknown" && show.entry.label !== "Check with organiser") {
+    fail(`${show.id} unknown entry label is ${show.entry?.label}.`);
+  }
+}
+if (!sitemap.includes("<loc>https://mineraldigger.com/this-weekend/</loc>")) fail("Sitemap is missing this weekend.");
+if (!sitemap.includes("<loc>https://mineraldigger.com/county/</loc>")) fail("Sitemap is missing the county index.");
+if (!sitemap.includes("<loc>https://mineraldigger.com/county/surrey/</loc>")) fail("Sitemap is missing Surrey.");
+if (!sitemap.includes("<loc>https://mineraldigger.com/towns/</loc>")) fail("Sitemap is missing the town index.");
+const weekendPage = await readFile(join(dist, "this-weekend/index.html"), "utf8");
+if (!weekendPage.includes("<h1>Shows this weekend</h1>")) fail("This weekend page heading is wrong.");
+if (!weekendPage.includes('rel="canonical" href="https://mineraldigger.com/this-weekend/"')) fail("This weekend canonical is wrong.");
+if (!weekendPage.includes(">Next weekend</h2>")) fail("This weekend page is missing next weekend.");
+const worcester = await readFile(join(dist, "show/rock-gem-and-bead-show-worcester-2026-11-07/index.html"), "utf8");
+if (!worcester.includes(">Check with organiser<")) fail("Worcester entry badge should say check with the organiser.");
+if (worcester.includes(">Unknown<")) fail("Worcester entry badge still says Unknown.");
+const countyIndex = await readFile(join(dist, "county/index.html"), "utf8");
+if (!countyIndex.includes("<h1>Shows by county</h1>") || !countyIndex.includes('href="/county/surrey/"')) {
+  fail("County index is missing Surrey.");
+}
+const surrey = await readFile(join(dist, "county/surrey/index.html"), "utf8");
+if (!surrey.includes("<h1>Shows in Surrey</h1>")) fail("Surrey page heading is wrong.");
+if (!surrey.includes("Sunbury-on-Thames")) fail("Surrey page is missing its town.");
+const townIndex = await readFile(join(dist, "towns/index.html"), "utf8");
+if (!townIndex.includes("<h1>Shows by town</h1>") || !townIndex.includes('href="/town/sunbury-on-thames/"')) {
+  fail("Town index is missing Sunbury-on-Thames.");
+}
+const mineralPage = await readFile(join(dist, "mineral/index.html"), "utf8");
+const rockPage = await readFile(join(dist, "rock/index.html"), "utf8");
+const fossilPage = await readFile(join(dist, "fossil/index.html"), "utf8");
+const beadPage = await readFile(join(dist, "bead/index.html"), "utf8");
+const rgbsLinks = (html) => (html.match(/rock-gem-and-bead-show/g) || []).length;
+if (rgbsLinks(rockPage) < 10) fail("Rock page is missing the Rock, Gem and Bead series.");
+if (rgbsLinks(beadPage) < 10) fail("Bead page is missing the Rock, Gem and Bead series.");
+if (rgbsLinks(mineralPage) !== 0) fail("Mineral page still lists the Rock, Gem and Bead series.");
+if (rgbsLinks(fossilPage) !== 0) fail("Fossil page still lists the Rock, Gem and Bead series.");
+if (mineralPage === rockPage) fail("Mineral and rock pages are still identical.");
 
 if (offerValidFrom("2026-10-25") !== "2026-10-25T00:00:00+01:00") fail("Offer validFrom on 25 October 2026 should be UK midnight in BST.");
 if (offerValidFrom("2026-01-16") !== "2026-01-16T00:00:00+00:00") fail("Offer validFrom in January should be UK midnight in GMT.");

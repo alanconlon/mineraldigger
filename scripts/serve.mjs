@@ -103,8 +103,16 @@ const server = createServer(async (request, response) => {
     if (request.method !== "GET" && request.method !== "HEAD") {
       return send(response, 405, JSON.stringify({ ok: false, errors: ["Method not allowed."] }));
     }
-    if (url.pathname === "/newsletter" || url.pathname === "/newsletter/") {
-      response.writeHead(301, { location: "/digest/" });
+    const redirects = {
+      "/newsletter": "/digest/",
+      "/newsletter/": "/digest/",
+      "/shows/surrey": "/county/surrey/",
+      "/shows/surrey/": "/county/surrey/",
+      "/counties": "/county/",
+      "/counties/": "/county/",
+    };
+    if (redirects[url.pathname]) {
+      response.writeHead(301, { location: redirects[url.pathname] });
       return response.end();
     }
     const path = (await fileFor(url.pathname)) || join(dist, "404.html");

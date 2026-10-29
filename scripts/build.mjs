@@ -13,12 +13,18 @@ import {
   renderNotFound,
   renderOffline,
   renderPrivacy,
+  renderCounty,
+  renderCountyIndex,
   renderShow,
   renderSignupThanks,
   renderSitemap,
   renderSubmit,
   renderThanks,
+  renderTown,
+  renderTownIndex,
   renderType,
+  renderWeekend,
+  groupPlaces,
 } from "./render.mjs";
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "..");
@@ -133,7 +139,18 @@ async function copyAssets() {
     join(dist, "_headers"),
     "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Frame-Options: SAMEORIGIN\n\n/thanks/\n  X-Robots-Tag: noindex\n\n/thanks/*\n  X-Robots-Tag: noindex\n\n/thanks/payment/*\n  X-Robots-Tag: noindex\n\n/offline/\n  X-Robots-Tag: noindex\n\n/sw.js\n  Cache-Control: no-cache\n\n/manifest.webmanifest\n  Content-Type: application/manifest+json\n",
   );
-  await writeFile(join(dist, "_redirects"), "/newsletter /digest/ 301\n/newsletter/ /digest/ 301\n");
+  await writeFile(
+    join(dist, "_redirects"),
+    [
+      "/newsletter /digest/ 301",
+      "/newsletter/ /digest/ 301",
+      "/shows/surrey /county/surrey/ 301",
+      "/shows/surrey/ /county/surrey/ 301",
+      "/counties /county/ 301",
+      "/counties/ /county/ 301",
+      "",
+    ].join("\n"),
+  );
 }
 
 async function main() {
@@ -157,7 +174,21 @@ async function main() {
   await writeFile(join(dist, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml\n`);
 
   const ctx = { site, shows: upcoming, generated, today, todayISO, stripe };
+  const places = groupPlaces(upcoming);
+  const placeSets = {
+    counties: new Set(places.counties.keys()),
+    towns: new Set(places.towns.keys()),
+  };
   await writePage("index.html", renderHome(ctx));
+  await writePage("this-weekend/index.html", renderWeekend(ctx));
+  await writePage("county/index.html", renderCountyIndex(ctx, places.counties));
+  await writePage("towns/index.html", renderTownIndex(ctx, places.towns));
+  for (const county of places.counties.values()) {
+    await writePage(`county/${county.slug}/index.html`, renderCounty(ctx, county, places.towns));
+  }
+  for (const town of places.towns.values()) {
+    await writePage(`town/${town.slug}/index.html`, renderTown(ctx, town));
+  }
   for (const key of ["rock", "gem", "mineral", "fossil", "bead"]) {
     await writePage(`${key}/index.html`, renderType(ctx, key));
   }
@@ -173,9 +204,11 @@ async function main() {
   await writePage("404.html", renderNotFound({ site, generated }));
 
   // /thanks/, /thanks/payment/ and /offline/ are noindex and stay out of the sitemap. /newsletter/ redirects to /digest/. This site does not ping IndexNow.
-  const paths = ["/", "/feature/", "/submit/", "/digest/", "/app/", "/about/", "/privacy/", "/rock/", "/gem/", "/mineral/", "/fossil/", "/bead/"];
+  const paths = ["/", "/this-weekend/", "/county/", "/towns/", "/feature/", "/submit/", "/digest/", "/app/", "/about/", "/privacy/", "/rock/", "/gem/", "/mineral/", "/fossil/", "/bead/"];
+  for (const county of places.counties.values()) paths.push(`/county/${county.slug}/`);
+  for (const town of places.towns.values()) paths.push(`/town/${town.slug}/`);
   for (const show of shows) {
-    await writePage(`show/${show.slug}/index.html`, renderShow({ site, show, generated, todayISO }));
+    await writePage(`show/${show.slug}/index.html`, renderShow({ site, show, generated, todayISO, places: placeSets }));
     await writePage(`show/${show.slug}/event.ics`, ics(show, todayISO, site));
     paths.push(`/show/${show.slug}/`);
   }
