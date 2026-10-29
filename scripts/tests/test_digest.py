@@ -22,6 +22,7 @@ from digest import (  # noqa: E402
     empty_friday_sponsor,
     issue_friday,
     load_json,
+    preview_for,
     render_newsletter,
     subject_for,
     write_newsletter,
@@ -72,6 +73,22 @@ class DigestTests(unittest.TestCase):
         self.assertEqual(issue_friday(date(2026, 10, 30)), date(2026, 10, 30))
         self.assertEqual(issue_friday(date(2026, 10, 31)), date(2026, 11, 6))
         self.assertEqual(issue_friday(date(2026, 11, 1)), date(2026, 11, 6))
+        # The subject window is that Friday to Sunday, even when the script runs on Wednesday or Saturday.
+        self.assertEqual(
+            subject_for(issue_friday(date(2026, 10, 28))),
+            "Mineral and fossil shows this weekend: Fri 30 Oct to Sun 1 Nov",
+        )
+        self.assertEqual(
+            subject_for(issue_friday(date(2026, 10, 31))),
+            "Mineral and fossil shows this weekend: Fri 6 Nov to Sun 8 Nov",
+        )
+        self.assertNotIn("28 Oct", subject_for(issue_friday(date(2026, 10, 28))))
+        self.assertNotIn("31 Oct", subject_for(issue_friday(date(2026, 10, 31))))
+        self.assertEqual(
+            preview_for(issue_friday(date(2026, 10, 28))),
+            "Dates, venues and entry for UK rock, gem, mineral, fossil and bead shows, Fri 30 Oct to Sun 1 Nov.",
+        )
+        self.assertNotEqual(preview_for(date(2026, 10, 30)), preview_for(date(2026, 11, 6)))
 
     def test_seed_friday_uses_catalogue_facts_only(self):
         friday, markdown = render_newsletter(SHOWS, TODAY, SITE)
@@ -101,19 +118,23 @@ class DigestTests(unittest.TestCase):
         self.assertNotIn("£", worcester)
         self.assertNotIn("Unknown", worcester)
         self.assertNotIn("10:00", worcester)
+        self.assertIn("Times not yet published", worcester)
 
         newcastle = paragraph_for(markdown, "rock-gem-and-bead-show-newcastle-upon-tyne-2026-11-14")
         self.assertIn("Newcastle Racecourse, Newcastle upon Tyne, NE3 5HP", newcastle)
         self.assertNotIn("£", newcastle)
         self.assertNotIn("Unknown", newcastle)
+        self.assertIn("Times not yet published", newcastle)
 
         sussex = paragraph_for(markdown, "sussex-mineral-crystal-and-fossil-show-haywards-heath-2026-11-14")
         self.assertIn("Haywards Heath College, Harlands Road, Haywards Heath, RH16 1LT", sussex)
         self.assertIn("Entry £5", sussex)
         self.assertIn("Early entry £10", sussex)
-        self.assertIn("matches the weekday on the organiser page", sussex)
+        self.assertNotIn("matches the weekday", sussex)
         self.assertNotIn("does not print the year", sussex)
         self.assertNotIn("year is matched", sussex)
+        self.assertNotIn("college contact page", sussex)
+        self.assertNotIn("Times not yet published", sussex)
 
         self.assertIn("## This weekend", markdown)
         self.assertIn("## The next couple of weeks", markdown)
@@ -123,7 +144,11 @@ class DigestTests(unittest.TestCase):
         self.assertIn("Further dates are on the map.", markdown)
         for hub in ("/rock/", "/gem/", "/mineral/", "/fossil/", "/bead/"):
             self.assertIn(f"{SITE}{hub}", markdown)
-        self.assertIn("Subscribe and find shows at [mineraldigger.com](https://mineraldigger.com/).", markdown)
+        self.assertIn("You're getting this because you signed up at [mineraldigger.com](https://mineraldigger.com/).", markdown)
+        self.assertNotIn("Subscribe and find shows", markdown)
+        self.assertNotIn("does not print the year", markdown)
+        self.assertNotIn("year is matched", markdown)
+        self.assertNotIn("college contact page", markdown)
 
     def test_later_shows_become_a_short_coming_up(self):
         friday, markdown = render_newsletter(SHOWS, date(2026, 12, 4), SITE)
@@ -212,7 +237,8 @@ class DigestTests(unittest.TestCase):
         _, markdown = render_newsletter(SHOWS, TODAY, SITE, {"friday": None})
         _, body = buttondown_draft.split_subject(markdown)
         self.assertIn(EMPTY_FRIDAY, body)
-        self.assertNotIn("# Mineral shows", body)
+        self.assertNotIn(subject_for(date(2026, 10, 30)), body)
+        self.assertEqual(preview_for(date(2026, 10, 30)), preview_for(issue_friday(TODAY)))
 
     def test_write_uses_the_issue_friday_filename(self):
         import tempfile
@@ -318,7 +344,11 @@ class ButtondownTests(unittest.TestCase):
                 code, output = run_main(["--file", str(path), "--dry-run"])
             self.assertEqual(code, 0)
             self.assertIn("Dry run. No Buttondown request.", output)
-            self.assertIn("Mineral shows for 30 October 2026", output)
+            self.assertIn("Mineral and fossil shows this weekend: Fri 30 Oct to Sun 1 Nov", output)
+            self.assertIn(
+                "Preview: Dates, venues and entry for UK rock, gem, mineral, fossil and bead shows, Fri 30 Oct to Sun 1 Nov.",
+                output,
+            )
             os.environ["BUTTONDOWN_API_KEY"] = "shared-key"
             with mock.patch("buttondown_draft.urllib.request.urlopen", side_effect=AssertionError("network")):
                 code, output = run_main(["--file", str(path)])
@@ -333,6 +363,7 @@ class ButtondownTests(unittest.TestCase):
     def test_create_then_update_stays_a_draft(self):
         friday, markdown = render_newsletter(SHOWS, TODAY, SITE)
         subject, body = buttondown_draft.split_subject(markdown)
+        description = preview_for(friday)
         self.assertEqual(subject, subject_for(friday))
         self.assertIn("buttondown-editor-mode: plaintext", body)
         self.assertIn(EMPTY_FRIDAY, body)
@@ -344,10 +375,11 @@ class ButtondownTests(unittest.TestCase):
         try:
             base = f"http://127.0.0.1:{server.server_address[1]}"
             client = buttondown_draft.Buttondown("test-token", base)
-            action, email_id = client.save_draft(subject, body)
+            action, email_id = client.save_draft(subject, body, description)
             self.assertEqual(action, "created")
             self.assertEqual(email_id, "draft-1")
-            action, email_id = client.save_draft(subject, body + "\nUpdated line.\n")
+            self.assertEqual(server.emails[0]["description"], description)
+            action, email_id = client.save_draft(subject, body + "\nUpdated line.\n", description)
             self.assertEqual(action, "updated")
             self.assertEqual(email_id, "draft-1")
             self.assertEqual(len(server.emails), 1)
@@ -392,6 +424,14 @@ class ButtondownTests(unittest.TestCase):
                 self.assertEqual(server.emails[0]["status"], "draft")
                 self.assertIn(EMPTY_FRIDAY, server.emails[0]["body"])
                 self.assertNotIn("Sponsored", server.emails[0]["body"])
+                self.assertEqual(
+                    server.emails[0]["description"],
+                    "Dates, venues and entry for UK rock, gem, mineral, fossil and bead shows, Fri 30 Oct to Sun 1 Nov.",
+                )
+                self.assertEqual(
+                    server.emails[0]["subject"],
+                    "Mineral and fossil shows this weekend: Fri 30 Oct to Sun 1 Nov",
+                )
                 self.assertEqual(sum(call[0] == "POST" for call in server.calls), 1)
             finally:
                 server.shutdown()
