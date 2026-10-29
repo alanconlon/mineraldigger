@@ -6,7 +6,11 @@ from datetime import date
 from dates import clock_range, normalise_postcode, parse_show_span
 
 SOURCE = "https://www.rockngem.co/"
-TYPES = ["rock", "gem", "mineral", "fossil", "bead"]
+# Every date line is the same Rock, Gem & Bead show. The homepage also
+# describes mineral, fossil and lapidary stock, but it does not assign those
+# to a weekend. Tagging every row with all five types made the type pages
+# the same list, so mineral and fossil stay off the row.
+TYPES = ["rock", "gem", "bead"]
 
 
 def parse_rockngem(html: str, today: date | None = None, retrieved: str | None = None) -> list[dict]:
@@ -69,7 +73,7 @@ def parse_rockngem(html: str, today: date | None = None, retrieved: str | None =
 def _summary(provisional: bool) -> str:
     base = (
         "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, "
-        "for retail and wholesale visitors."
+        "but each date is the same series rather than a separate mineral or fossil fair."
     )
     if provisional:
         return base + " This 2027 date is marked provisional on their site."

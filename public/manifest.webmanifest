@@ -20,7 +20,7 @@
     {
       "name": "Shows this weekend",
       "short_name": "This weekend",
-      "url": "/?when=weekend",
+      "url": "/this-weekend/",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {

@@ -33,7 +33,7 @@ def entry_fields(row: dict) -> dict:
             "adult_gbp": amount,
             "notes": row.get("entry_notes"),
         }
-    return {"kind": "unknown", "label": "Unknown", "adult_gbp": None, "notes": row.get("entry_notes")}
+    return {"kind": "unknown", "label": "Check with organiser", "adult_gbp": None, "notes": row.get("entry_notes")}
 
 
 def assemble(rows: list[dict]) -> list[dict]:

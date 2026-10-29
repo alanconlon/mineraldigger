@@ -11,7 +11,13 @@ from dates import month_num
 
 HOME = "https://www.natureunearthed.co.uk/"
 EXHIBITORS = "https://www.natureunearthed.co.uk/pages/exhibitor-information"
-TYPES = ["rock", "gem", "mineral", "fossil", "bead"]
+TYPE_CHECKS = (
+    ("rock", re.compile(r"\brocks?\b", re.I)),
+    ("gem", re.compile(r"\b(?:gems?|crystals?)\b", re.I)),
+    ("mineral", re.compile(r"\bminerals?\b", re.I)),
+    ("fossil", re.compile(r"\bfossils?\b", re.I)),
+    ("bead", re.compile(r"\bbeads?\b", re.I)),
+)
 
 DATED = re.compile(
     r"(\d{1,2})(?:st|nd|rd|th)?\s*(?:/|and)\s*(\d{1,2})(?:st|nd|rd|th)?\s+"
@@ -78,7 +84,7 @@ def parse_nature(home_html: str, exhibitors_html: str = "", today: date | None =
                 "organiser_phone": None,
                 "organiser_email": email,
                 "name": "South of England Mineral Show",
-                "types": list(TYPES),
+                "types": _types(home, start),
                 "start": start,
                 "end": end,
                 "provisional": False,
@@ -97,7 +103,35 @@ def parse_nature(home_html: str, exhibitors_html: str = "", today: date | None =
                 "source_url": EXHIBITORS if not is_published_weekend else HOME,
                 "source_retrieved": retrieved,
                 "source_notes": notes,
-                "summary": "Mineral show at the South of England Showground, with fossils, gems, beads and rocks.",
+                "summary": _summary(home, start),
             }
         )
     return rows
+
+
+def _types(home: str, start: str) -> list[str]:
+    # The stock sentence is written for the October 2026 weekend. Later dates
+    # on the same page do not repeat it, so they are not given those tags.
+    if start == "2026-10-17":
+        found = [name for name, pattern in TYPE_CHECKS if pattern.search(home)]
+        return found or ["mineral"]
+    # The title names 13th/14th March as a crystal show as well as a mineral show.
+    if start.startswith("2027-03") and re.search(r"crystal show", home, re.I) and re.search(r"march", home, re.I):
+        return ["gem", "mineral"]
+    return ["mineral"]
+
+
+def _summary(home: str, start: str) -> str:
+    if start == "2026-10-17":
+        extra = []
+        if re.search(r"\bfossils?\b", home, re.I):
+            extra.append("fossils")
+        if re.search(r"\bbeads?\b", home, re.I):
+            extra.append("beads")
+        base = "Mineral and crystal show at the South of England Showground"
+        if extra:
+            return base + ", with " + " and ".join(extra) + "."
+        return base + "."
+    if start.startswith("2027-03") and re.search(r"crystal show", home, re.I):
+        return "Mineral and crystal show at the South of England Showground."
+    return "Mineral show at the South of England Showground."
