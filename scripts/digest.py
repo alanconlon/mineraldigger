@@ -14,9 +14,10 @@ and later shows are still on the list, the file is a short coming-up note.
 If nothing is upcoming, nothing is written.
 
 This script does not send email. When sponsors.friday is empty, or its issue
-is not that Friday, the draft includes one invitation to sponsor the email
-(£12 an issue) or the site (£25 a month). A booked Friday sponsor replaces
-that line. The sign-up page does not show either.
+is not that Friday, the draft includes one sponsor line, as its own paragraph
+straight after the opening intro (this Friday email for £12, or the site for
+£25 a month). A booked Friday sponsor replaces that line. The sign-up page
+does not show either.
 
 Examples:
   python3 scripts/digest.py
@@ -234,14 +235,14 @@ def heading_span(shows: list[dict]) -> str:
 
 
 def empty_friday_sponsor(site_url: str) -> str:
-    """Invitation used when no Friday email sponsor is booked for that issue.
+    """One sponsor line when no Friday email sponsor is booked for that issue.
 
-    Copy approved 28 October 2026. Amounts match /feature/: Friday email £12
-    an issue, site sponsor £25 a month.
+    Its own paragraph, straight after the opening intro. Amounts match
+    /feature/: this Friday email £12, the site £25 a month.
     """
     base = site_url.rstrip("/")
     return (
-        "Run a rock, gem or lapidary shop? Sponsor this email for £12 an issue, "
+        "**This week's sponsor slot is free.** Sponsor this Friday email for £12, "
         f"or the site for £25 a month: [see the sponsor options]({base}/feature/)."
     )
 
