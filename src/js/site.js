@@ -75,6 +75,19 @@ function setStatus(text) {
   if (status) status.textContent = text || "";
 }
 
+function nearStatus(count, label) {
+  if (!count) return `No shows found near ${label}. Try a nearby town or browse by county.`;
+  const noun = count === 1 ? "show" : "shows";
+  return `Showing ${count} ${noun} near ${label}.`;
+}
+
+function scrollToResults() {
+  const target = document.getElementById(visibleCards().length ? "show-list" : "empty");
+  if (!target) return;
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  target.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+}
+
 const homes = new Map();
 let origin = null;
 let requestSeq = 0;
@@ -168,7 +181,7 @@ async function lookupPlace(raw) {
   return { lat: place.latitude, lng: place.longitude, label: place.name_1 || raw };
 }
 
-async function search() {
+async function search(options = {}) {
   const seq = ++requestSeq;
   const raw = (document.getElementById("q")?.value || "").trim();
   origin = null;
@@ -191,6 +204,7 @@ async function search() {
     placeNote = "Search is unavailable right now. Try a town name.";
   }
   applyFilters();
+  if (options.scroll) scrollToResults();
 }
 
 function applyFilters() {
@@ -234,8 +248,7 @@ function applyFilters() {
     else {
       for (const month of document.querySelectorAll("#show-list > .month")) month.hidden = true;
     }
-    const noun = ranked.length === 1 ? "show" : "shows";
-    setStatus(placeNote || `${ranked.length} ${noun} within ${limit} miles of ${origin.label}.`);
+    setStatus(nearStatus(ranked.length, origin.label));
   } else {
     for (const month of document.querySelectorAll("#show-list > .month")) {
       const any = [...month.querySelectorAll(".card")].some((card) => !card.hidden);
@@ -258,8 +271,12 @@ function applyFilters() {
     empty.hidden = shown.length !== 0;
     if (shown.length === 0) {
       if (origin) {
-        title.textContent = `Nothing within ${limit} miles.`;
-        copy.textContent = "Try a larger distance, or search for the town.";
+        title.textContent = `No shows found near ${origin.label}.`;
+        copy.replaceChildren(document.createTextNode("Try a nearby town or "));
+        const county = document.createElement("a");
+        county.href = "/county/";
+        county.textContent = "browse by county";
+        copy.append(county, document.createTextNode("."));
       } else if (when === "weekend") {
         title.textContent = "Nothing listed for this weekend.";
         copy.textContent = `This weekend is ${formatRange(weekend.start, weekend.end)}. Coming later has the next published dates.`;
@@ -352,7 +369,7 @@ function mountList() {
   });
   document.getElementById("search")?.addEventListener("submit", (event) => {
     event.preventDefault();
-    search();
+    search({ scroll: true });
   });
   radius?.addEventListener("change", () => {
     if (origin) applyFilters();

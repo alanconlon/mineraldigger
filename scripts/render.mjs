@@ -1,4 +1,4 @@
-import { addDays, formatDay, formatRange, iso, monthKey, monthLabel, overlaps, parseISO, shortStack, thisWeekend } from "../src/js/format.js";
+import { addDays, formatDay, formatRange, iso, longDate, monthKey, monthLabel, overlaps, parseISO, shortStack, thisWeekend } from "../src/js/format.js";
 import { stripeReady } from "./feature.mjs";
 
 const TYPES = [
@@ -146,7 +146,7 @@ function footer(generated) {
         <a href="/app/">Add to your phone</a>
       </div>
     </div>
-    <div class="wrap muted small">© 2026 MineralDigger. Data last refreshed ${esc(String(generated).slice(0, 10))}. <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></div>
+    <div class="wrap muted small">© 2026 MineralDigger. Data last refreshed ${esc(longDate(generated))}. <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></div>
   </footer>`;
 }
 
@@ -369,6 +369,21 @@ function browseLinks() {
   </div>`;
 }
 
+function whenFilters() {
+  return `<div class="chip-row" role="group" aria-label="When">
+          <button type="button" class="chip" data-when="all" aria-pressed="true">All upcoming</button>
+          <button type="button" class="chip" data-when="weekend" aria-pressed="false">This weekend</button>
+          <button type="button" class="chip" data-when="later" aria-pressed="false">Coming later</button>
+        </div>`;
+}
+
+function placeLinks() {
+  return `<div class="chip-row place-links" aria-label="Places">
+            <a class="chip" href="/county/">Counties</a>
+            <a class="chip" href="/towns/">Towns</a>
+          </div>`;
+}
+
 export function renderListing({ site, path, title, description, ogTitle, ogDescription, heading, lede, shows, generated, home = false, typeLock = null, eyebrow = null, preface = "" }) {
   const ordered = byDate(shows);
   const featured = ordered.filter((show) => show.featured);
@@ -388,10 +403,8 @@ export function renderListing({ site, path, title, description, ogTitle, ogDescr
     <div class="wrap">
       ${preface}
       <div class="filters">
-        <div class="chip-row" role="group" aria-label="Show filters">
-          <button type="button" class="chip" data-when="all" aria-pressed="true">All upcoming</button>
-          <button type="button" class="chip" data-when="weekend" aria-pressed="false">This weekend</button>
-          <button type="button" class="chip" data-when="later" aria-pressed="false">Coming later</button>
+        ${whenFilters()}
+        <div class="chip-row chip-scroll" role="group" aria-label="Type">
           ${typeLinks(typeLock)}
         </div>
         <form id="search" class="search" role="search" action="" method="get">
@@ -418,6 +431,7 @@ export function renderListing({ site, path, title, description, ogTitle, ogDescr
             ${featured.length ? `<section class="month"><h2>Featured</h2>${featured.map(card).join("")}</section>` : ""}
             ${months(rest)}
           </div>
+          ${home ? placeLinks() : ""}
         </div>
         <aside class="map-col">
           <div class="map-frame"><div id="map" role="region" aria-label="Map of shows"></div></div>
@@ -441,18 +455,20 @@ export function renderListing({ site, path, title, description, ogTitle, ogDescr
 }
 
 export function renderHome(ctx) {
+  const count = ctx.shows.length;
+  const noun = count === 1 ? "show" : "shows";
   return renderListing({
     ...ctx,
     path: "/",
     title: "MineralDigger · UK rock, gem, mineral, fossil and bead shows map",
-    description: "Free UK calendar of rock, gem, mineral, fossil and bead shows. Dates, venues and entry on one map. Always confirm with the organiser before you travel.",
+    description: `Free UK calendar of ${count} rock, gem, mineral, fossil and bead ${noun}. Dates, venues and entry on one map. Always confirm with the organiser before you travel.`,
     ogTitle: "MineralDigger · UK rock, gem, mineral, fossil and bead shows",
-    ogDescription: "Dates, venues and entry on one map. Free calendar for collectors and traders. Check the organiser before you travel.",
+    ogDescription: `${count} ${noun} with dates, venues and entry on one map. Free calendar for collectors and traders. Check the organiser before you travel.`,
     heading: "UK rock, gem, mineral, fossil and bead shows on one map.",
     lede: "Dates, venues and entry in one place. Check before you travel; always confirm with the organiser.",
     home: true,
     typeLock: null,
-    preface: browseLinks(),
+    preface: "",
   });
 }
 
@@ -492,6 +508,13 @@ function weekendBlock(title, range, shows) {
     </section>`;
 }
 
+function laterDatesLine(count) {
+  if (!count) return `<p class="fine">No further shows are listed after that. <a href="/">See all upcoming shows</a>.</p>`;
+  const noun = count === 1 ? "show" : "shows";
+  const verb = count === 1 ? "has" : "have";
+  return `<p class="fine"><a href="/">${count} ${noun}</a> ${verb} dates after that.</p>`;
+}
+
 export function renderWeekend(ctx) {
   const weekend = thisWeekend(ctx.today);
   const next = shiftWeekend(weekend, 7);
@@ -511,7 +534,7 @@ export function renderWeekend(ctx) {
           <noscript><p class="noscript">The map needs JavaScript. The list on this page is complete without it.</p></noscript>
           ${weekendBlock("This weekend", weekend, now)}
           ${weekendBlock("Next weekend", next, later)}
-          <p class="fine"><a href="/">All upcoming shows</a> have dates after that.</p>
+          ${laterDatesLine(ctx.shows.filter((show) => show.start > next.end).length)}
         </div>
         <aside class="map-col">
           <div class="map-frame"><div id="map" role="region" aria-label="Map of shows"></div></div>
@@ -748,7 +771,7 @@ function breadcrumb(show, site, places) {
   const html = `<nav class="crumbs" aria-label="Breadcrumb">${crumbs
     .map((crumb, index) => {
       const label = crumb.href ? `<a href="${crumb.href}">${esc(crumb.name)}</a>` : `<span>${esc(crumb.name)}</span>`;
-      const sep = index ? `<span class="crumb-sep" aria-hidden="true">&gt;</span> ` : "";
+      const sep = index ? `<span class="crumb-sep" aria-hidden="true">›</span> ` : "";
       return `${sep}${label}`;
     })
     .join(" ")}</nav>`;
@@ -779,8 +802,10 @@ export function renderShow({ site, show, generated, todayISO, places = null }) {
   if (show.provisional) banners.push(`<div class="callout"><p>The organiser lists this date as provisional. Check their site before you travel.</p></div>`);
   if (show.year_inferred) banners.push(`<div class="callout"><p>The date uses the year that matches the weekday on the organiser page.</p></div>`);
   const address = [show.venue.street, placeLine(show), show.venue.postcode].filter(Boolean).join(", ");
+  const whenBits = [`<p>${esc(formatRange(show.start, show.end))}</p>`];
+  if (show.times.summary) whenBits.push(`<p>${esc(show.times.summary)}</p>`);
+  if (show.times.notes) whenBits.push(`<p>${esc(show.times.notes)}</p>`);
   const facts = [
-    ["When", `${formatRange(show.start, show.end)}${show.times.summary ? `. ${show.times.summary}` : ""}${show.times.notes ? ` ${show.times.notes}` : ""}`],
     ["Entry", [entryLabel(show.entry), show.entry.notes].filter(Boolean).join(". ")],
     ["Venue", `${show.venue.name}, ${address}`],
     ["Organiser", show.organiser.name],
@@ -788,9 +813,9 @@ export function renderShow({ site, show, generated, todayISO, places = null }) {
   if (show.dealers) facts.push(["Dealers", `${show.dealers} on the organiser page`]);
   if (show.parking) facts.push(["Parking", show.parking]);
   if (show.access_notes) facts.push(["Access", show.access_notes]);
-  const factHtml = facts
+  const factHtml = `<div class="fact"><h2>When</h2>${whenBits.join("")}</div>${facts
     .map(([label, value]) => `<div class="fact"><h2>${esc(label)}</h2><p>${esc(value)}</p></div>`)
-    .join("");
+    .join("")}`;
   const phone = show.organiser.phone ? `<p>Phone: <a href="tel:${esc(show.organiser.phone.replace(/\s+/g, ""))}">${esc(show.organiser.phone)}</a></p>` : "";
   const email = show.organiser.email ? `<p>Email: <a href="mailto:${esc(show.organiser.email)}">${esc(show.organiser.email)}</a></p>` : "";
   const website = show.organiser.url ? `<p><a href="${esc(show.organiser.url)}">Organiser website</a></p>` : "";
@@ -821,7 +846,7 @@ export function renderShow({ site, show, generated, todayISO, places = null }) {
       <div class="actions">
         <a href="/show/${esc(show.slug)}/event.ics">Add to calendar</a>
         ${directions ? `<a href="${esc(directions)}" rel="noopener" target="_blank">Directions</a>` : ""}
-        <a href="/feature/?show=${esc(show.slug)}">Feature this show</a>
+        <a href="/feature/?show=${esc(show.slug)}">Feature your show</a>
       </div>
       <div class="map-frame" style="height:320px;min-height:0"><div id="detail-map" data-lat="${esc(show.venue.lat)}" data-lng="${esc(show.venue.lng)}" role="region" aria-label="Map of the venue"></div></div>
       <p class="map-note">The pin is the venue postcode, not a surveyed entrance.${placeNote ? ` ${esc(placeNote)}` : ""}</p>
@@ -843,9 +868,10 @@ export function renderShow({ site, show, generated, todayISO, places = null }) {
   });
 }
 
-function payControl(href, label, ready) {
+function payControl(href, label, ready, id = "") {
   if (!ready) return `<p class="soon">Coming soon</p>`;
-  return `<a class="pay" href="${esc(href)}">${esc(label)}</a>`;
+  const idAttr = id ? ` id="${esc(id)}"` : "";
+  return `<a class="pay" href="${esc(href)}"${idAttr}>${esc(label)}</a>`;
 }
 
 function mailLink(address) {
@@ -921,7 +947,7 @@ export function renderFeature({ site, stripe, generated }) {
   const copy = paymentCopy(ready, prices);
   const body = `<article class="page"><div class="wrap">
       <p class="eyebrow">For organisers and sponsors</p>
-      <h1>Feature a show</h1>
+      <h1 id="feature-heading">Feature a show</h1>
       <p class="lede">Put your show in front of people looking for rock, gem, mineral, fossil and bead shows. Listing is free. Featuring and sponsorship are optional, and they are labelled when they are on.</p>
       <div id="feature-pick" class="callout" hidden></div>
       <div class="ladder">
@@ -944,7 +970,7 @@ export function renderFeature({ site, stripe, generated }) {
             <li>A Featured label on the list and the show page</li>
             <li>Featured in the Friday email sent the week of your show</li>
           </ul>
-          ${payControl(links.featured_show, `Pay £${prices.featured_show} with Stripe`, ready.featured_show)}
+          ${payControl(links.featured_show, `Pay £${prices.featured_show} with Stripe`, ready.featured_show, "featured-pay")}
         </section>
         <section class="price-card">
           <h2>Year pass</h2>
@@ -1174,12 +1200,12 @@ export function renderPrivacy({ site, generated }) {
   const body = `<article class="page"><div class="wrap-narrow prose">
       <p class="eyebrow">Privacy</p>
       <h1>Privacy</h1>
-      <p class="fine">Last updated: 29 October 2026</p>
+      <p class="fine">Last updated 29 October 2026</p>
       <p class="lede">MineralDigger (mineraldigger.com) is run by Alan Conlon in Ireland. This page explains what information we collect, why, who handles it for us, and how long we keep it. Questions or requests: <a href="mailto:${esc(email)}">${esc(email)}</a>.</p>
       <h2>Browsing the site</h2>
-      <p>You do not need an account to use MineralDigger. We use Cloudflare Web Analytics, which is cookieless and does not track you across sites. It counts page views and gives rough visitor numbers. MineralDigger does not use advertising trackers or its own cookies. Cloudflare may set a short-lived security cookie if it needs to check that a visitor is not a bot.</p>
+      <p>You do not need an account to use MineralDigger. We use Cloudflare Web Analytics, which is cookieless and does not track you across sites. It counts page views and gives rough visitor numbers. It does not collect personal data. Web Analytics on this site runs in lite mode. In lite mode Cloudflare does not add the analytics script for visitors from the EU, so those visits are not counted. Cloudflare's notes on the same setting also cover visitors whose traffic reaches a data centre in the UK or the rest of the EEA, so those visits may not be counted either. MineralDigger does not use advertising trackers or its own cookies. Cloudflare may set a security cookie called __cf_bm when it checks that a visitor is not a bot. It expires after 30 minutes of inactivity. It is not an analytics cookie, and Cloudflare does not use it to track you from site to site.</p>
       <ul>
-        <li><strong>Hosting.</strong> The site is hosted by Cloudflare. Like any web host, Cloudflare handles the technical details of each visit (such as your IP address and browser type) to deliver pages and protect the site from abuse. Cloudflare Web Analytics is part of that hosting. It is cookieless and does not track you across sites.</li>
+        <li><strong>Hosting.</strong> The site is hosted by Cloudflare. Like any web host, Cloudflare handles the technical details of each visit (such as your IP address and browser type) to deliver pages and protect the site from abuse. Cloudflare Web Analytics is part of that hosting. It is cookieless, it does not collect personal data, and in lite mode it is not added for visitors from the EU.</li>
         <li><strong>Search and maps.</strong> A postcode search, or a place name that is not already a town on the page, is sent to postcodes.io so shows can be sorted by distance. postcodes.io sees your IP address and the place you search for. A town that is already listed is matched on this page. Maps load tiles from OpenStreetMap, which sees your IP address when your browser requests a tile. The map code is served from this site.</li>
         <li><strong>On your phone.</strong> If you add MineralDigger to your home screen, pages you open are saved on that phone so they still open with a weak signal. That copy stays on your device. We do not receive it.</li>
       </ul>
@@ -1221,7 +1247,7 @@ export function renderTerms({ site, stripe, generated }) {
   const body = `<article class="page"><div class="wrap-narrow prose">
       <p class="eyebrow">Terms</p>
       <h1>Terms</h1>
-      <p class="fine">Last updated: 29 October 2026</p>
+      <p class="fine">Last updated 29 October 2026</p>
       <p class="lede">These terms cover featured listings and sponsorship on MineralDigger (mineraldigger.com). Listing on MineralDigger is free. These terms only apply when you pay for something.</p>
       <h2>What you can buy</h2>
       <ul>

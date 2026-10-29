@@ -74,9 +74,22 @@ const tagline = "UK rock, gem, mineral, fossil and bead shows on one map.";
 const subline = "Dates, venues and entry in one place. Check before you travel; always confirm with the organiser.";
 const footer = "Rock, gem, mineral, fossil and bead shows across the UK.";
 const homeTitle = "MineralDigger · UK rock, gem, mineral, fossil and bead shows map";
-const homeDescription = "Free UK calendar of rock, gem, mineral, fossil and bead shows. Dates, venues and entry on one map. Always confirm with the organiser before you travel.";
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+function isoToday(date = new Date()) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+function longDateFromISO(value) {
+  const [year, month, day] = String(value).slice(0, 10).split("-").map(Number);
+  return `${day} ${MONTH_NAMES[month - 1]} ${year}`;
+}
+const homeCatalogue = JSON.parse(await readFile(join(root, "data/shows.json"), "utf8"));
+const homeCount = homeCatalogue.shows.filter((show) => show.end >= isoToday()).length;
+const homeNoun = homeCount === 1 ? "show" : "shows";
+const homeDescription = `Free UK calendar of ${homeCount} rock, gem, mineral, fossil and bead ${homeNoun}. Dates, venues and entry on one map. Always confirm with the organiser before you travel.`;
 const homeOgTitle = "MineralDigger · UK rock, gem, mineral, fossil and bead shows";
-const homeOgDescription = "Dates, venues and entry on one map. Free calendar for collectors and traders. Check the organiser before you travel.";
+const homeOgDescription = `${homeCount} ${homeNoun} with dates, venues and entry on one map. Free calendar for collectors and traders. Check the organiser before you travel.`;
 if (!index.includes(`<h1>${tagline}</h1>`)) fail("Homepage H1 changed.");
 if (!index.includes(`<p class="lede">${subline}</p>`)) fail("Homepage lede changed.");
 if (!index.includes(`<title>${homeTitle}</title>`)) fail("Homepage title is wrong.");
@@ -186,8 +199,22 @@ if (!index.includes('class="nav-toggle"') || !index.includes('id="primary-nav"')
 if (!index.includes('href="#main">Skip to content</a>')) fail("Skip to content link is missing.");
 if (!index.includes(">Search</button>")) fail("Search button is missing.");
 if (!index.includes('placeholder="Postcode or town, e.g. RH16"')) fail("Search placeholder is wrong.");
-if (!index.includes('aria-label="Show filters"')) fail("Filter buttons should be one group.");
-if (index.includes('aria-label="Date window"') || index.includes('aria-label="Type"')) fail("The two filter rows are still separate.");
+if (!index.includes('role="group" aria-label="When"')) fail("Homepage should have one When row.");
+if (!index.includes('class="chip-row chip-scroll" role="group" aria-label="Type"')) fail("Homepage should have one sideways Type row.");
+if (index.includes('aria-label="Show filters"')) fail("When and Type should be separate rows.");
+const homeMain = index.slice(0, index.indexOf('<footer class="site-footer">'));
+const weekendLabels = homeMain.match(/>This weekend</g) || [];
+if (weekendLabels.length !== 1) fail(`Homepage should say This weekend once above the footer, found ${weekendLabels.length}.`);
+const listAt = homeMain.indexOf('id="show-list"');
+const placesAt = homeMain.indexOf('aria-label="Places"');
+if (listAt < 0 || placesAt < listAt) fail("Counties and Towns should sit below the show list.");
+if (!homeMain.slice(placesAt).includes('href="/county/">Counties</a>') || !homeMain.slice(placesAt).includes('href="/towns/">Towns</a>')) {
+  fail("Place links under the list should be Counties and Towns.");
+}
+const beforeList = homeMain.slice(0, listAt);
+if (beforeList.includes('href="/county/">Counties</a>') || beforeList.includes('href="/towns/">Towns</a>')) {
+  fail("Counties and Towns should not sit above the list.");
+}
 if (index.includes("<h2>Nothing listed for this weekend.</h2>")) fail("Homepage still has the hidden weekend heading.");
 if (!index.includes("<h3>Haywards Heath: Sussex Mineral, Crystal &amp; Fossil Show</h3>")) fail("Homepage show names should lead with the town.");
 const monthKeys = [...index.matchAll(/data-month="(\d{4}-\d{2})"/g)].map((match) => match[1]);
@@ -221,6 +248,16 @@ if (feature.includes("28 days")) fail("Feature page still says 28 days.");
 if (!feature.includes('id="feature-pick"') || !feature.includes('src="/js/feature.js"')) {
   fail("Feature page should be able to show the show passed in the query.");
 }
+if (!feature.includes('id="feature-heading"')) fail("Feature page should have a heading the show name can replace.");
+if (!feature.includes('id="featured-pay"')) fail("Featured show payment link should be marked so the show can be passed through.");
+const featureJs = await readFile(join(dist, "js/feature.js"), "utf8");
+if (!featureJs.includes('heading.textContent = "Feature: " + name')) fail("Feature page should title the page Feature: and the show name.");
+if (!featureJs.includes('client_reference_id')) fail("Featured payment link should pass the show as client_reference_id.");
+const siteJs = await readFile(join(dist, "js/site.js"), "utf8");
+if (!siteJs.includes("Showing ") || !siteJs.includes(" near ")) fail("Search status should say Showing N shows near a place.");
+if (!siteJs.includes("No shows found near ")) fail("Search should say when no shows are near a place.");
+if (!siteJs.includes("Try a nearby town or browse by county.")) fail("No-match copy should suggest a nearby town or a county.");
+if (!siteJs.includes("scrollIntoView")) fail("Search should scroll to the results.");
 if (!feature.includes("Pay by card through Stripe") || !feature.includes("We feature the show within one working day")) {
   fail("Feature page is missing the live checkout steps.");
 }
@@ -449,6 +486,8 @@ for (const file of files) {
     fail(`Bluesky link missing in ${file}`);
   }
   if (!foot.includes("© 2026 MineralDigger.") || !foot.includes("Data last refreshed ")) fail(`Footer credit line missing in ${file}`);
+  if (!/Data last refreshed \d{1,2} [A-Z][a-z]+ \d{4}\./.test(foot)) fail(`Footer date in ${file} should be a long date.`);
+  if (/Data last refreshed \d{4}-\d{2}-\d{2}/.test(foot)) fail(`Footer date in ${file} is still an ISO date.`);
   if (!foot.includes('href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a>')) {
     fail(`Footer in ${file} should put Terms next to Privacy.`);
   }
@@ -498,6 +537,15 @@ if (!privacy.includes("Cloudflare Web Analytics, which is cookieless and does no
 if (!privacy.includes("It counts page views and gives rough visitor numbers.")) {
   fail("Privacy page does not describe what Cloudflare Web Analytics counts.");
 }
+if (!privacy.includes("does not collect personal data")) fail("Privacy page should say Web Analytics collects no personal data.");
+if (!privacy.includes("lite mode")) fail("Privacy page should say Web Analytics runs in lite mode.");
+if (!privacy.includes("does not add the analytics script for visitors from the EU")) {
+  fail("Privacy page should say lite mode does not record visitors from the EU.");
+}
+if (!privacy.includes("__cf_bm")) fail("Privacy page should name the Cloudflare security cookie __cf_bm.");
+if (!privacy.includes("30 minutes of inactivity")) fail("Privacy page should say how long __cf_bm lasts.");
+if (!privacy.includes("Last updated 29 October 2026")) fail("Privacy last updated line is wrong.");
+if (privacy.includes("Last updated:")) fail("Privacy Last updated should not use a colon.");
 if (/does not use analytics|doesn't use analytics|do not use analytics/i.test(privacy)) {
   fail("Privacy page still says there are no analytics.");
 }
@@ -559,7 +607,8 @@ if (!terms.includes("always check with the organiser or auctioneer before you tr
 if (!terms.includes("<h2>Contact</h2>")) fail("Terms is missing Contact.");
 if (!terms.includes("Questions:") || !terms.includes('href="mailto:hello@mineraldigger.com"')) fail("Terms contact line is wrong.");
 if (!terms.includes("Sponsorship and featured listings:")) fail("Terms sponsorship contact is wrong.");
-if (!terms.includes("Last updated: 29 October 2026")) fail("Terms last updated date is wrong.");
+if (!terms.includes("Last updated 29 October 2026")) fail("Terms last updated date is wrong.");
+if (terms.includes("Last updated:")) fail("Terms Last updated should not use a colon.");
 if (!terms.includes("for 4 weeks")) fail("Terms should describe featuring as 4 weeks.");
 if (terms.includes("28 days")) fail("Terms still says 28 days.");
 const termsArticle = terms.slice(terms.indexOf("<article"), terms.indexOf("</article>"));
@@ -683,6 +732,10 @@ if (signedUp.includes("Payment received") || signedUp.includes("Stripe receipt")
 }
 
 const catalogue = JSON.parse(await readFile(join(root, "data/shows.json"), "utf8"));
+const refreshedLong = longDateFromISO(catalogue.generated || isoToday());
+if (!index.includes(`Data last refreshed ${refreshedLong}.`)) {
+  fail(`Footer should say Data last refreshed ${refreshedLong}.`);
+}
 if (catalogue.shows.length < 35 || catalogue.shows.length > 50) fail(`Unexpected show count ${catalogue.shows.length}`);
 const upcoming = catalogue.shows.filter((show) => show.end >= "2026-10-25");
 if (upcoming.length < 35) fail(`Not enough upcoming shows: ${upcoming.length}`);
@@ -726,8 +779,19 @@ const weekendPage = await readFile(join(dist, "this-weekend/index.html"), "utf8"
 if (!weekendPage.includes("<h1>Shows this weekend</h1>")) fail("This weekend page heading is wrong.");
 if (!weekendPage.includes('rel="canonical" href="https://mineraldigger.com/this-weekend/"')) fail("This weekend canonical is wrong.");
 if (!weekendPage.includes(">Next weekend</h2>")) fail("This weekend page is missing next weekend.");
-if (!weekendPage.includes("have dates after that.")) fail("Weekend page should say shows have dates after that.");
-if (weekendPage.includes("has dates after that.")) fail("Weekend page still says shows has dates after that.");
+if (weekendPage.includes("shows has dates") || weekendPage.includes(">1 shows<") || weekendPage.includes("show have dates")) {
+  fail("Weekend page date grammar does not match the count.");
+}
+const datedAfter = weekendPage.match(/<a href="\/">(\d+) (show|shows)<\/a> (has|have) dates after that\./);
+const noneAfter = weekendPage.includes("No further shows are listed after that.");
+if (!datedAfter && !noneAfter) fail("Weekend page should say how many shows have dates after that.");
+if (datedAfter) {
+  const afterCount = Number(datedAfter[1]);
+  const afterNoun = datedAfter[2];
+  const afterVerb = datedAfter[3];
+  if (afterCount === 1 && (afterNoun !== "show" || afterVerb !== "has")) fail("One later show should read: 1 show has dates.");
+  if (afterCount !== 1 && (afterNoun !== "shows" || afterVerb !== "have")) fail("Later shows should use the plural have.");
+}
 const worcester = await readFile(join(dist, "show/rock-gem-and-bead-show-worcester-2026-11-07/index.html"), "utf8");
 if (!worcester.includes(">Check with organiser<")) fail("Worcester entry badge should say check with the organiser.");
 if (worcester.includes(">Unknown<")) fail("Worcester entry badge still says Unknown.");
@@ -797,6 +861,17 @@ for (const show of catalogue.shows) {
     fail(`${show.slug} is missing the breadcrumb.`);
   }
   if (!html.includes(">Home</a>")) fail(`${show.slug} breadcrumb should start at Home.`);
+  if (!html.includes('class="crumb-sep" aria-hidden="true">›</span>')) fail(`${show.slug} breadcrumb should use ›.`);
+  if (html.includes("same series rather than a separate")) fail(`${show.slug} still has the internal series note.`);
+  if (!html.includes(`href="/feature/?show=${show.slug}">Feature your show</a>`)) {
+    fail(`${show.slug} should label the feature link Feature your show.`);
+  }
+  const whenStart = html.indexOf("<h2>When</h2>");
+  const whenEnd = html.indexOf("<h2>Entry</h2>");
+  const whenCard = whenStart >= 0 && whenEnd > whenStart ? html.slice(whenStart, whenEnd) : "";
+  if (show.times?.summary && !whenCard.includes(show.times.summary)) {
+    fail(`${show.slug} When card is missing the opening times.`);
+  }
   if (!html.includes("https://www.google.com/maps/dir/?api=1&amp;destination=")) {
     fail(`${show.slug} directions are not Google Maps.`);
   }

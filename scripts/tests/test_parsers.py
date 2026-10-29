@@ -70,6 +70,9 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual(later_kempton["entry_kind"], "unknown")
         self.assertEqual(kempton["organiser_phone"], "07712 276041")
         self.assertTrue(all(row["types"] == ["rock", "gem", "bead"] for row in rows))
+        self.assertNotIn("same series", kempton["summary"])
+        self.assertNotIn("fossil fair", kempton["summary"])
+        self.assertIn("Minerals, fossils and lapidary stock are part of this show too.", kempton["summary"])
 
     def test_nature_does_not_invent_an_undated_march(self):
         home = (FIXTURES / "nature-home.html").read_text(encoding="utf-8")

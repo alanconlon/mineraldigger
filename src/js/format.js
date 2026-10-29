@@ -39,6 +39,11 @@ export function formatDay(value) {
   return `${WEEKDAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 }
 
+export function longDate(value) {
+  const date = typeof value === "string" ? parseISO(String(value).slice(0, 10)) : value;
+  return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+}
+
 export function formatRange(start, end) {
   if (start === end) return formatDay(start);
   return `${formatDay(start)} to ${formatDay(end)}`;
