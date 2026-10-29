@@ -77,7 +77,7 @@ Refresh from the live sites:
 python3 scripts/refresh.py --live --write
 ```
 
-Live refresh fetches the six sources above and replaces `data/shows.json` only if every source returns a page. A partial refresh will not overwrite the file. `rockexchange.uk` answers a browser user agent. The script sends one.
+Live refresh fetches the six sources above. `rockexchange.uk` is the one host fetched with unverified TLS and a browser user agent, because its certificate is self-signed and expired and it refuses the refresh user agent. If one organiser site fails, the script logs a warning and keeps that organiser's shows from the current `data/shows.json`. The other sources are still written. Naming only some sources with `--live --write` is still refused.
 
 Then run `npm run build`.
 
@@ -158,7 +158,7 @@ npx wrangler pages deploy dist --project-name mineraldigger --branch main
 
 `dist` is the Pages root for that command. Wrangler also picks up `functions/` beside it. Dashboard drag and drop of a zip publishes the static files only and does not compile `functions/`. The public `/api/submit` mail path is the worker route above, not the Pages function.
 
-Daily refresh is `.github/workflows/refresh-and-deploy.yml`. It runs at 05:15 UTC (05:15 GMT, 06:15 BST), and it can also be started by hand with `workflow_dispatch`. The job fetches the organiser pages (`python3 scripts/refresh.py --live --write`), commits `data/shows.json` when that file changes, runs `npm run build`, and deploys with Wrangler:
+Daily refresh is `.github/workflows/refresh-and-deploy.yml`. It runs at 05:15 UTC (05:15 GMT, 06:15 BST), and it can also be started by hand with `workflow_dispatch`. The job fetches the organiser pages (`python3 scripts/refresh.py --live --write`), runs `npm run build`, and deploys with Wrangler. It does not commit `data/shows.json`. A direct push to `main` is not how this repo lands changes, and a rejected push would stop the deploy. The deployment is marked dirty because the refreshed file exists only on the runner.
 
 ```bash
 npx wrangler pages deploy dist --project-name mineraldigger --branch main
