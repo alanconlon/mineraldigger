@@ -36,6 +36,7 @@ npm run dev
 - `/offline/` shown when there is no signal and that page has not been saved on the phone. It is `noindex` and is not in the sitemap.
 - `/about/` how shows are listed
 - `/privacy/` what the site collects, who handles it, and how to ask about it
+- `/terms/` what a featured show and a sponsor slot include, when they go live, renewals, cancelling and refunds
 
 ## Data
 
@@ -154,6 +155,19 @@ npx wrangler pages deploy dist --project-name mineraldigger --branch main
 ```
 
 `dist` is the Pages root for that command. Wrangler also picks up `functions/` beside it. Dashboard drag and drop of a zip publishes the static files only and does not compile `functions/`. The public `/api/submit` mail path is the worker route above, not the Pages function.
+
+Daily refresh is `.github/workflows/refresh-and-deploy.yml`. It runs at 05:15 UTC (05:15 GMT, 06:15 BST), and it can also be started by hand with `workflow_dispatch`. The job fetches the organiser pages (`python3 scripts/refresh.py --live --write`), commits `data/shows.json` when that file changes, runs `npm run build`, and deploys with Wrangler:
+
+```bash
+npx wrangler pages deploy dist --project-name mineraldigger --branch main
+```
+
+The workflow reads two repository secrets, the same names FairDigger uses:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+It does not deploy on a push. A merge of this workflow does not by itself publish the site.
 
 `dist/_headers` sets a few basic response headers, including `application/manifest+json` for `manifest.webmanifest` and `no-cache` for `sw.js`. `dist/_redirects` sends `/newsletter/` to `/digest/`. `robots.txt` points at `https://mineraldigger.com/sitemap.xml`.
 

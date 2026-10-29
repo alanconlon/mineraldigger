@@ -1,5 +1,6 @@
+import { existsSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { featuredIds, stripeReady } from "./feature.mjs";
 import { offerValidFrom, renderFeature } from "./render.mjs";
@@ -211,6 +212,15 @@ if (!feature.includes("Pay by card through Stripe") || !feature.includes("We fea
 if (!feature.includes("Your slot is live within one working day of receiving your logo and message.")) {
   fail("Feature page sponsor turnaround is wrong.");
 }
+if (!feature.includes("Also in the Friday email before your show's weekend (that date is set by the show, not picked)")) {
+  fail("Featured show should say the Friday email date is set by the show.");
+}
+if (feature.includes("Friday email the weekend it runs")) fail("Featured show still says the Friday email is the weekend it runs.");
+if (!feature.includes("the Friday before that show's weekend, set by the show, not picked")) {
+  fail("Year pass should use the same fixed Friday email slot as a featured show.");
+}
+if (!feature.includes("One issue. You pick the Friday.")) fail("Friday email sponsorship should still say you pick the Friday.");
+if (!feature.includes('href="/terms/"')) fail("Feature page should link to the terms near the prices.");
 if (!feature.includes("logo") || !feature.includes("one-line message")) {
   fail("Feature page does not ask sponsors to email a logo and a one-line message.");
 }
@@ -393,6 +403,7 @@ for (const file of files) {
     "/fossil/",
     "/bead/",
     "/privacy/",
+    "/terms/",
   ]) {
     if (!foot.includes(`href="${href}"`)) fail(`Footer in ${file} is missing ${href}`);
   }
@@ -419,6 +430,10 @@ for (const file of files) {
     fail(`Bluesky link missing in ${file}`);
   }
   if (!foot.includes("© 2026 MineralDigger.") || !foot.includes("Show data retrieved ")) fail(`Footer credit line missing in ${file}`);
+  if (!foot.includes('href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a>')) {
+    fail(`Footer in ${file} should put Terms next to Privacy.`);
+  }
+  if (/\bVAT\b/i.test(textOnly(raw))) fail(`VAT wording in ${file}`);
   if (/Ireland|UK\s*&|UK\s*\+|fairdigger|auctiondigger|alanconlon\.com|\/newsletter\//i.test(foot)) {
     fail(`Footer in ${file} has a banned link or a non-UK blurb`);
   }
@@ -430,6 +445,7 @@ const sitemap = await readFile(join(dist, "sitemap.xml"), "utf8");
 if (!sitemap.includes("<loc>https://mineraldigger.com/</loc>")) fail("Sitemap is missing the .com homepage.");
 if (sitemap.includes("mineraldigger.co.uk")) fail("Sitemap still points at mineraldigger.co.uk.");
 if (!sitemap.includes("<loc>https://mineraldigger.com/privacy/</loc>")) fail("Sitemap is missing the privacy page.");
+if (!sitemap.includes("<loc>https://mineraldigger.com/terms/</loc>")) fail("Sitemap is missing the terms page.");
 if (sitemap.includes("/thanks/payment")) fail("Thank-you page must stay out of the sitemap.");
 if (sitemap.includes("<loc>https://mineraldigger.com/thanks/</loc>")) fail("Sign-up thank-you page must stay out of the sitemap.");
 if (sitemap.includes("/newsletter")) fail("Newsletter alias must stay out of the sitemap.");
@@ -467,6 +483,57 @@ if (privacy.includes("UK & Ireland") || privacy.includes("UK+IE") || privacy.inc
   fail("Privacy page uses Fair's geography.");
 }
 if (!privacy.includes("saved on that phone")) fail("Privacy page does not mention pages saved on the phone.");
+const terms = await readFile(join(dist, "terms/index.html"), "utf8");
+if (!terms.includes("<title>Terms | MineralDigger</title>")) fail("Terms title is wrong.");
+if (!terms.includes("<h1>Terms</h1>")) fail("Terms heading is wrong.");
+if (!terms.includes('rel="canonical" href="https://mineraldigger.com/terms/"')) fail("Terms canonical is wrong.");
+if (terms.includes('name="robots" content="noindex"')) fail("Terms page should be indexed.");
+if (!terms.includes("These terms cover featured listings and sponsorship on MineralDigger (mineraldigger.com). Listing on MineralDigger is free. These terms only apply when you pay for something.")) {
+  fail("Terms intro is wrong.");
+}
+if (!terms.includes("<h2>What you can buy</h2>")) fail("Terms is missing What you can buy.");
+if (!terms.includes("Featured show, £15:")) fail("Terms is missing the featured show.");
+if (!terms.includes("Year pass, £99 for 12 months:")) fail("Terms is missing the year pass.");
+if (!terms.includes("Site sponsor, £25 a month:")) fail("Terms is missing the site sponsor.");
+if (!terms.includes("Friday email, £12 an issue:")) fail("Terms is missing the Friday email product.");
+if (!terms.includes("and also in the Friday email before your show's weekend (that date is set by the show, not picked)")) {
+  fail("Terms featured show should say the Friday email date is set by the show.");
+}
+if (!terms.includes("You pick the Friday.")) fail("Terms Friday email product should say you pick the Friday.");
+if (!terms.includes("<h2>When it goes live</h2>")) fail("Terms is missing When it goes live.");
+if (!terms.includes("A featured show is featured within one working day of payment.")) fail("Terms featuring turnaround is wrong.");
+if (!terms.includes("A sponsor slot is live within one working day of getting your logo and message.")) fail("Terms sponsor turnaround is wrong.");
+if (!terms.includes("<h2>Renewals and cancelling</h2>")) fail("Terms is missing Renewals and cancelling.");
+if (!terms.includes("Monthly options renew each month until you cancel. There is no contract.")) fail("Terms monthly renewal line is wrong.");
+if (!terms.includes("To cancel, email")) fail("Terms cancel line is missing.");
+if (!terms.includes('href="mailto:sponsors@mineraldigger.com"')) fail("Terms cancel address is not a mailto link.");
+if (!terms.includes("Cancelling stops the next renewal, and your slot runs to the end of the period you have paid for.")) {
+  fail("Terms cancellation effect is wrong.");
+}
+if (/billing\.stripe\.com|customer portal/i.test(terms)) fail("Terms invented a Stripe customer portal link.");
+if (!terms.includes("<h2>Refunds</h2>")) fail("Terms is missing Refunds.");
+if (!terms.includes("If we can't put your slot or featured show live, we refund you in full.")) fail("Terms full-refund line is wrong.");
+if (!terms.includes("If the show is cancelled before your slot runs, tell us and we refund you in full.")) fail("Terms cancelled-show refund is wrong.");
+if (!terms.includes("Otherwise we don't refund part-used periods or slots that have already run.")) fail("Terms no-refund line is wrong.");
+if (!terms.includes("<h2>Prices and payment</h2>")) fail("Terms is missing Prices and payment.");
+if (!terms.includes("Prices are in pounds and are as shown at checkout.")) fail("Terms currency line is wrong.");
+if (!terms.includes("Prices shown are the total you pay.")) fail("Terms total-price line is wrong.");
+if (!terms.includes("Payments are taken by Stripe, and you get a receipt by email.")) fail("Terms Stripe receipt line is wrong.");
+if (!terms.includes("<h2>Content</h2>")) fail("Terms is missing Content.");
+if (!terms.includes("We can decline or remove anything misleading, unlawful or unsuitable, and refund you if we do.")) {
+  fail("Terms content line is wrong.");
+}
+if (!terms.includes("always check with the organiser or auctioneer before you travel or bid.")) fail("Terms travel line is wrong.");
+if (!terms.includes("<h2>Contact</h2>")) fail("Terms is missing Contact.");
+if (!terms.includes("Questions:") || !terms.includes('href="mailto:hello@mineraldigger.com"')) fail("Terms contact line is wrong.");
+if (!terms.includes("Sponsorship and featured listings:")) fail("Terms sponsorship contact is wrong.");
+if (!terms.includes("Last updated: 29 October 2026")) fail("Terms last updated date is wrong.");
+const termsArticle = terms.slice(terms.indexOf("<article"), terms.indexOf("</article>"));
+const termsHeadings = [...termsArticle.matchAll(/<h2>([^<]+)<\/h2>/g)].map((match) => match[1]);
+const expectedTermsHeadings = ["What you can buy", "When it goes live", "Renewals and cancelling", "Refunds", "Prices and payment", "Content", "Contact"];
+if (termsHeadings.join("|") !== expectedTermsHeadings.join("|")) {
+  fail(`Terms headings changed: ${termsHeadings.join(", ")}`);
+}
 const app = await readFile(join(dist, "app/index.html"), "utf8");
 if (!app.includes("<title>Add MineralDigger to your phone</title>")) fail("Add-to-phone title is wrong.");
 if (!app.includes('rel="canonical" href="https://mineraldigger.com/app/"')) fail("Add-to-phone canonical is wrong.");
@@ -549,6 +616,12 @@ if (!thanks.includes("Stripe receipt") || !thanks.includes("one working day") ||
 if (!thanks.includes("logo") || !thanks.includes("one-line message") || !thanks.includes("within one working day of receiving your logo and message")) {
   fail("Thank-you page is missing the sponsor follow-up.");
 }
+if (!thanks.includes("in the Friday email before your show's weekend (that date is set by the show, not picked)")) {
+  fail("Thank-you page should say the featured Friday email date is set by the show.");
+}
+if (!thanks.includes("you pick the Friday")) fail("Thank-you page should still say you pick the Friday for a Friday email sponsorship.");
+if (thanks.includes("Friday email the weekend it runs")) fail("Thank-you page still says the Friday email is the weekend it runs.");
+if (!thanks.includes('href="/terms/"')) fail("Thank-you page should link to the terms near the payment copy.");
 if (!thanks.includes(">Home</a>") || !thanks.includes(">Upcoming shows</a>")) {
   fail("Thank-you page is missing the home and upcoming-shows links.");
 }
@@ -855,6 +928,40 @@ async function generatedFiles(dir) {
 for (const file of await generatedFiles(dist)) {
   const raw = await readFile(file, "utf8");
   if (raw.includes("mineraldigger.hq@gmail.com")) fail(`Generated file still names the HQ Gmail: ${file}`);
+}
+
+function pageDir(file) {
+  const rel = relative(dist, file).split(sep).join("/");
+  const slash = rel.lastIndexOf("/");
+  return slash < 0 ? "/" : `/${rel.slice(0, slash + 1)}`;
+}
+
+function localTarget(file, raw) {
+  const pathOnly = raw.split("#")[0].split("?")[0];
+  if (!pathOnly || /^[a-z]+:/i.test(pathOnly)) return null;
+  let urlPath = pathOnly;
+  if (!urlPath.startsWith("/")) {
+    const parts = `${pageDir(file)}${urlPath}`.split("/");
+    const stack = [];
+    for (const part of parts) {
+      if (!part || part === ".") continue;
+      if (part === "..") stack.pop();
+      else stack.push(part);
+    }
+    urlPath = `/${stack.join("/")}`;
+  }
+  const relativePath = urlPath.replace(/^\/+/, "");
+  if (urlPath.endsWith("/")) return join(dist, relativePath, "index.html");
+  return join(dist, relativePath);
+}
+
+for (const file of files) {
+  const raw = await readFile(file, "utf8");
+  for (const match of raw.matchAll(/\s(?:href|src)="([^"]*)"/g)) {
+    const target = localTarget(file, match[1]);
+    if (!target) continue;
+    if (!existsSync(target)) fail(`Broken link ${match[1]} in ${relative(dist, file)}`);
+  }
 }
 
 if (failures.length) {

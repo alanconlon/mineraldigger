@@ -20,6 +20,7 @@ import {
   renderSitemap,
   renderSubmit,
   renderThanks,
+  renderTerms,
   renderTown,
   renderTownIndex,
   renderType,
@@ -201,10 +202,11 @@ async function main() {
   await writePage("app/index.html", renderApp({ site, generated }));
   await writePage("offline/index.html", renderOffline({ site, generated }));
   await writePage("privacy/index.html", renderPrivacy({ site, generated }));
+  await writePage("terms/index.html", renderTerms({ site, stripe, generated }));
   await writePage("404.html", renderNotFound({ site, generated }));
 
   // /thanks/, /thanks/payment/ and /offline/ are noindex and stay out of the sitemap. /newsletter/ redirects to /digest/. This site does not ping IndexNow.
-  const paths = ["/", "/this-weekend/", "/county/", "/towns/", "/feature/", "/submit/", "/digest/", "/app/", "/about/", "/privacy/", "/rock/", "/gem/", "/mineral/", "/fossil/", "/bead/"];
+  const paths = ["/", "/this-weekend/", "/county/", "/towns/", "/feature/", "/submit/", "/digest/", "/app/", "/about/", "/privacy/", "/terms/", "/rock/", "/gem/", "/mineral/", "/fossil/", "/bead/"];
   for (const county of places.counties.values()) paths.push(`/county/${county.slug}/`);
   for (const town of places.towns.values()) paths.push(`/town/${town.slug}/`);
   for (const show of shows) {
