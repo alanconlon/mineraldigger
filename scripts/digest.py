@@ -9,9 +9,16 @@ sign-up page and does not list that window.
 The note lists shows on that weekend and over the next couple of weeks
 (the two weekends after it). Each line uses the date, venue, and entry
 already stored for that show. A door price is included only when the
-catalogue has one. Empty weekends are left out. If that window is empty
+catalogue has one. A show with no opening times says times are not yet published
+and to check entry with the organiser.
+Catalogue notes that explain how a date was read stay out of the email.
+Empty weekends are left out. If that window is empty
 and later shows are still on the list, the file is a short coming-up note.
 If nothing is upcoming, nothing is written.
+
+The subject names that Friday-to-Sunday window, not the day the script runs.
+A Wednesday 28 October 2026 run is "Rock, gem and mineral shows this weekend:
+Fri 30 Oct to Sun 1 Nov".
 
 This script does not send email. When sponsors.friday is empty, or its issue
 is not that Friday, the draft includes one sponsor line, as its own paragraph
@@ -28,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -46,6 +54,15 @@ NEAR_END_OFFSET = 16
 COMING_UP_LIMIT = 4
 
 WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+SHORT_WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+# Catalogue notes for editors. They do not belong in the email.
+INTERNAL_NOTE = re.compile(
+    r"year is matched|year was matched|matches the weekday|does not print the year|"
+    r"does not print them|college contact page|organiser homepage|date line does not|"
+    r"printed under the heading|provisional 2027 dates|satnav postcode|venue-supplements|source note",
+    re.I,
+)
 MONTHS = [
     "January",
     "February",
@@ -100,8 +117,34 @@ def format_range(start: date, end: date) -> str:
     return f"{format_day(start)} to {format_day(end)}"
 
 
+def short_stamp(value: date, with_year: bool = False) -> str:
+    text = f"{SHORT_WEEKDAYS[value.weekday()]} {value.day} {SHORT_MONTHS[value.month - 1]}"
+    if with_year:
+        return f"{text} {value.year}"
+    return text
+
+
+def weekend_span(friday: date) -> tuple[date, date]:
+    """Friday to Sunday of the issue, not the day the script was run."""
+    return friday, friday + timedelta(days=2)
+
+
+def format_weekend(friday: date) -> str:
+    start, end = weekend_span(friday)
+    with_year = start.year != end.year
+    return f"{short_stamp(start, with_year)} to {short_stamp(end, with_year)}"
+
+
 def subject_for(friday: date) -> str:
-    return f"Mineral shows for {friday.day} {MONTHS[friday.month - 1]} {friday.year}"
+    return f"Rock, gem and mineral shows this weekend: {format_weekend(friday)}"
+
+
+def preview_for(friday: date) -> str:
+    """Inbox preview for this issue. It changes with the Friday the email covers."""
+    return (
+        "Dates, venues and entry for UK rock, gem, mineral, fossil and bead shows, "
+        f"{format_weekend(friday)}."
+    )
 
 
 def newsletter_path(out_dir: Path, friday: date) -> Path:
@@ -175,8 +218,10 @@ def time_bits(times: dict | None) -> list[str]:
     notes = _clean(times.get("notes"))
     if summary:
         bits.append(summary)
-    if notes:
+    if notes and not INTERNAL_NOTE.search(notes):
         bits.append(notes)
+    if not bits:
+        bits.append("Times not yet published. Check entry with the organiser")
     return bits
 
 
@@ -197,15 +242,13 @@ def show_bits(show: dict, featured: set[str]) -> list[str]:
     place = venue_phrase(show.get("venue"))
     if place:
         bits.append(place)
-    bits.extend(entry_bits(show.get("entry")))
+    bits.extend(bit for bit in entry_bits(show.get("entry")) if not INTERNAL_NOTE.search(bit))
     bits.extend(time_bits(show.get("times")))
     if show.get("provisional"):
         bits.append("The organiser lists this date as provisional")
-    if show.get("year_inferred"):
-        bits.append("The date uses the year that matches the weekday on the organiser page")
     if show.get("id") in featured:
         bits.insert(0, "Featured")
-    return bits
+    return [bit for bit in bits if not INTERNAL_NOTE.search(bit)]
 
 
 def show_markdown(show: dict, site_url: str, featured: set[str]) -> str:
@@ -261,6 +304,15 @@ def sponsor_markdown(sponsors: dict | None, friday: date, site_url: str = SITE_U
                 text = f"{text} {line}"
             return text
     return empty_friday_sponsor(site_url)
+
+
+def signoff(site_url: str) -> list[str]:
+    host = site_url.removeprefix("https://").removeprefix("http://").strip("/")
+    return [
+        f"Find more shows near you any time at [{host}]({site_url}/).",
+        "",
+        "You're getting this because you signed up for MineralDigger's free Friday show email.",
+    ]
 
 
 def hub_lines(shows: list[dict], site_url: str) -> list[str]:
@@ -320,8 +372,7 @@ def render_newsletter(
         f"# {subject_for(friday)}",
         "",
         (
-            "A Friday list of UK rock, gem, mineral, fossil and bead shows. "
-            "Dates, venues, times and entry come from the MineralDigger catalogue, "
+            "A Friday list of UK rock, gem, mineral, fossil and bead shows, "
             "checked against organiser websites. Confirm with the organiser before you travel."
         ),
         "",
@@ -359,7 +410,7 @@ def render_newsletter(
     blocks.extend(
         [
             "",
-            f"Subscribe and find shows at [{site_url.removeprefix('https://').removeprefix('http://')}]({site_url}/).",
+            *signoff(site_url),
             "",
         ]
     )

@@ -14,7 +14,8 @@ Environment:
 
 A draft with the same subject is updated in place. A second draft is not
 created. The script never sends, never schedules, and never sets a status
-other than draft. There is no publish_date.
+other than draft. There is no publish_date. Each draft sets description
+to that issue's preview text, taken from the Friday in the filename.
 
 Examples:
   python3 scripts/digest.py
@@ -28,6 +29,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -37,7 +39,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from digest import issue_friday, newsletter_path, parse_iso  # noqa: E402
+from digest import issue_friday, newsletter_path, parse_iso, preview_for  # noqa: E402
 
 API = "https://api.buttondown.com/v1"
 OUT_DIR = ROOT / "out"
@@ -53,6 +55,34 @@ def api_key() -> str | None:
     """Key for the mineraldigger newsletter. No shared BUTTONDOWN_API_KEY fallback."""
     value = os.environ.get(ENV_KEY, "").strip()
     return value or None
+
+
+def issue_date_from_path(path: Path) -> date | None:
+    """The filename date is the issue Friday, not the day the draft was uploaded."""
+    match = re.fullmatch(r"newsletter-(\d{4}-\d{2}-\d{2})\.md", path.name)
+    if not match:
+        return None
+    try:
+        return parse_iso(match.group(1))
+    except ValueError:
+        return None
+
+
+def description_for(path: Path, subject: str) -> str:
+    """Preview text for this issue. Prefer the Friday in the filename."""
+    friday = issue_date_from_path(path)
+    if friday is not None:
+        return preview_for(friday)
+    marker = ": "
+    if marker not in subject:
+        raise ButtondownError("Newsletter subject has no weekend window for the preview.")
+    window = subject.split(marker, 1)[1].strip()
+    if not window:
+        raise ButtondownError("Newsletter subject has no weekend window for the preview.")
+    return (
+        "Dates, venues and entry for UK rock, gem, mineral, fossil and bead shows, "
+        f"{window}."
+    )
 
 
 def split_subject(markdown: str) -> tuple[str, str]:
@@ -124,8 +154,11 @@ class Buttondown:
             url = nxt if isinstance(nxt, str) and nxt else None
         return matches
 
-    def save_draft(self, subject: str, body: str) -> tuple[str, str]:
-        payload = {"subject": subject, "body": body, "status": "draft"}
+    def save_draft(self, subject: str, body: str, description: str) -> tuple[str, str]:
+        preview = description.strip()
+        if not preview:
+            raise ButtondownError("Newsletter has no preview text.")
+        payload = {"subject": subject, "body": body, "description": preview, "status": "draft"}
         matches = self.drafts_with_subject(subject)
         if matches:
             email_id = matches[0].get("id")
@@ -161,6 +194,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         subject, body = split_subject(path.read_text(encoding="utf-8"))
+        description = description_for(path, subject)
     except ButtondownError as exc:
         print(exc, file=sys.stderr)
         return 1
@@ -169,6 +203,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run or not key:
         print("Dry run. No Buttondown request.")
         print(f"Subject: {subject}")
+        print(f"Preview: {description}")
         print(f"File: {path}")
         print("Status would be draft. Nothing is sent.")
         if not key:
@@ -176,7 +211,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     try:
-        action, email_id = Buttondown(key, args.api).save_draft(subject, body)
+        action, email_id = Buttondown(key, args.api).save_draft(subject, body, description)
     except ButtondownError as exc:
         print(exc, file=sys.stderr)
         return 1
