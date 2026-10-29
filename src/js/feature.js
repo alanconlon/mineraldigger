@@ -4,6 +4,13 @@
   var slug = (new URLSearchParams(location.search).get("show") || "").trim();
   if (!/^[a-z0-9-]+$/.test(slug)) return;
 
+  var pay = document.getElementById("featured-pay");
+  if (pay && String(pay.getAttribute("href") || "").indexOf("https://") === 0) {
+    var payment = new URL(pay.getAttribute("href"));
+    payment.searchParams.set("client_reference_id", slug);
+    pay.href = payment.toString();
+  }
+
   function listedName(show) {
     var name = String((show && show.name) || "").trim();
     var town = String((show && show.venue && show.venue.town) || "").trim();
@@ -37,15 +44,13 @@
         box.appendChild(paragraph);
         return;
       }
-      var strong = document.createElement("strong");
-      strong.textContent = "Featuring this show. ";
-      paragraph.appendChild(strong);
-      paragraph.appendChild(document.createTextNode(listedName(show)));
+      var heading = document.getElementById("feature-heading");
+      var name = listedName(show);
+      if (heading) heading.textContent = "Feature: " + name;
+      document.title = "Feature: " + name + " | MineralDigger";
       var date = when(show.start);
       if (date && show.end && show.end !== show.start) date = when(show.start) + " to " + when(show.end);
-      if (date) paragraph.appendChild(document.createTextNode(". " + date + "."));
-      else paragraph.appendChild(document.createTextNode("."));
-      paragraph.appendChild(document.createTextNode(" "));
+      if (date) paragraph.appendChild(document.createTextNode(date + ". "));
       var link = document.createElement("a");
       link.href = "/show/" + slug + "/";
       link.textContent = "Show page";

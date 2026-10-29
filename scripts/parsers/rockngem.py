@@ -72,8 +72,7 @@ def parse_rockngem(html: str, today: date | None = None, retrieved: str | None =
 
 def _summary(provisional: bool) -> str:
     base = (
-        "Rock, gem and bead show. The organiser also describes mineral, fossil and lapidary stock, "
-        "but each date is the same series rather than a separate mineral or fossil fair."
+        "Rock, gem and bead show. Minerals, fossils and lapidary stock are part of this show too."
     )
     if provisional:
         return base + " This 2027 date is marked provisional on their site."

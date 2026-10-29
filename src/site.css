@@ -164,12 +164,22 @@ p { margin: 0 0 0.8rem; }
 
 .filters {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 1rem;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.7rem;
   padding: 0.9rem 0 1rem;
 }
 .chip-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.chip-scroll {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  max-width: 100%;
+  padding-bottom: 0.2rem;
+}
+.chip-scroll .chip { flex: 0 0 auto; }
+.place-links { margin: 0.2rem 0 1.2rem; }
 .chip, button.chip {
   appearance: none;
   border: 1px solid var(--line);
@@ -379,6 +389,9 @@ button.pay[disabled], .pay[aria-disabled="true"] {
   padding: 0.8rem 0.9rem;
 }
 .fact h2 { font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-family: var(--sans); font-weight: 600; margin: 0 0 0.3rem; }
+.fact p { margin: 0; }
+.fact p + p { margin-top: 0.35rem; }
+#show-list, #empty { scroll-margin-top: calc(var(--header) + 12px); }
 .actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 0.8rem 0 1rem; }
 .actions a {
   text-decoration: none;
