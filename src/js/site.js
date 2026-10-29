@@ -153,11 +153,15 @@ function townCentre(raw) {
   return { lat, lng, label: hits[0].dataset.town };
 }
 
-function countyNamed(raw) {
+function countyCentre(raw) {
   const low = raw.toLowerCase();
-  if (low.length < 3) return "";
-  const hit = [...document.querySelectorAll(".card")].find((card) => (card.dataset.county || "").toLowerCase().includes(low));
-  return hit?.dataset.county || "";
+  const hits = [...document.querySelectorAll(".card")].filter((card) => {
+    return (card.dataset.county || "").toLowerCase() === low && Number.isFinite(Number(card.dataset.lat));
+  });
+  if (!hits.length) return null;
+  const lat = hits.reduce((sum, card) => sum + Number(card.dataset.lat), 0) / hits.length;
+  const lng = hits.reduce((sum, card) => sum + Number(card.dataset.lng), 0) / hits.length;
+  return { lat, lng, label: hits[0].dataset.county, kind: "county" };
 }
 
 async function lookupPlace(raw) {
@@ -174,10 +178,21 @@ async function lookupPlace(raw) {
   }
   const town = townCentre(raw);
   if (town) return town;
-  if (countyNamed(raw)) return null;
-  const data = await (await fetch(`https://api.postcodes.io/places?limit=1&q=${encodeURIComponent(raw)}`)).json();
-  const place = data?.result?.[0];
-  if (!place || !Number.isFinite(place.latitude) || !Number.isFinite(place.longitude)) return null;
+  const county = countyCentre(raw);
+  if (county) return county;
+  const data = await (await fetch(`https://api.postcodes.io/places?limit=10&q=${encodeURIComponent(raw)}`)).json();
+  const results = Array.isArray(data?.result) ? data.result : [];
+  const order = ["city", "town", "village", "other settlement", "suburban area", "hamlet"];
+  const wanted = raw.toLowerCase();
+  const place = results
+    .filter((item) => String(item?.name_1 || "").trim().toLowerCase() === wanted)
+    .filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude))
+    .sort((a, b) => {
+      const ar = order.indexOf(String(a.local_type || "").toLowerCase());
+      const br = order.indexOf(String(b.local_type || "").toLowerCase());
+      return (ar < 0 ? order.length : ar) - (br < 0 ? order.length : br);
+    })[0];
+  if (!place) return null;
   return { lat: place.latitude, lng: place.longitude, label: place.name_1 || raw };
 }
 
@@ -232,7 +247,9 @@ function applyFilters() {
     if (origin) {
       const lat = Number(card.dataset.lat);
       const lng = Number(card.dataset.lng);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) nearOk = false;
+      if (origin.kind === "county") {
+        nearOk = (card.dataset.county || "").toLowerCase() === origin.label.toLowerCase();
+      } else if (!Number.isFinite(lat) || !Number.isFinite(lng)) nearOk = false;
       else {
         const miles = milesBetween(origin.lat, origin.lng, lat, lng);
         card.dataset.miles = String(miles);
@@ -242,7 +259,7 @@ function applyFilters() {
     card.hidden = ended || !whenOk || (origin ? !nearOk : !textOk);
   }
 
-  if (origin) {
+  if (origin && origin.kind !== "county") {
     const ranked = visibleCards().sort((a, b) => Number(a.dataset.miles) - Number(b.dataset.miles) || a.dataset.start.localeCompare(b.dataset.start));
     if (ranked.length) showDistances(ranked);
     else {
@@ -254,14 +271,26 @@ function applyFilters() {
       const any = [...month.querySelectorAll(".card")].some((card) => !card.hidden);
       month.hidden = !any;
     }
-    setStatus(placeNote);
+    if (origin?.kind === "county") setStatus(nearStatus(visibleCards().length, origin.label));
+    else setStatus(placeNote);
   }
 
   const shown = visibleCards();
   const count = document.getElementById("result-count");
+  const tail = document.getElementById("result-count-tail");
   if (count) {
-    const noun = shown.length === 1 ? "show" : "shows";
-    count.textContent = `${shown.length} ${noun}`;
+    const total = Number(count.dataset.total);
+    const totalNoun = total === 1 ? "show" : "shows";
+    const narrowed = Boolean(queryRaw) || when !== "all";
+    if (Number.isFinite(total) && narrowed && shown.length > 0 && shown.length !== total) {
+      count.textContent = shown.length === 1
+        ? `1 of ${total} shows matches`
+        : `${shown.length} of ${total} shows match`;
+      if (tail) tail.hidden = true;
+    } else if (Number.isFinite(total)) {
+      count.textContent = `${total} ${totalNoun}`;
+      if (tail) tail.hidden = false;
+    }
   }
 
   const empty = document.getElementById("empty");

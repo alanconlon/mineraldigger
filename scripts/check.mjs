@@ -258,6 +258,11 @@ if (!siteJs.includes("Showing ") || !siteJs.includes(" near ")) fail("Search sta
 if (!siteJs.includes("No shows found near ")) fail("Search should say when no shows are near a place.");
 if (!siteJs.includes("Try a nearby town or browse by county.")) fail("No-match copy should suggest a nearby town or a county.");
 if (!siteJs.includes("scrollIntoView")) fail("Search should scroll to the results.");
+if (!siteJs.includes("countyCentre")) fail("A county search should resolve like a place search.");
+if (!siteJs.includes("shows match")) fail("A narrowed list should say how many of the total match.");
+if (!siteJs.includes("dataset.total")) fail("The intro count should keep the full total.");
+const siteCss = await readFile(join(dist, "site.css"), "utf8");
+if (!siteCss.includes(".show-date { display: none; }")) fail("The show date should be hidden on small screens so it is not printed twice.");
 if (!feature.includes("Pay by card through Stripe") || !feature.includes("We feature the show within one working day")) {
   fail("Feature page is missing the live checkout steps.");
 }
@@ -794,6 +799,10 @@ if (datedAfter) {
 }
 const worcester = await readFile(join(dist, "show/rock-gem-and-bead-show-worcester-2026-11-07/index.html"), "utf8");
 if (!worcester.includes(">Check with organiser<")) fail("Worcester entry badge should say check with the organiser.");
+const worcesterCopy = worcester.replace(/<script[\s\S]*?<\/script>/gi, "");
+if ((worcesterCopy.match(/Check with organiser/g) || []).length !== 1) {
+  fail("Worcester should say Check with organiser once.");
+}
 if (worcester.includes(">Unknown<")) fail("Worcester entry badge still says Unknown.");
 const countyIndex = await readFile(join(dist, "county/index.html"), "utf8");
 if (!countyIndex.includes("<h1>Shows by county</h1>") || !countyIndex.includes('href="/county/surrey/"')) {
@@ -854,7 +863,7 @@ for (const show of catalogue.shows) {
   const refreshed = show.source?.retrieved || catalogue.generated;
   if (event.name !== show.name) fail(`${show.slug} structured data name should stay the catalogue name.`);
   if (event.url !== pageUrl) fail(`${show.slug} Event url is not the mineraldigger.com show page.`);
-  if (/year is matched|year was matched|does not print the year|college contact page/i.test(html)) {
+  if (/year is matched|year was matched|matches the weekday|does not print the year|college contact page/i.test(html)) {
     fail(`${show.slug} publishes an internal note.`);
   }
   if (!html.includes('aria-label="Breadcrumb"') || !html.includes('"@type":"BreadcrumbList"')) {
@@ -867,7 +876,7 @@ for (const show of catalogue.shows) {
     fail(`${show.slug} should label the feature link Feature your show.`);
   }
   const whenStart = html.indexOf("<h2>When</h2>");
-  const whenEnd = html.indexOf("<h2>Entry</h2>");
+  const whenEnd = html.indexOf("<h2>", whenStart + 4);
   const whenCard = whenStart >= 0 && whenEnd > whenStart ? html.slice(whenStart, whenEnd) : "";
   if (show.times?.summary && !whenCard.includes(show.times.summary)) {
     fail(`${show.slug} When card is missing the opening times.`);

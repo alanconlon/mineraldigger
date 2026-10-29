@@ -397,7 +397,7 @@ export function renderListing({ site, path, title, description, ogTitle, ogDescr
         <p class="eyebrow">${esc(eyebrowText)}</p>
         <h1>${esc(heading)}</h1>
         <p class="lede">${esc(lede)}</p>
-        <p class="count-line"><strong id="result-count">${shows.length} ${shows.length === 1 ? "show" : "shows"}</strong>${countTail}</p>
+        <p class="count-line"><strong id="result-count" data-total="${shows.length}">${shows.length} ${shows.length === 1 ? "show" : "shows"}</strong>${countTail ? `<span id="result-count-tail">${countTail}</span>` : ""}</p>
       </div></section>`;
   const body = `${hero}
     <div class="wrap">
@@ -711,7 +711,7 @@ function jsonLd(show, site, generated) {
     endDate: show.end,
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     eventStatus: "https://schema.org/EventScheduled",
-    description: show.summary,
+    description: publicNote(show.summary) || undefined,
     image: [new URL("/og-image.jpg", site.url).href],
     url: pageUrl,
     location: {
@@ -750,7 +750,7 @@ function whereLinks(show, places) {
   return [town, county, esc(show.venue.nation)].filter(Boolean).join(", ");
 }
 
-const INTERNAL_NOTE = /year is matched|year was matched|does not print the year|does not print them|college contact page|organiser homepage|date line does not|printed under the heading|provisional 2027 dates|satnav postcode|venue-supplements|source note/i;
+const INTERNAL_NOTE = /year is matched|year was matched|matches the weekday|does not print the year|does not print them|college contact page|organiser homepage|date line does not|printed under the heading|provisional 2027 dates|satnav postcode|venue-supplements|source note/i;
 
 function publicNote(value) {
   const text = String(value || "").trim();
@@ -800,19 +800,24 @@ export function renderShow({ site, show, generated, todayISO, places = null }) {
   const banners = [];
   if (past) banners.push(`<div class="callout past"><p>This date has passed. Check the organiser for the next one.</p></div>`);
   if (show.provisional) banners.push(`<div class="callout"><p>The organiser lists this date as provisional. Check their site before you travel.</p></div>`);
-  if (show.year_inferred) banners.push(`<div class="callout"><p>The date uses the year that matches the weekday on the organiser page.</p></div>`);
   const address = [show.venue.street, placeLine(show), show.venue.postcode].filter(Boolean).join(", ");
   const whenBits = [`<p>${esc(formatRange(show.start, show.end))}</p>`];
-  if (show.times.summary) whenBits.push(`<p>${esc(show.times.summary)}</p>`);
-  if (show.times.notes) whenBits.push(`<p>${esc(show.times.notes)}</p>`);
+  const opening = publicNote(show.times.summary);
+  const timeNotes = publicNote(show.times.notes);
+  if (opening) whenBits.push(`<p>${esc(opening)}</p>`);
+  if (timeNotes) whenBits.push(`<p>${esc(timeNotes)}</p>`);
+  const entryName = entryLabel(show.entry);
+  const entryNotes = publicNote(show.entry.notes);
   const facts = [
-    ["Entry", [entryLabel(show.entry), show.entry.notes].filter(Boolean).join(". ")],
     ["Venue", `${show.venue.name}, ${address}`],
     ["Organiser", show.organiser.name],
   ];
+  if (entryNotes) facts.unshift(["Entry", `${entryName}. ${entryNotes}`]);
   if (show.dealers) facts.push(["Dealers", `${show.dealers} on the organiser page`]);
-  if (show.parking) facts.push(["Parking", show.parking]);
-  if (show.access_notes) facts.push(["Access", show.access_notes]);
+  const parking = publicNote(show.parking);
+  const access = publicNote(show.access_notes);
+  if (parking) facts.push(["Parking", parking]);
+  if (access) facts.push(["Access", access]);
   const factHtml = `<div class="fact"><h2>When</h2>${whenBits.join("")}</div>${facts
     .map(([label, value]) => `<div class="fact"><h2>${esc(label)}</h2><p>${esc(value)}</p></div>`)
     .join("")}`;
@@ -834,7 +839,7 @@ export function renderShow({ site, show, generated, todayISO, places = null }) {
       ${crumbs.html}
       <h1>${esc(label)}</h1>
       <p class="show-date">${esc(formatRange(show.start, show.end))}</p>
-      <p class="lede">${esc(show.summary)}</p>
+      <p class="lede">${esc(publicNote(show.summary))}</p>
       <div class="pills">${pills(show, false)}</div>
       ${banners.join("")}
       <p>Types: ${types}</p>
