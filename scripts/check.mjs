@@ -168,7 +168,7 @@ if (website?.name !== "MineralDigger" || website?.url !== "https://mineraldigger
 if (website?.description !== "Rock, gem, mineral, fossil and bead shows across the UK, on one map.") fail("WebSite description does not match the site.");
 if (website?.publisher?.["@id"] !== "https://mineraldigger.com/#org") fail("WebSite publisher does not point at the organization.");
 if (org?.["@type"] !== "Organization" || org?.["@id"] !== "https://mineraldigger.com/#org") fail("Organization @id is wrong.");
-if (org?.name !== "MineralDigger" || org?.url !== "https://mineraldigger.com/" || org?.email !== "mineraldigger.hq@gmail.com") {
+if (org?.name !== "MineralDigger" || org?.url !== "https://mineraldigger.com/" || org?.email !== "hello@mineraldigger.com") {
   fail("Organization name, url, or email is wrong.");
 }
 if (org?.logo?.["@type"] !== "ImageObject" || org?.logo?.url !== "https://mineraldigger.com/logo.png" || org?.logo?.width !== 512 || org?.logo?.height !== 512) {
@@ -192,9 +192,11 @@ for (const price of ["£15", "£99", "£25", "£12"]) {
   if (!feature.includes(price)) fail(`Feature page is missing ${price}.`);
 }
 if (!feature.includes("a month") || !feature.includes("an issue")) fail("Feature page is missing the sponsor periods.");
-if (!feature.includes("mineraldigger.hq@gmail.com")) fail("Feature page is missing mineraldigger.hq@gmail.com.");
+if (!feature.includes("sponsors@mineraldigger.com")) fail("Feature page is missing sponsors@mineraldigger.com.");
+if (!feature.includes('href="mailto:sponsors@mineraldigger.com"')) fail("Feature page sponsor address is not a mailto link.");
+if (feature.includes("mineraldigger.hq@gmail.com")) fail("Feature page still names the HQ Gmail.");
 if (feature.includes("once the mailbox is open") || feature.includes("hello@mineraldigger.com")) {
-  fail("Feature page still waits on the old mailbox.");
+  fail("Feature page should use the sponsors address, not the general mailbox.");
 }
 if (/coming soon/i.test(feature)) fail("Feature page still says payment is coming soon.");
 if ((feature.match(/class="soon"/g) || []).length !== 0) fail("Feature page still has a Coming soon placeholder.");
@@ -312,12 +314,11 @@ const submit = await readFile(join(dist, "submit/index.html"), "utf8");
 if (!submit.includes("<form") || !submit.includes('action="/api/submit"')) fail("Submit form is missing.");
 const submitJs = await readFile(join(dist, "js/submit.js"), "utf8");
 if (!submitJs.includes("Mail is not connected")) fail("Submit fallback should still say mail is not connected.");
-if (!submitJs.includes("mineraldigger.hq@gmail.com")) fail("Submit fallback is missing mineraldigger.hq@gmail.com.");
-if (submitJs.includes("once the mailbox is open") || submitJs.includes("hello@mineraldigger.com")) {
-  fail("Submit fallback still waits on the old mailbox.");
-}
+if (!submitJs.includes('href="mailto:hello@mineraldigger.com"')) fail("Submit fallback is missing a mailto to hello@mineraldigger.com.");
+if (submitJs.includes("mineraldigger.hq@gmail.com")) fail("Submit fallback still names the HQ Gmail.");
+if (submitJs.includes("once the mailbox is open")) fail("Submit fallback still waits on the old mailbox.");
 const siteFile = JSON.parse(await readFile(join(root, "data/site.json"), "utf8"));
-if (siteFile.email !== "mineraldigger.hq@gmail.com") fail("data/site.json email is not mineraldigger.hq@gmail.com.");
+if (siteFile.email !== "hello@mineraldigger.com") fail("data/site.json email is not hello@mineraldigger.com.");
 const wrangler = await readFile(join(root, "workers/submit/wrangler.toml"), "utf8");
 if (!wrangler.includes('MINERALDIGGER_SUBMIT_TO = "mineraldigger.hq@gmail.com"')) {
   fail("Wrangler MINERALDIGGER_SUBMIT_TO is not mineraldigger.hq@gmail.com.");
@@ -340,6 +341,7 @@ for (const file of files) {
   if (html.includes("\u2014")) fail(`Em dash in ${file}`);
   if (html.includes("!")) fail(`Exclamation mark in ${file}`);
   if (/gumroad|crystaldigger/i.test(html)) fail(`Banned name in ${file}`);
+  if (raw.includes("mineraldigger.hq@gmail.com")) fail(`Generated page still names the HQ Gmail: ${file}`);
   if (raw.includes("mineraldigger.co.uk")) fail(`mineraldigger.co.uk still linked in ${file}`);
   if (raw.includes("Also from us")) fail(`Sister footer must stay off ${file}`);
   if (!raw.includes('rel="icon" href="/favicon.ico" sizes="32x32"')) fail(`favicon.ico link missing in ${file}`);
@@ -428,7 +430,9 @@ const privacy = await readFile(join(dist, "privacy/index.html"), "utf8");
 if (!privacy.includes("<title>Privacy | MineralDigger</title>")) fail("Privacy title is wrong.");
 if (!privacy.includes('rel="canonical" href="https://mineraldigger.com/privacy/"')) fail("Privacy canonical is wrong.");
 if (!privacy.includes("Alan Conlon")) fail("Privacy page does not name Alan Conlon.");
-if (!privacy.includes("mineraldigger.hq@gmail.com")) fail("Privacy page is missing the contact email.");
+if (!privacy.includes("hello@mineraldigger.com")) fail("Privacy page is missing the contact email.");
+if (!privacy.includes('href="mailto:hello@mineraldigger.com"')) fail("Privacy contact is not a mailto link.");
+if (privacy.includes("mineraldigger.hq@gmail.com")) fail("Privacy page still names the HQ Gmail.");
 if (!privacy.includes("Buttondown")) fail("Privacy page does not name Buttondown.");
 if (!privacy.includes("Stripe")) fail("Privacy page does not name Stripe.");
 if (!privacy.includes("Cloudflare")) fail("Privacy page does not name Cloudflare.");
@@ -517,8 +521,11 @@ if (!thanks.includes('rel="canonical" href="https://mineraldigger.com/thanks/pay
   fail("Thank-you page canonical is not https://mineraldigger.com/thanks/payment/.");
 }
 if (!thanks.includes('name="robots" content="noindex"')) fail("Thank-you page is missing noindex.");
-if (!thanks.includes("mineraldigger.hq@gmail.com")) fail("Thank-you page is missing mineraldigger.hq@gmail.com.");
-if (thanks.includes("hello@")) fail("Thank-you page invented another mailbox.");
+if (!thanks.includes("sponsors@mineraldigger.com")) fail("Thank-you page is missing sponsors@mineraldigger.com.");
+if (!thanks.includes('href="mailto:sponsors@mineraldigger.com"')) fail("Thank-you sponsor address is not a mailto link.");
+if (!thanks.includes("hello@mineraldigger.com")) fail("Thank-you page is missing hello@mineraldigger.com.");
+if (!thanks.includes('href="mailto:hello@mineraldigger.com"')) fail("Thank-you listing address is not a mailto link.");
+if (thanks.includes("mineraldigger.hq@gmail.com")) fail("Thank-you page still names the HQ Gmail.");
 if (!thanks.includes("Stripe receipt") || !thanks.includes("one working day") || !thanks.includes("12 months")) {
   fail("Thank-you page is missing the receipt and featuring promise.");
 }
@@ -817,6 +824,21 @@ const unconfigured = await submitWorker.fetch(
 );
 const unconfiguredBody = await unconfigured.json();
 if (unconfigured.status !== 200 || unconfiguredBody.delivery !== "unconfigured") fail("Missing email binding should stay unconfigured.");
+
+const publicExt = /\.(html|js|json|txt|xml|ics|webmanifest|css|svg)$/;
+async function generatedFiles(dir) {
+  const found = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) found.push(...(await generatedFiles(path)));
+    else if (publicExt.test(entry.name)) found.push(path);
+  }
+  return found;
+}
+for (const file of await generatedFiles(dist)) {
+  const raw = await readFile(file, "utf8");
+  if (raw.includes("mineraldigger.hq@gmail.com")) fail(`Generated file still names the HQ Gmail: ${file}`);
+}
 
 if (failures.length) {
   console.error(failures.join("\n"));

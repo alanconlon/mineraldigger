@@ -66,7 +66,7 @@ if (form) {
     } else if (payload.delivery === "emailed" || payload.delivery === "forwarded" || payload.delivery === "accepted") {
       line.textContent = "Sent. We check the organiser site before a show goes on the map.";
     } else {
-      line.textContent = "Mail is not connected on this host yet. Copy the listing below and send it to mineraldigger.hq@gmail.com. Nothing was stored on the server.";
+      line.innerHTML = 'Mail is not connected on this host yet. Copy the listing below and send it to <a href="mailto:hello@mineraldigger.com">hello@mineraldigger.com</a>. Nothing was stored on the server.';
     }
     box.value = receipt;
     ok.hidden = false;
