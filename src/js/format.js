@@ -99,3 +99,21 @@ export function overlaps(show, start, end) {
 export function comingLater(show, weekendEnd) {
   return show.start > weekendEnd;
 }
+
+// One coordinate is setView. Several distinct spots are fitBounds. A blank map is the UK.
+export function frameForPoints(points) {
+  const unique = [];
+  const seen = new Set();
+  for (const point of points || []) {
+    const lat = Number(point?.[0]);
+    const lng = Number(point?.[1]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    const key = `${lat},${lng}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push([lat, lng]);
+  }
+  if (unique.length === 0) return { method: "setView", center: [54.5, -3], zoom: 5.5 };
+  if (unique.length === 1) return { method: "setView", center: unique[0], zoom: 11 };
+  return { method: "fitBounds", points: unique, maxZoom: 11 };
+}

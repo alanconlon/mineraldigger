@@ -3,6 +3,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { featuredIds, stripeReady } from "./feature.mjs";
+import { frameForPoints } from "../src/js/format.js";
 import { offerValidFrom, organizerLink, renderFeature } from "./render.mjs";
 import { validateSubmission } from "../functions/api/validate.js";
 import submitWorker, { resetRateLimit, MINERALDIGGER_SUBMIT_FROM, MINERALDIGGER_SUBMIT_TO } from "../workers/submit/src/index.js";
@@ -205,6 +206,20 @@ if (index.includes('aria-label="Show filters"')) fail("When and Type should be s
 const homeMain = index.slice(0, index.indexOf('<footer class="site-footer">'));
 const weekendLabels = homeMain.match(/>This weekend</g) || [];
 if (weekendLabels.length !== 1) fail(`Homepage should say This weekend once above the footer, found ${weekendLabels.length}.`);
+if (!index.includes(`<strong id="result-count" data-total="${homeCount}">${homeCount} UK ${homeNoun}</strong><span id="result-count-tail">, taken from organiser and society websites.</span>`)) {
+  fail("Homepage subline should be N UK shows, taken from organiser and society websites.");
+}
+if (index.includes("from organiser websites, on one map.")) fail("Homepage count still repeats on one map.");
+const emptyFrame = frameForPoints([]);
+const oneFrame = frameForPoints([[51.42, -0.41]]);
+const sameFrame = frameForPoints([[51.42, -0.41], [51.42, -0.41]]);
+const manyFrame = frameForPoints([[51.42, -0.41], [53.8, -1.55], [50.9, -1.4]]);
+if (emptyFrame.method !== "setView" || emptyFrame.zoom !== 5.5) fail("A map with no shows should setView on the UK.");
+if (oneFrame.method !== "setView" || oneFrame.zoom !== 11 || oneFrame.center[0] !== 51.42) {
+  fail("A map with one show should setView at a close zoom.");
+}
+if (sameFrame.method !== "setView") fail("Pins on one spot should setView, not fitBounds.");
+if (manyFrame.method !== "fitBounds" || manyFrame.points.length !== 3) fail("A map with several shows should fitBounds.");
 const listAt = homeMain.indexOf('id="show-list"');
 const placesAt = homeMain.indexOf('aria-label="Places"');
 if (listAt < 0 || placesAt < listAt) fail("Counties and Towns should sit below the show list.");
@@ -262,11 +277,15 @@ if (!siteJs.includes('href = "/county/"')) fail("Browse by county should open th
 if (!siteJs.includes("Did you mean ")) fail("An ambiguous place should ask which one was meant.");
 if (!siteJs.includes('relation: "in"')) fail("A county or region search should use in, not near.");
 if (!siteJs.includes("scrollIntoView")) fail("Search should scroll to the results.");
+if (!siteJs.includes("frameForPoints")) fail("The list map should frame pins with frameForPoints.");
+if (!siteJs.includes("if (!list)")) fail("The weekend map should draw when the page has no filter list.");
 if (!siteJs.includes("areaFromCards")) fail("A county search should resolve like a place search.");
 if (!siteJs.includes("shows match")) fail("A narrowed list should say how many of the total match.");
 if (!siteJs.includes("dataset.total")) fail("The intro count should keep the full total.");
 const siteCss = await readFile(join(dist, "site.css"), "utf8");
 if (!siteCss.includes(".show-date { display: none; }")) fail("The show date should be hidden on small screens so it is not printed twice.");
+if (siteCss.includes("rgba(243, 239, 230")) fail("The sticky header should have a solid background.");
+if (!siteCss.includes("overflow-wrap: anywhere")) fail("Long links should wrap instead of widening the page.");
 if (!feature.includes("Pay by card through Stripe") || !feature.includes("We feature the show within one working day")) {
   fail("Feature page is missing the live checkout steps.");
 }
@@ -827,6 +846,15 @@ if (!countyIndex.includes("<h1>Shows by county</h1>") || !countyIndex.includes('
 const surrey = await readFile(join(dist, "county/surrey/index.html"), "utf8");
 if (!surrey.includes("<h1>Shows in Surrey</h1>")) fail("Surrey page heading is wrong.");
 if (!surrey.includes("Sunbury-on-Thames")) fail("Surrey page is missing its town.");
+function weekendControls(html) {
+  const main = html.slice(0, html.indexOf('<footer class="site-footer">'));
+  return (main.match(/>This weekend</g) || []).length;
+}
+if (weekendControls(surrey) !== 1) fail("County pages should keep This weekend only in the filter row.");
+const rockHub = await readFile(join(dist, "rock/index.html"), "utf8");
+if (weekendControls(rockHub) !== 1) fail("Type pages should keep This weekend only in the filter row.");
+const townPage = await readFile(join(dist, "town/sunbury-on-thames/index.html"), "utf8");
+if (weekendControls(townPage) !== 1) fail("Town pages should keep This weekend only in the filter row.");
 const townIndex = await readFile(join(dist, "towns/index.html"), "utf8");
 if (!townIndex.includes("<h1>Shows by town</h1>") || !townIndex.includes('href="/town/sunbury-on-thames/"')) {
   fail("Town index is missing Sunbury-on-Thames.");
@@ -919,6 +947,11 @@ for (const show of catalogue.shows) {
   }
   if (!html.includes(`href="/feature/?show=${show.slug}"`)) fail(`${show.slug} feature link should pass the show slug.`);
   if (!html.includes('class="show-date"')) fail(`${show.slug} should show the date under the heading.`);
+  if (show.source?.url) {
+    if (!html.includes(">organiser's page</a>")) fail(`${show.slug} source link should read organiser's page.`);
+    const rawHref = String(show.source.url).replace(/&/g, "&amp;");
+    if (html.includes(`>${rawHref}</a>`)) fail(`${show.slug} still prints the source URL as the link text.`);
+  }
   if (JSON.stringify(event.image) !== JSON.stringify(["https://mineraldigger.com/og-image.jpg"])) {
     fail(`${show.slug} Event image is not the og-image array.`);
   }

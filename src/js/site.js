@@ -1,5 +1,5 @@
 import { map, tileLayer, layerGroup, marker, divIcon } from "/vendor/leaflet/leaflet-src.esm.js";
-import { formatRange, thisWeekend, overlaps, comingLater, iso } from "./format.js";
+import { formatRange, frameForPoints, thisWeekend, overlaps, comingLater, iso } from "./format.js";
 
 const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
@@ -16,16 +16,14 @@ function esc(value) {
   }[ch]));
 }
 
-function pinIcon(card) {
+function pinIcon(provisional) {
   const classes = ["pin"];
-  if (card.dataset.provisional === "1") classes.push("pin-provisional");
-  if (card.dataset.featured === "1") classes.push("pin-featured");
-  const size = card.dataset.featured === "1" ? 18 : 14;
+  if (provisional) classes.push("pin-provisional");
   return divIcon({
     className: "pin-wrap",
     html: `<span class="${classes.join(" ")}"></span>`,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
   });
 }
 
@@ -375,7 +373,10 @@ async function search(options = {}) {
 
 function applyFilters() {
   const list = document.getElementById("show-list");
-  if (!list) return;
+  if (!list) {
+    drawMarkers();
+    return;
+  }
   rememberHomes();
   restoreOrder();
   const today = new Date();
@@ -449,7 +450,7 @@ function applyFilters() {
         : `${shown.length} of ${total} shows match`;
       if (tail) tail.hidden = true;
     } else if (Number.isFinite(total)) {
-      count.textContent = `${total} ${totalNoun}`;
+      count.textContent = tail ? `${total} UK ${totalNoun}` : `${total} ${totalNoun}`;
       if (tail) tail.hidden = false;
     }
   }
@@ -493,22 +494,40 @@ function applyFilters() {
 let view;
 let group;
 
+function applyFrame(points) {
+  const frame = frameForPoints(points);
+  if (frame.method === "setView") view.setView(frame.center, frame.zoom);
+  else view.fitBounds(frame.points, { padding: [28, 28], maxZoom: frame.maxZoom });
+}
+
 function drawMarkers() {
   const frame = document.getElementById("map");
   if (!frame || !view || !group) return;
   group.clearLayers();
-  const points = [];
+  const venues = new Map();
   for (const card of visibleCards()) {
     const lat = Number(card.dataset.lat);
     const lng = Number(card.dataset.lng);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-    const point = [lat, lng];
-    points.push(point);
-    const place = card.dataset.place || "";
-    const html = `<strong>${esc(card.dataset.name)}</strong><br>${esc(place)}<br><a href="${esc(card.dataset.href)}">Show page</a>`;
-    marker(point, { icon: pinIcon(card) }).bindPopup(html).addTo(group);
+    const key = `${lat},${lng}`;
+    if (!venues.has(key)) venues.set(key, []);
+    venues.get(key).push(card);
   }
-  if (origin) {
+  const points = [];
+  for (const cards of venues.values()) {
+    cards.sort((a, b) => a.dataset.start.localeCompare(b.dataset.start) || (a.dataset.name || "").localeCompare(b.dataset.name || ""));
+    const next = cards[0];
+    const lat = Number(next.dataset.lat);
+    const lng = Number(next.dataset.lng);
+    points.push([lat, lng]);
+    const lines = cards.map((card) => {
+      const when = formatRange(card.dataset.start, card.dataset.end);
+      const state = card.dataset.provisional === "1" ? "Provisional" : "Confirmed";
+      return `<a href="${esc(card.dataset.href)}">${esc(card.dataset.name)}</a><br>${esc(when)} (${state})`;
+    });
+    marker([lat, lng], { icon: pinIcon(next.dataset.provisional === "1") }).bindPopup(lines.join("<br>")).addTo(group);
+  }
+  if (origin && Number.isFinite(origin.lat) && Number.isFinite(origin.lng)) {
     points.push([origin.lat, origin.lng]);
     marker([origin.lat, origin.lng], {
       icon: divIcon({
@@ -519,15 +538,7 @@ function drawMarkers() {
       }),
     }).bindPopup(esc(origin.label)).addTo(group);
   }
-  if (!points.length) {
-    view.setView([54.5, -3], 5.5);
-    return;
-  }
-  const lats = points.map((point) => point[0]);
-  const lngs = points.map((point) => point[1]);
-  const tight = Math.max(...lats) - Math.min(...lats) < 0.02 && Math.max(...lngs) - Math.min(...lngs) < 0.02;
-  if (points.length === 1 || tight) view.setView(points[0], 11);
-  else view.fitBounds(points, { padding: [28, 28], maxZoom: 10 });
+  applyFrame(points);
 }
 
 function mountList() {
@@ -572,7 +583,11 @@ function mountList() {
   });
   if ((input?.value || "").trim()) search();
   else applyFilters();
-  setTimeout(() => view.invalidateSize(), 50);
+  setTimeout(() => {
+    if (!view) return;
+    view.invalidateSize();
+    drawMarkers();
+  }, 50);
 }
 
 function setWhen(active) {

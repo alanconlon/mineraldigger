@@ -78,7 +78,7 @@ body {
   line-height: 1.5;
 }
 img { max-width: 100%; }
-a { color: var(--green-2); }
+a { color: var(--green-2); overflow-wrap: anywhere; }
 a:hover { color: var(--copper); }
 h1, h2, h3, h4 { font-family: var(--serif); font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; }
 h1 { font-size: clamp(2rem, 4vw, 3.4rem); margin: 0 0 0.6rem; }
@@ -107,8 +107,7 @@ p { margin: 0 0 0.8rem; }
   position: sticky;
   top: 0;
   z-index: 20;
-  background: rgba(243, 239, 230, 0.92);
-  backdrop-filter: blur(10px);
+  background: var(--paper);
   border-bottom: 1px solid var(--line);
 }
 .site-header .wrap {
