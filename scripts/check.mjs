@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { assetHash } from "./asset-hash.mjs";
 import { featuredIds, stripeReady } from "./feature.mjs";
 import { frameForPoints } from "../src/js/format.js";
 import { offerValidFrom, organizerLink, renderFeature } from "./render.mjs";
@@ -103,7 +104,7 @@ if (!index.includes('action="https://buttondown.com/api/emails/embed-subscribe/m
   fail("Homepage form does not post to Buttondown.");
 }
 if (!index.includes('data-thanks="/thanks/"')) fail("Homepage form does not point at /thanks/.");
-if (!index.includes('src="/js/newsletter.js"')) fail("Homepage is missing the sign-up script.");
+if (!/src="\/js\/newsletter\.js\?v=[0-9a-f]{12}"/.test(index)) fail("Homepage is missing the sign-up script.");
 if (!index.includes('Emails are sent by <a href="https://buttondown.com/" rel="noopener">Buttondown</a>; you\'ll get a link to confirm.')) {
   fail("Homepage sign-up fine print should name Buttondown and the confirm link.");
 }
@@ -260,7 +261,7 @@ if (feature.includes("REPLACE_ME")) fail("Feature page still has a Stripe placeh
 if (!feature.includes("Free listing") || !feature.includes("Submit a show")) fail("Feature page is missing the free listing.");
 if (!feature.includes("for 4 weeks")) fail("Feature page should describe featuring as 4 weeks.");
 if (feature.includes("28 days")) fail("Feature page still says 28 days.");
-if (!feature.includes('id="feature-pick"') || !feature.includes('src="/js/feature.js"')) {
+if (!feature.includes('id="feature-pick"') || !/src="\/js\/feature\.js\?v=[0-9a-f]{12}"/.test(feature)) {
   fail("Feature page should be able to show the show passed in the query.");
 }
 if (!feature.includes('id="feature-heading"')) fail("Feature page should have a heading the show name can replace.");
@@ -278,6 +279,8 @@ if (!siteJs.includes("Did you mean ")) fail("An ambiguous place should ask which
 if (!siteJs.includes('relation: "in"')) fail("A county or region search should use in, not near.");
 if (!siteJs.includes("scrollIntoView")) fail("Search should scroll to the results.");
 if (!siteJs.includes("frameForPoints")) fail("The list map should frame pins with frameForPoints.");
+if (!siteJs.includes("padding: [28, 28]")) fail("A map with several pins should fitBounds with padding.");
+if (!siteJs.includes('view.on("resize"')) fail("The map should refit every pin when its size changes.");
 if (!siteJs.includes("if (!list)")) fail("The weekend map should draw when the page has no filter list.");
 if (!siteJs.includes("areaFromCards")) fail("A county search should resolve like a place search.");
 if (!siteJs.includes("shows match")) fail("A narrowed list should say how many of the total match.");
@@ -351,7 +354,7 @@ if (!digest.includes('type="hidden" name="embed" value="1"')) fail("Digest form 
 if (!digest.includes('data-thanks="/thanks/"')) fail("Digest form does not send sign-ups to /thanks/.");
 if (!digest.includes(">Sign me up</button>")) fail("Digest button should say Sign me up.");
 if (!digest.includes(digestFinePrint)) fail("Digest fine print should name Buttondown and the confirm link.");
-if (!digest.includes('src="/js/newsletter.js"')) fail("Digest is missing the sign-up script.");
+if (!/src="\/js\/newsletter\.js\?v=[0-9a-f]{12}"/.test(digest)) fail("Digest is missing the sign-up script.");
 const digestFormEnd = digest.indexOf("</form>");
 const digestFooter = digest.indexOf('<footer class="site-footer">');
 if (digestFormEnd < 0 || digestFooter < digestFormEnd) fail("Digest form should sit above the footer.");
@@ -444,6 +447,7 @@ if (MINERALDIGGER_SUBMIT_TO !== "mineraldigger.hq@gmail.com") {
   fail("MINERALDIGGER_SUBMIT_TO is not mineraldigger.hq@gmail.com.");
 }
 
+const assetVersion = await assetHash(dist);
 const files = await htmlFiles(dist);
 for (const file of files) {
   const raw = await readFile(file, "utf8");
@@ -498,7 +502,10 @@ for (const file of files) {
   if (!foot.includes('href="/app/">Add to your phone</a>')) fail(`Add to your phone link missing in ${file}`);
   if (!raw.includes('<link rel="manifest" href="/manifest.webmanifest">')) fail(`Manifest link missing in ${file}`);
   if (!raw.includes('<meta name="theme-color" content="#143f36">')) fail(`Theme colour missing in ${file}`);
-  if (!raw.includes('src="/pwa.js"')) fail(`pwa.js missing in ${file}`);
+  if (!raw.includes(`src="/pwa.js?v=${assetVersion}"`)) fail(`pwa.js missing in ${file}`);
+  for (const match of raw.matchAll(/(?:href|src)="(\/(?:site\.css|pwa\.js|js\/[^"?]+\.js|vendor\/leaflet\/[^"?]+\.css))(\?[^"]*)?"/g)) {
+    if (match[2] !== `?v=${assetVersion}`) fail(`${relative(dist, file)} should load ${match[1]}?v=${assetVersion}.`);
+  }
   const headerEnd = raw.indexOf("</header>");
   const header = headerEnd > 0 ? raw.slice(0, headerEnd) : "";
   if (!/href="\/newsletter\/"(?: aria-current="page")?>Friday email<\/a>/.test(header)) {
@@ -659,7 +666,7 @@ if (!app.includes('src="/icons/icon-192.png"')) fail("Add-to-phone is missing th
 const offline = await readFile(join(dist, "offline/index.html"), "utf8");
 if (!offline.includes("<h1>You're offline</h1>")) fail("Offline heading is wrong.");
 if (!offline.includes('name="robots" content="noindex"')) fail("Offline page is missing noindex.");
-if (!offline.includes("md-pages-")) fail("Offline page does not read the saved-page cache.");
+if (!offline.includes(`var k = "${assetVersion}-pages"`)) fail("Offline page does not read the saved-page cache.");
 const manifest = JSON.parse(await readFile(join(dist, "manifest.webmanifest"), "utf8"));
 if (manifest.short_name !== "MineralDigger" || !manifest.name.includes("MineralDigger")) fail("Manifest name is wrong.");
 if (manifest.display !== "standalone" || manifest.start_url !== "/" || manifest.lang !== "en-GB") fail("Manifest display settings are wrong.");
@@ -677,7 +684,15 @@ if (!pwaJs.includes("beforeinstallprompt") || !pwaJs.includes("a2hs-install")) f
 if (!pwaJs.includes("if (android) return;")) fail("pwa.js should not offer the install prompt on Android.");
 const swJs = await readFile(join(dist, "sw.js"), "utf8");
 if (swJs.includes("__MD_VERSION__")) fail("Service worker version was not stamped.");
-if (!swJs.includes('PREFIX = "md-"') || !swJs.includes('"/offline/"')) fail("Service worker is not the MineralDigger offline cache.");
+const cacheName = swJs.match(/const CACHE = "([0-9a-f]{12})"/);
+if (!cacheName || cacheName[1] !== assetVersion) {
+  fail(`Service worker cache name ${cacheName ? cacheName[1] : "(missing)"} is not the asset hash ${assetVersion}.`);
+}
+if (!swJs.includes('"/offline/"')) fail("Service worker is not the MineralDigger offline cache.");
+if (!swJs.includes("k !== CACHE && k !== PAGE_CACHE")) fail("Service worker should delete old caches on activate.");
+if (!swJs.includes('req.mode === "navigate"') || !swJs.includes("page(event)")) {
+  fail("Service worker should use network-first for HTML navigations.");
+}
 const icon192 = pngSize(await readFile(join(dist, "icons/icon-192.png")));
 const icon512 = pngSize(await readFile(join(dist, "icons/icon-512.png")));
 const iconMask = pngSize(await readFile(join(dist, "icons/icon-maskable-512.png")));
@@ -804,6 +819,18 @@ if (!sitemap.includes("<loc>https://mineraldigger.com/county/</loc>")) fail("Sit
 if (!sitemap.includes("<loc>https://mineraldigger.com/county/surrey/</loc>")) fail("Sitemap is missing Surrey.");
 if (!sitemap.includes("<loc>https://mineraldigger.com/towns/</loc>")) fail("Sitemap is missing the town index.");
 const weekendPage = await readFile(join(dist, "this-weekend/index.html"), "utf8");
+const weekendPins = [...weekendPage.matchAll(/data-lat="([0-9.-]+)" data-lng="([0-9.-]+)"/g)].map((match) => [Number(match[1]), Number(match[2])]);
+const weekendFrame = frameForPoints(weekendPins);
+if (weekendPins.length > 1 && weekendFrame.method !== "fitBounds") fail("This weekend map should fitBounds around every pin.");
+if (weekendPins.length === 1 && (weekendFrame.method !== "setView" || weekendFrame.zoom !== 11)) {
+  fail("This weekend map should setView a single pin at a close zoom.");
+}
+if (weekendFrame.method === "fitBounds") {
+  const framedPins = new Set(weekendFrame.points.map((point) => point.join(",")));
+  for (const pin of weekendPins) {
+    if (!framedPins.has(pin.join(","))) fail("This weekend map left a pin out of the frame.");
+  }
+}
 if (!weekendPage.includes("<h1>Shows this weekend</h1>")) fail("This weekend page heading is wrong.");
 if (!weekendPage.includes('rel="canonical" href="https://mineraldigger.com/this-weekend/"')) fail("This weekend canonical is wrong.");
 if (!weekendPage.includes(">Next weekend</h2>")) fail("This weekend page is missing next weekend.");

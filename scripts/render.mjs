@@ -1,6 +1,16 @@
 import { addDays, formatDay, formatRange, iso, longDate, monthKey, monthLabel, overlaps, parseISO, shortStack, thisWeekend } from "../src/js/format.js";
 import { stripeReady } from "./feature.mjs";
 
+let assetVersion = "";
+
+export function setAssetVersion(version) {
+  assetVersion = version || "";
+}
+
+function assetUrl(path) {
+  return assetVersion ? `${path}?v=${assetVersion}` : path;
+}
+
 const TYPES = [
   ["rock", "Rock", "/rock/"],
   ["gem", "Gem", "/gem/"],
@@ -241,8 +251,8 @@ function layout({ site, path, title, description, ogTitle, ogDescription, body, 
   <meta name="twitter:title" content="${esc(title)}">
   <meta name="twitter:description" content="${esc(description)}">
   <meta name="twitter:image" content="${esc(image)}">
-  <link rel="stylesheet" href="/site.css">
-  ${map ? '<link rel="stylesheet" href="/vendor/leaflet/leaflet.css">' : ""}
+  <link rel="stylesheet" href="${assetUrl("/site.css")}">
+  ${map ? `<link rel="stylesheet" href="${assetUrl("/vendor/leaflet/leaflet.css")}">` : ""}
   ${structuredData}
 </head>
 <body>
@@ -256,9 +266,9 @@ function layout({ site, path, title, description, ogTitle, ogDescription, body, 
   </header>
   <main id="main">${body}</main>
   ${footer(generated)}
-  ${map ? '<script type="module" src="/js/site.js"></script>' : ""}
-  <script defer src="/js/newsletter.js"></script>
-  <script defer src="/pwa.js" data-app="MineralDigger"></script>
+  ${map ? `<script type="module" src="${assetUrl("/js/site.js")}"></script>` : ""}
+  <script defer src="${assetUrl("/js/newsletter.js")}"></script>
+  <script defer src="${assetUrl("/pwa.js")}" data-app="MineralDigger"></script>
   <script>
     (function () {
       var button = document.querySelector(".nav-toggle");
@@ -1070,7 +1080,7 @@ export function renderFeature({ site, stripe, generated }) {
       ${copy.sponsorSteps}
       <p>Sponsors are labelled, and the link is marked as sponsored. We take sponsors that suit collectors of rocks, gems, minerals, fossils and beads.</p>
     </div></article>
-    <script src="/js/feature.js" defer></script>`;
+    <script src="${assetUrl("/js/feature.js")}" defer></script>`;
   return layout({
     site,
     path: "/feature/",
@@ -1171,7 +1181,7 @@ export function renderSubmit({ site, generated }) {
         <button class="pay" type="submit">Send listing</button>
       </form>
     </div></article>
-    <script type="module" src="/js/submit.js"></script>`;
+    <script type="module" src="${assetUrl("/js/submit.js")}"></script>`;
   return layout({
     site,
     path: "/submit/",
@@ -1416,8 +1426,8 @@ export function renderOffline({ site, generated }) {
     <script>(function () {
       if (!window.caches) return;
       caches.keys().then(function (ks) {
-        var k = ks.filter(function (n) { return n.indexOf("md-pages-") === 0; })[0];
-        if (!k) return;
+        var k = "${assetVersion}-pages";
+        if (ks.indexOf(k) === -1) return;
         return caches.open(k).then(function (c) { return c.keys(); }).then(function (rs) {
           var ul = document.getElementById("saved-pages");
           var seen = { "/": 1 };

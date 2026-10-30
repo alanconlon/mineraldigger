@@ -1,11 +1,12 @@
-import { createHash } from "node:crypto";
-import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { addDays, iso, parseISO } from "../src/js/format.js";
+import { assetHash } from "./asset-hash.mjs";
 import { featuredIds } from "./feature.mjs";
 import {
   listedName,
+  setAssetVersion,
   renderAbout,
   renderApp,
   renderDigest,
@@ -135,9 +136,6 @@ async function copyAssets() {
   await cp(join(root, "public/manifest.webmanifest"), join(dist, "manifest.webmanifest"));
   await cp(join(root, "public/pwa.js"), join(dist, "pwa.js"));
   await cp(join(root, "public/icons"), join(dist, "icons"), { recursive: true });
-  const swSource = await readFile(join(root, "public/sw.js"), "utf8");
-  const swVersion = createHash("sha256").update(swSource).digest("hex").slice(0, 12);
-  await writeFile(join(dist, "sw.js"), swSource.replaceAll("__MD_VERSION__", swVersion));
   await writeFile(
     join(dist, "_headers"),
     "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Frame-Options: SAMEORIGIN\n\n/thanks/\n  X-Robots-Tag: noindex\n\n/thanks/*\n  X-Robots-Tag: noindex\n\n/thanks/payment/*\n  X-Robots-Tag: noindex\n\n/offline/\n  X-Robots-Tag: noindex\n\n/sw.js\n  Cache-Control: no-cache\n\n/manifest.webmanifest\n  Content-Type: application/manifest+json\n",
@@ -154,6 +152,23 @@ async function copyAssets() {
       "",
     ].join("\n"),
   );
+}
+
+async function stampBuiltScripts(version) {
+  const files = ["js/site.js", "js/submit.js"];
+  const specifiers = [
+    "/vendor/leaflet/leaflet-src.esm.js",
+    "./format.js",
+    "./validate.js",
+  ];
+  for (const rel of files) {
+    const path = join(dist, rel);
+    let text = await readFile(path, "utf8");
+    for (const specifier of specifiers) {
+      text = text.replaceAll(`from "${specifier}"`, `from "${specifier}?v=${version}"`);
+    }
+    await writeFile(path, text);
+  }
 }
 
 async function main() {
@@ -173,6 +188,11 @@ async function main() {
   await rm(dist, { recursive: true, force: true });
   await mkdir(dist, { recursive: true });
   await copyAssets();
+  const version = await assetHash(dist);
+  await stampBuiltScripts(version);
+  const swSource = await readFile(join(root, "public/sw.js"), "utf8");
+  await writeFile(join(dist, "sw.js"), swSource.replaceAll("__MD_VERSION__", version));
+  setAssetVersion(version);
   const origin = new URL(site.url).origin;
   await writeFile(join(dist, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml\n`);
 

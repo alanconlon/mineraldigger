@@ -1,24 +1,22 @@
 /* MineralDigger service worker. Deliberately small, so it stays out of the way of the live site:
-   - Pages (HTML): network first, always. A copy of each page you open is kept on the phone. Only if the
+   - Pages (HTML navigations): network first. A copy of each page you open is kept on the phone. Only if the
      network fails (or gives nothing for 8 seconds on a weak signal) is the saved copy shown, with a
      "saved copy" notice on top. With no saved copy you get the offline page.
    - Listing data (*.json): network first, saved copy only if the network fails.
    - Other same-origin images, icons, CSS and scripts: shown from the cache, refreshed in the background.
    - Everything else is left alone: non-GET requests, Stripe, Buttondown, map tiles and any other site.
-   Cache names carry the build version; old caches are deleted when a new version activates. */
+   CACHE is the content hash of the built assets. Activating a new hash deletes every older cache. */
 "use strict";
-const VERSION = "__MD_VERSION__";
-const PREFIX = "md-";
-const STATIC_CACHE = PREFIX + "static-" + VERSION;
-const PAGE_CACHE = PREFIX + "pages-" + VERSION;
+const CACHE = "__MD_VERSION__";
+const PAGE_CACHE = CACHE + "-pages";
 const OFFLINE_URL = "/offline/";
-const PRECACHE = [OFFLINE_URL, "/site.css", "/pwa.js", "/icons/icon-192.png", "/favicon.svg"];
+const PRECACHE = [OFFLINE_URL, "/site.css?v=" + CACHE, "/pwa.js?v=" + CACHE, "/js/newsletter.js?v=" + CACHE, "/icons/icon-192.png", "/favicon.svg"];
 const MAX_PAGES = 60;
 const TIMEOUT_MS = 8 * 1000;
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(STATIC_CACHE)
+    caches.open(CACHE)
       .then((c) => c.addAll(PRECACHE.map((u) => new Request(u, { cache: "reload" }))))
       .then(() => caches.open(PAGE_CACHE).then((c) => c.add("/")).catch(() => {}))
       .then(() => self.skipWaiting())
@@ -28,7 +26,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k.startsWith(PREFIX) && k !== STATIC_CACHE && k !== PAGE_CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== PAGE_CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -103,9 +101,9 @@ async function networkFirst(event) {
 
 async function staleWhileRevalidate(event) {
   const req = event.request;
-  const cache = await caches.open(STATIC_CACHE);
+  const cache = await caches.open(CACHE);
   const hit = await cache.match(req);
-  const network = fetch(req).then((res) => {
+  const network = fetch(new Request(req, { cache: "reload" })).then((res) => {
     if (cacheable(res)) { const copy = res.clone(); return cache.put(req, copy).then(() => res, () => res); }
     return res;
   });
