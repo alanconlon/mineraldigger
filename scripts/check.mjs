@@ -540,6 +540,11 @@ const robots = await readFile(join(dist, "robots.txt"), "utf8");
 if (!robots.includes("Sitemap: https://mineraldigger.com/sitemap.xml")) fail("robots.txt sitemap is not on mineraldigger.com.");
 const sitemap = await readFile(join(dist, "sitemap.xml"), "utf8");
 if (!sitemap.includes("<loc>https://mineraldigger.com/</loc>")) fail("Sitemap is missing the .com homepage.");
+const sitemapUrlCount = (sitemap.match(/<url>/g) || []).length;
+const sitemapLastmodCount = (sitemap.match(/<lastmod>/g) || []).length;
+if (!homeCatalogue.generated || sitemapUrlCount === 0 || sitemapUrlCount !== sitemapLastmodCount || !sitemap.includes(`<lastmod>${homeCatalogue.generated}</lastmod>`)) {
+  fail("Every sitemap URL needs a lastmod of the catalogue date.");
+}
 if (sitemap.includes("mineraldigger.co.uk")) fail("Sitemap still points at mineraldigger.co.uk.");
 if (!sitemap.includes("<loc>https://mineraldigger.com/privacy/</loc>")) fail("Sitemap is missing the privacy page.");
 if (!sitemap.includes("<loc>https://mineraldigger.com/terms/</loc>")) fail("Sitemap is missing the terms page.");
@@ -696,6 +701,17 @@ if (!swJs.includes('"/offline/"')) fail("Service worker is not the MineralDigger
 if (!swJs.includes("k !== CACHE && k !== PAGE_CACHE")) fail("Service worker should delete old caches on activate.");
 if (!swJs.includes('req.mode === "navigate"') || !swJs.includes("page(event)")) {
   fail("Service worker should use network-first for HTML navigations.");
+}
+const indexNowKeys = (await readdir(join(root, "public"))).filter((name) => /^[0-9a-f]{32}\.txt$/.test(name));
+if (indexNowKeys.length !== 1) fail("IndexNow needs one 32-character hex key file in public/.");
+const indexNowKeyName = indexNowKeys[0];
+const indexNowKey = indexNowKeyName.slice(0, -4);
+const indexNowBody = (await readFile(join(dist, indexNowKeyName), "utf8")).trim();
+if (indexNowBody !== indexNowKey) fail("The built IndexNow key file must contain the key and nothing else.");
+if (swJs.includes(indexNowKeyName) || swJs.includes("indexnow")) fail("The IndexNow key file must stay out of the service worker.");
+const indexNowState = JSON.parse(await readFile(join(root, "data/indexnow_state.json"), "utf8"));
+if (indexNowState.host !== "mineraldigger.com" || !indexNowState.urls || Array.isArray(indexNowState.urls)) {
+  fail("IndexNow state should track mineraldigger.com URLs.");
 }
 const icon192 = pngSize(await readFile(join(dist, "icons/icon-192.png")));
 const icon512 = pngSize(await readFile(join(dist, "icons/icon-512.png")));

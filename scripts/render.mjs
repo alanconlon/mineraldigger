@@ -1457,9 +1457,10 @@ export function renderOffline({ site, generated }) {
   });
 }
 
-export function renderSitemap(site, paths) {
+export function renderSitemap(site, paths, lastmod) {
+  const stamp = lastmod ? `<lastmod>${esc(lastmod)}</lastmod>` : "";
   const urls = paths
-    .map((path) => `<url><loc>${esc(new URL(path, site.url).href)}</loc></url>`)
+    .map((path) => `<url><loc>${esc(new URL(path, site.url).href)}</loc>${stamp}</url>`)
     .join("");
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

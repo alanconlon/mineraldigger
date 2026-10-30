@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, writeFile, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { addDays, iso, parseISO } from "../src/js/format.js";
@@ -136,6 +136,9 @@ async function copyAssets() {
   await cp(join(root, "public/manifest.webmanifest"), join(dist, "manifest.webmanifest"));
   await cp(join(root, "public/pwa.js"), join(dist, "pwa.js"));
   await cp(join(root, "public/icons"), join(dist, "icons"), { recursive: true });
+  for (const name of await readdir(join(root, "public"))) {
+    if (/^[0-9a-f]{32}\.txt$/.test(name)) await cp(join(root, "public", name), join(dist, name));
+  }
   await writeFile(
     join(dist, "_headers"),
     "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Frame-Options: SAMEORIGIN\n\n/thanks/\n  X-Robots-Tag: noindex\n\n/thanks/*\n  X-Robots-Tag: noindex\n\n/thanks/payment/*\n  X-Robots-Tag: noindex\n\n/offline/\n  X-Robots-Tag: noindex\n\n/sw.js\n  Cache-Control: no-cache\n\n/manifest.webmanifest\n  Content-Type: application/manifest+json\n",
@@ -227,7 +230,7 @@ async function main() {
   await writePage("terms/index.html", renderTerms({ site, stripe, generated }));
   await writePage("404.html", renderNotFound({ site, generated }));
 
-  // /thanks/, /thanks/payment/ and /offline/ are noindex and stay out of the sitemap. /digest/ redirects to /newsletter/. This site does not ping IndexNow.
+  // /thanks/, /thanks/payment/ and /offline/ are noindex and stay out of the sitemap. /digest/ redirects to /newsletter/. IndexNow runs after deploy, not during the build.
   const paths = ["/", "/this-weekend/", "/county/", "/towns/", "/feature/", "/submit/", "/newsletter/", "/app/", "/about/", "/privacy/", "/terms/", "/rock/", "/gem/", "/mineral/", "/fossil/", "/bead/"];
   for (const county of places.counties.values()) paths.push(`/county/${county.slug}/`);
   for (const town of places.towns.values()) paths.push(`/town/${town.slug}/`);
@@ -236,7 +239,7 @@ async function main() {
     await writePage(`show/${show.slug}/event.ics`, ics(show, todayISO, site));
     paths.push(`/show/${show.slug}/`);
   }
-  await writeFile(join(dist, "sitemap.xml"), renderSitemap(site, paths));
+  await writeFile(join(dist, "sitemap.xml"), renderSitemap(site, paths, generated));
   await mkdir(join(dist, "data"), { recursive: true });
   const published = shows.map((show) => {
     const copy = structuredClone(show);
