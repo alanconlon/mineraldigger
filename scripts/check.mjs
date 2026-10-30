@@ -520,6 +520,10 @@ for (const file of files) {
   if (!foot.includes('href="https://bsky.app/profile/mineraldigger.com" rel="me noopener" target="_blank">Bluesky</a>')) {
     fail(`Bluesky link missing in ${file}`);
   }
+  if (!foot.includes("Rock, gem, mineral, fossil and bead shows across the UK.<br>Dates checked against organiser websites.")) {
+    fail(`Footer tagline in ${file} should end at across the UK.`);
+  }
+  if (foot.includes("On one map.")) fail(`Footer tagline in ${file} should not say On one map.`);
   if (!foot.includes("© 2026 MineralDigger.") || !foot.includes("Data last refreshed ")) fail(`Footer credit line missing in ${file}`);
   if (!/Data last refreshed \d{1,2} [A-Z][a-z]+ \d{4}\./.test(foot)) fail(`Footer date in ${file} should be a long date.`);
   if (/Data last refreshed \d{4}-\d{2}-\d{2}/.test(foot)) fail(`Footer date in ${file} is still an ISO date.`);

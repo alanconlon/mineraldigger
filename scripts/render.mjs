@@ -145,7 +145,7 @@ function footer(generated) {
     <div class="wrap foot">
       <div>
         <a class="logo" href="/">Mineral<span>Digger</span></a>
-        <p class="muted">Rock, gem, mineral, fossil and bead shows across the UK. On one map.<br>Dates checked against organiser websites. Always confirm with the organiser before you travel.</p>
+        <p class="muted">Rock, gem, mineral, fossil and bead shows across the UK.<br>Dates checked against organiser websites. Always confirm with the organiser before you travel.</p>
         <p class="social"><a href="https://www.facebook.com/people/MineralDigger/61595681170967/" rel="me noopener" target="_blank">Facebook</a> <a href="https://bsky.app/profile/mineraldigger.com" rel="me noopener" target="_blank">Bluesky</a></p>
       </div>
       <div>
