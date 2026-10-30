@@ -541,9 +541,9 @@ if (!robots.includes("Sitemap: https://mineraldigger.com/sitemap.xml")) fail("ro
 const sitemap = await readFile(join(dist, "sitemap.xml"), "utf8");
 if (!sitemap.includes("<loc>https://mineraldigger.com/</loc>")) fail("Sitemap is missing the .com homepage.");
 const sitemapUrlCount = (sitemap.match(/<url>/g) || []).length;
-const sitemapLastmodCount = (sitemap.match(/<lastmod>/g) || []).length;
-if (!homeCatalogue.generated || sitemapUrlCount === 0 || sitemapUrlCount !== sitemapLastmodCount || !sitemap.includes(`<lastmod>${homeCatalogue.generated}</lastmod>`)) {
-  fail("Every sitemap URL needs a lastmod of the catalogue date.");
+const sitemapLastmods = [...sitemap.matchAll(/<lastmod>(\d{4}-\d{2}-\d{2})<\/lastmod>/g)];
+if (sitemapUrlCount === 0 || sitemapLastmods.length !== sitemapUrlCount) {
+  fail("Every sitemap URL needs a YYYY-MM-DD lastmod.");
 }
 if (sitemap.includes("mineraldigger.co.uk")) fail("Sitemap still points at mineraldigger.co.uk.");
 if (!sitemap.includes("<loc>https://mineraldigger.com/privacy/</loc>")) fail("Sitemap is missing the privacy page.");
@@ -712,6 +712,18 @@ if (swJs.includes(indexNowKeyName) || swJs.includes("indexnow")) fail("The Index
 const indexNowState = JSON.parse(await readFile(join(root, "data/indexnow_state.json"), "utf8"));
 if (indexNowState.host !== "mineraldigger.com" || !indexNowState.urls || Array.isArray(indexNowState.urls)) {
   fail("IndexNow state should track mineraldigger.com URLs.");
+}
+const homeIndexNow = indexNowState.urls["https://mineraldigger.com/"];
+if (!homeIndexNow || !/^[0-9a-f]{64}$/.test(homeIndexNow.hash || "") || !/^\d{4}-\d{2}-\d{2}$/.test(homeIndexNow.lastmod || "")) {
+  fail("IndexNow state should store a content hash and lastmod for the homepage.");
+} else if (!sitemap.includes(`<loc>https://mineraldigger.com/</loc><lastmod>${homeIndexNow.lastmod}</lastmod>`)) {
+  fail("Homepage sitemap lastmod should stay on the stored content date while the page is unchanged.");
+}
+for (const [url, entry] of Object.entries(indexNowState.urls)) {
+  if (!url.startsWith("https://mineraldigger.com/")) fail(`IndexNow state URL is not on mineraldigger.com: ${url}`);
+  if (!entry || !/^[0-9a-f]{64}$/.test(entry.hash || "") || !/^\d{4}-\d{2}-\d{2}$/.test(entry.lastmod || "")) {
+    fail(`IndexNow state entry is missing a hash or lastmod: ${url}`);
+  }
 }
 const icon192 = pngSize(await readFile(join(dist, "icons/icon-192.png")));
 const icon512 = pngSize(await readFile(join(dist, "icons/icon-512.png")));
