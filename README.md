@@ -27,7 +27,7 @@ npm run dev
 - `/rock/`, `/gem/`, `/mineral/`, `/fossil/`, `/bead/` type pages
 - `/show/…/` one page per show, plus an `event.ics` calendar file
 - `/feature/` free listing, featured show £15, year pass £99, site sponsor £25 a month, Friday email £12 an issue. The four paid cards link to live Stripe checkout.
-- `/thanks/payment/` post-payment thank-you page. It is `noindex` and is not in the sitemap. This site does not ping IndexNow.
+- `/thanks/payment/` post-payment thank-you page. It is `noindex` and is not in the sitemap. IndexNow is not given this URL.
 - `/thanks/` after a Friday email sign-up. It is `noindex` and is not in the sitemap.
 - `/submit/` organiser form
 - `/newsletter/` the Friday email. Visitors sign up through Buttondown. After the form, the page goes to the site footer. It does not send the issue. Drafts are made with the scripts in Friday email drafts below.
@@ -149,11 +149,12 @@ Git-connected project (if you create one later):
 - Root directory: the repo root, so Pages compiles `functions/` beside `dist`
 - Environment variables: the four `STRIPE_*` URLs, and `SUBMISSION_WEBHOOK_URL` when mail exists
 
-Direct Upload of the static site, from the repo root:
+Direct Upload of the static site, from the repo root. After the deploy has finished, tell IndexNow about pages on mineraldigger.com:
 
 ```bash
 npm run build
 npx wrangler pages deploy dist --project-name mineraldigger --branch main
+python3 scripts/indexnow.py
 ```
 
 `dist` is the Pages root for that command. Wrangler also picks up `functions/` beside it. Dashboard drag and drop of a zip publishes the static files only and does not compile `functions/`. The public `/api/submit` mail path is the worker route above, not the Pages function.
@@ -170,6 +171,10 @@ The workflow reads two repository secrets, the same names FairDigger uses:
 - `CLOUDFLARE_ACCOUNT_ID`
 
 It does not deploy on a push. A merge of this workflow does not by itself publish the site.
+
+After that Pages deploy succeeds, the workflow runs `python3 scripts/indexnow.py`. The script reads `dist/sitemap.xml`, compares each `lastmod` with `data/indexnow_state.json`, and POSTs only new or changed URLs to `https://api.indexnow.org/indexnow`. The JSON body is `host`, `key`, `keyLocation`, and `urlList`, with at most 10000 URLs in one request. `host` is `mineraldigger.com`. URLs on `mineraldigger.co.uk` are not submitted. The key file is `3b35b2fc93db4757a34032329daf6509.txt` at the site root, so `https://mineraldigger.com/3b35b2fc93db4757a34032329daf6509.txt` serves the key. The key is public by design. An empty state file means the first run sends every sitemap URL. The state file is updated only after HTTP 200 or 202. Any other response is logged, and the script still exits 0, so IndexNow cannot fail the deploy. `--dry-run` prints the URLs and does not POST or write the state file.
+
+The daily job does not commit `data/indexnow_state.json`, for the same reason it does not commit the refreshed catalogue. After a manual direct upload, commit that state file if the script rewrote it, so the next run can skip URLs whose `lastmod` has not changed.
 
 `dist/_headers` sets a few basic response headers, including `application/manifest+json` for `manifest.webmanifest` and `no-cache` for `sw.js`. `dist/_redirects` sends `/digest/` to `/newsletter/`. `robots.txt` points at `https://mineraldigger.com/sitemap.xml`.
 
