@@ -3,7 +3,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { featuredIds, stripeReady } from "./feature.mjs";
-import { offerValidFrom, renderFeature } from "./render.mjs";
+import { offerValidFrom, organizerLink, renderFeature } from "./render.mjs";
 import { validateSubmission } from "../functions/api/validate.js";
 import submitWorker, { resetRateLimit, MINERALDIGGER_SUBMIT_FROM, MINERALDIGGER_SUBMIT_TO } from "../workers/submit/src/index.js";
 
@@ -861,6 +861,23 @@ function eventJsonLd(html) {
   return { events };
 }
 
+function eventSchemaIssues(event) {
+  const issues = [];
+  if (event["@context"] !== "https://schema.org") issues.push("@context");
+  if (event["@type"] !== "Event") issues.push("@type");
+  for (const field of ["name", "startDate", "endDate", "url"]) {
+    if (!event[field]) issues.push(field);
+  }
+  if (event.location?.["@type"] !== "Place" || !event.location?.name || !event.location?.address) issues.push("location");
+  if (event.organizer) {
+    if (event.organizer["@type"] !== "Organization" || !event.organizer.name) issues.push("organizer");
+    if (typeof event.organizer.url !== "string" || !/^https?:\/\/\S+$/.test(event.organizer.url)) issues.push("organizer.url");
+  }
+  if (event.performer?.["@type"] !== "Organization" || !event.performer?.name) issues.push("performer");
+  return issues;
+}
+
+const organizerCounts = { organiser: 0, source: 0, omitted: 0 };
 for (const show of catalogue.shows) {
   const pageUrl = `https://mineraldigger.com/show/${show.slug}/`;
   let html;
@@ -905,12 +922,28 @@ for (const show of catalogue.shows) {
   if (JSON.stringify(event.image) !== JSON.stringify(["https://mineraldigger.com/og-image.jpg"])) {
     fail(`${show.slug} Event image is not the og-image array.`);
   }
-  if (event.organizer?.["@type"] !== "Organization" || event.organizer?.name !== show.organiser.name) {
-    fail(`${show.slug} organizer name is wrong.`);
-  }
-  if ((event.organizer?.url || null) !== (show.organiser.url || null)) fail(`${show.slug} organizer url changed.`);
-  if (JSON.stringify(event.performer) !== JSON.stringify(event.organizer)) {
-    fail(`${show.slug} performer is not the same organization as organizer.`);
+  const link = organizerLink(show);
+  if (link.from === "organiser") organizerCounts.organiser += 1;
+  else if (link.from === "source") organizerCounts.source += 1;
+  else organizerCounts.omitted += 1;
+  const schemaIssues = eventSchemaIssues(event);
+  if (schemaIssues.length) fail(`${show.slug} Event JSON-LD failed the schema check: ${schemaIssues.join(", ")}.`);
+  if (link.url) {
+    if (event.organizer?.["@type"] !== "Organization" || event.organizer?.name !== show.organiser.name) {
+      fail(`${show.slug} organizer name is wrong.`);
+    }
+    if (event.organizer?.url !== link.url) fail(`${show.slug} organizer url should be ${link.url}.`);
+    if (!/^https?:\/\//.test(event.organizer.url)) fail(`${show.slug} organizer url is not an http URL.`);
+    if (event.organizer.url === pageUrl) fail(`${show.slug} organizer url must not be the MineralDigger show page.`);
+    if (JSON.stringify(event.performer) !== JSON.stringify(event.organizer)) {
+      fail(`${show.slug} performer is not the same organization as organizer.`);
+    }
+  } else {
+    if (event.organizer) fail(`${show.slug} organizer should be omitted when there is no organiser or source URL.`);
+    if (event.performer?.["@type"] !== "Organization" || event.performer?.name !== show.organiser.name) {
+      fail(`${show.slug} performer name is wrong.`);
+    }
+    if (event.performer?.url) fail(`${show.slug} performer invented a url.`);
   }
   if (String(event.url).includes("mineraldigger.co.uk")) {
     fail(`${show.slug} Event links to mineraldigger.co.uk.`);
@@ -944,6 +977,27 @@ for (const show of catalogue.shows) {
     fail(`${show.slug} unknown entry should not invent a price.`);
   }
 }
+
+if (organizerCounts.organiser + organizerCounts.source + organizerCounts.omitted !== catalogue.shows.length) {
+  fail("Organizer URL tally does not cover every show.");
+}
+const aggregatorFallback = organizerLink({
+  organiser: { name: "Club", url: "https://www.facebook.com/club" },
+  source: { url: "https://club.example/show" },
+});
+if (aggregatorFallback.from !== "source" || aggregatorFallback.url !== "https://club.example/show") {
+  fail("An aggregator organiser URL should fall back to the show's own page.");
+}
+const invented = organizerLink({ organiser: { name: "Club" }, source: {} });
+if (invented.url || invented.from) fail("A show with no URL should not gain an organizer url.");
+const clubFirst = organizerLink({
+  organiser: { name: "Club", url: "https://club.example/" },
+  source: { url: "https://club.example/show.htm" },
+});
+if (clubFirst.from !== "organiser" || clubFirst.url !== "https://club.example/") {
+  fail("The organiser website should be preferred to the show page.");
+}
+console.log(`Organizer URL: ${organizerCounts.organiser} from the organiser site, ${organizerCounts.source} fell back to the show page, ${organizerCounts.omitted} omitted.`);
 
 const ids = featuredIds(
   [

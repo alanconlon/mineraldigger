@@ -711,13 +711,45 @@ function eventOffer(show, pageUrl, validFrom) {
   };
 }
 
+const AGGREGATOR_HOST = /(^|\.)((facebook|fb|instagram|eventbrite|skiddle|ents24|gumroad|mineralica)\.com)$/i;
+
+function httpUrl(value) {
+  const text = String(value || "").trim();
+  if (!/^https?:\/\//i.test(text)) return "";
+  try {
+    const url = new URL(text);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+    return url.href;
+  } catch {
+    return "";
+  }
+}
+
+function aggregatorUrl(value) {
+  const url = httpUrl(value);
+  if (!url) return false;
+  const host = new URL(url).hostname.replace(/^www\./i, "");
+  return AGGREGATOR_HOST.test(host);
+}
+
+// Organiser or club site first. The source page is only the show's own page when the organiser URL is missing.
+export function organizerLink(show) {
+  const organiser = httpUrl(show?.organiser?.url);
+  if (organiser && !aggregatorUrl(organiser)) return { url: organiser, from: "organiser" };
+  const source = httpUrl(show?.source?.url);
+  if (source && !aggregatorUrl(source)) return { url: source, from: "source" };
+  return { url: "", from: "" };
+}
+
 function jsonLd(show, site, generated) {
   const pageUrl = new URL(`/show/${show.slug}/`, site.url).href;
-  const organizer = {
+  const link = organizerLink(show);
+  const performer = {
     "@type": "Organization",
     name: show.organiser.name,
   };
-  if (show.organiser.url) organizer.url = show.organiser.url;
+  const organizer = link.url ? { ...performer, url: link.url } : null;
+  if (link.url) performer.url = link.url;
   const refreshed = show.source?.retrieved || generated;
   const data = {
     "@context": "https://schema.org",
@@ -742,9 +774,10 @@ function jsonLd(show, site, generated) {
         addressCountry: "GB",
       },
     },
-    organizer,
+    // Omit organizer when we have no real URL. Search Console warns on an organizer without url.
+    ...(organizer ? { organizer } : {}),
     // Mineral shows are not performances. The organiser fills performer so Search Console stops flagging the field.
-    performer: { ...organizer },
+    performer,
   };
   const offer = eventOffer(show, pageUrl, offerValidFrom(refreshed));
   if (offer) data.offers = offer;
