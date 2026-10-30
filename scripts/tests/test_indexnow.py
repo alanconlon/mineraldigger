@@ -1,4 +1,4 @@
-"""IndexNow submits a URL only when it is new or its lastmod changed."""
+"""IndexNow submits a URL only when it is new or its content hash changed."""
 
 from __future__ import annotations
 
@@ -28,9 +28,16 @@ SITEMAP = """<?xml version="1.0" encoding="UTF-8"?>
 """
 
 
-def write_site(root: Path, state: dict | None) -> tuple[Path, Path, Path]:
+HOME = "<html><p>Home shows</p><p>Data last refreshed 28 October 2026.</p><script src=\"/js/site.js?v=aaaaaaaaaaaa\"></script></html>"
+SHOW = "<html><p>Show A</p><p>Retrieved 28 October 2026 from the organiser.</p><script type=\"application/ld+json\">{\"validFrom\":\"2026-10-28T00:00:00+01:00\"}</script></html>"
+SHOW_CHANGED = "<html><p>Show A, now with fossils</p><p>Retrieved 30 October 2026 from the organiser.</p></html>"
+
+
+def write_site(root: Path, state: dict | None, show_html: str = SHOW) -> tuple[Path, Path, Path]:
     dist = root / "dist"
-    dist.mkdir()
+    (dist / "show" / "a").mkdir(parents=True)
+    (dist / "index.html").write_text(HOME, encoding="utf-8")
+    (dist / "show" / "a" / "index.html").write_text(show_html, encoding="utf-8")
     (dist / "sitemap.xml").write_text(SITEMAP, encoding="utf-8")
     (dist / f"{KEY}.txt").write_text(KEY + "\n", encoding="utf-8")
     state_path = root / "data" / "indexnow_state.json"
@@ -38,6 +45,10 @@ def write_site(root: Path, state: dict | None) -> tuple[Path, Path, Path]:
     if state is not None:
         state_path.write_text(json.dumps(state) + "\n", encoding="utf-8")
     return dist / "sitemap.xml", state_path, dist
+
+
+def entry(html: str, lastmod: str) -> dict[str, str]:
+    return {"hash": indexnow.content_hash(html), "lastmod": lastmod}
 
 
 def run_main(argv: list[str]) -> tuple[int, str]:
@@ -49,31 +60,57 @@ def run_main(argv: list[str]) -> tuple[int, str]:
 
 
 class DiffTests(unittest.TestCase):
-    def test_first_run_sends_every_com_url(self):
-        urls = {
-            "https://mineraldigger.com/": "2026-10-28",
-            "https://mineraldigger.com/show/a/": "2026-10-29",
-        }
-        self.assertEqual(indexnow.changed_urls(urls, {}), list(urls))
+    def test_refresh_dates_do_not_change_the_hash(self):
+        later = HOME.replace("28 October 2026", "30 October 2026").replace("?v=aaaaaaaaaaaa", "?v=bbbbbbbbbbbb")
+        self.assertEqual(indexnow.content_hash(HOME), indexnow.content_hash(later))
+        retrieved = SHOW.replace("28 October 2026", "30 October 2026").replace(
+            "2026-10-28T00:00:00+01:00", "2026-10-30T00:00:00+00:00"
+        )
+        self.assertEqual(indexnow.content_hash(SHOW), indexnow.content_hash(retrieved))
+        self.assertNotEqual(indexnow.content_hash(SHOW), indexnow.content_hash(SHOW_CHANGED))
 
-    def test_unchanged_lastmod_is_skipped_and_a_new_or_edited_url_is_sent(self):
-        sitemap = {
-            "https://mineraldigger.com/": "2026-10-28",
-            "https://mineraldigger.com/show/a/": "2026-10-30",
-            "https://mineraldigger.com/town/sunbury-on-thames/": "2026-10-30",
+    def test_first_run_sends_every_url(self):
+        pages = {
+            "https://mineraldigger.com/": indexnow.content_hash(HOME),
+            "https://mineraldigger.com/show/a/": indexnow.content_hash(SHOW),
+        }
+        self.assertEqual(indexnow.changed_urls(pages, {}), list(pages))
+
+    def test_unchanged_hash_is_skipped_and_a_new_or_edited_url_is_sent(self):
+        home = indexnow.content_hash(HOME)
+        pages = {
+            "https://mineraldigger.com/": home,
+            "https://mineraldigger.com/show/a/": indexnow.content_hash(SHOW_CHANGED),
+            "https://mineraldigger.com/town/sunbury-on-thames/": "new",
         }
         previous = {
-            "https://mineraldigger.com/": "2026-10-28",
-            "https://mineraldigger.com/show/a/": "2026-10-29",
-            "https://mineraldigger.com/old/": "2026-10-01",
+            "https://mineraldigger.com/": {"hash": home, "lastmod": "2026-10-30"},
+            "https://mineraldigger.com/show/a/": {"hash": indexnow.content_hash(SHOW), "lastmod": "2026-10-30"},
+            "https://mineraldigger.com/old/": {"hash": "gone", "lastmod": "2026-10-01"},
         }
         self.assertEqual(
-            indexnow.changed_urls(sitemap, previous),
+            indexnow.changed_urls(pages, previous),
             [
                 "https://mineraldigger.com/show/a/",
                 "https://mineraldigger.com/town/sunbury-on-thames/",
             ],
         )
+
+    def test_stamp_keeps_the_stored_date_until_the_hash_changes(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sitemap, state, dist = write_site(
+                root,
+                {
+                    "host": "mineraldigger.com",
+                    "urls": {"https://mineraldigger.com/": entry(HOME, "2026-10-30")},
+                },
+            )
+            code, _ = run_main(["--stamp-sitemap", "--date", "2026-11-02", "--sitemap", str(sitemap), "--state", str(state), "--dist", str(dist)])
+            text = sitemap.read_text(encoding="utf-8")
+            self.assertEqual(code, 0)
+            self.assertIn("<loc>https://mineraldigger.com/</loc><lastmod>2026-10-30</lastmod>", text)
+            self.assertIn("<loc>https://mineraldigger.com/show/a/</loc><lastmod>2026-11-02</lastmod>", text)
 
     def test_sitemap_ignores_co_uk_hosts(self):
         with TemporaryDirectory() as tmp:
@@ -91,21 +128,28 @@ class DiffTests(unittest.TestCase):
         self.assertEqual(len(groups[0]), 10000)
         self.assertEqual(len(groups[1]), 1)
 
-    def test_success_records_accepted_lastmods_only(self):
-        sitemap = {
-            "https://mineraldigger.com/": "2026-10-28",
-            "https://mineraldigger.com/show/a/": "2026-10-30",
+    def test_success_records_the_accepted_hash_and_drops_removed_urls(self):
+        home = indexnow.content_hash(HOME)
+        show = indexnow.content_hash(SHOW)
+        pages = {
+            "https://mineraldigger.com/": home,
+            "https://mineraldigger.com/show/a/": show,
         }
         previous = {
-            "https://mineraldigger.com/": "2026-10-28",
-            "https://mineraldigger.com/gone/": "2026-10-01",
+            "https://mineraldigger.com/": {"hash": home, "lastmod": "2026-10-30"},
+            "https://mineraldigger.com/gone/": {"hash": "old", "lastmod": "2026-10-01"},
         }
-        updated = indexnow.state_after_success(sitemap, previous, ["https://mineraldigger.com/show/a/"])
+        updated = indexnow.state_after_success(
+            pages,
+            previous,
+            ["https://mineraldigger.com/show/a/"],
+            {"https://mineraldigger.com/show/a/": "2026-10-30"},
+        )
         self.assertEqual(
             updated,
             {
-                "https://mineraldigger.com/": "2026-10-28",
-                "https://mineraldigger.com/show/a/": "2026-10-30",
+                "https://mineraldigger.com/": {"hash": home, "lastmod": "2026-10-30"},
+                "https://mineraldigger.com/show/a/": {"hash": show, "lastmod": "2026-10-30"},
             },
         )
 
@@ -129,7 +173,7 @@ class RunTests(unittest.TestCase):
             root = Path(tmp)
             sitemap, state, dist = write_site(
                 root,
-                {"host": "mineraldigger.com", "urls": {"https://mineraldigger.com/": "2026-10-28"}},
+                {"host": "mineraldigger.com", "urls": {"https://mineraldigger.com/": entry(HOME, "2026-10-30")}},
             )
             response = mock.Mock()
             response.status = 200
@@ -145,8 +189,10 @@ class RunTests(unittest.TestCase):
             self.assertEqual(body["keyLocation"], f"https://mineraldigger.com/{KEY}.txt")
             self.assertEqual(body["urlList"], ["https://mineraldigger.com/show/a/"])
             saved = json.loads(state.read_text(encoding="utf-8"))
-            self.assertEqual(saved["urls"]["https://mineraldigger.com/show/a/"], "2026-10-29")
-            self.assertEqual(saved["urls"]["https://mineraldigger.com/"], "2026-10-28")
+            self.assertEqual(saved["urls"]["https://mineraldigger.com/show/a/"]["hash"], indexnow.content_hash(SHOW))
+            self.assertEqual(saved["urls"]["https://mineraldigger.com/show/a/"]["lastmod"], "2026-10-29")
+            self.assertEqual(saved["urls"]["https://mineraldigger.com/"]["hash"], indexnow.content_hash(HOME))
+            self.assertEqual(saved["urls"]["https://mineraldigger.com/"]["lastmod"], "2026-10-30")
 
     def test_http_400_logs_the_code_and_keeps_the_state_file(self):
         with TemporaryDirectory() as tmp:

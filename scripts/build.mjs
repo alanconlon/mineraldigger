@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { cp, mkdir, readdir, readFile, writeFile, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -240,6 +241,8 @@ async function main() {
     paths.push(`/show/${show.slug}/`);
   }
   await writeFile(join(dist, "sitemap.xml"), renderSitemap(site, paths, generated));
+  const stamped = spawnSync("python3", ["scripts/indexnow.py", "--stamp-sitemap", "--date", todayISO], { cwd: root, stdio: "inherit" });
+  if (stamped.status !== 0) throw new Error("IndexNow sitemap stamp failed.");
   await mkdir(join(dist, "data"), { recursive: true });
   const published = shows.map((show) => {
     const copy = structuredClone(show);
