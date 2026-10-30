@@ -493,11 +493,13 @@ function applyFilters() {
 
 let view;
 let group;
+let framed = [];
 
 function applyFrame(points) {
+  framed = points;
   const frame = frameForPoints(points);
-  if (frame.method === "setView") view.setView(frame.center, frame.zoom);
-  else view.fitBounds(frame.points, { padding: [28, 28], maxZoom: frame.maxZoom });
+  if (frame.method === "setView") view.setView(frame.center, frame.zoom, { animate: false });
+  else view.fitBounds(frame.points, { padding: [28, 28], maxZoom: frame.maxZoom, animate: false });
 }
 
 function drawMarkers() {
@@ -583,9 +585,10 @@ function mountList() {
   });
   if ((input?.value || "").trim()) search();
   else applyFilters();
+  view.on("resize", () => applyFrame(framed));
   setTimeout(() => {
     if (!view) return;
-    view.invalidateSize();
+    view.invalidateSize({ animate: false, pan: false });
     drawMarkers();
   }, 50);
 }
