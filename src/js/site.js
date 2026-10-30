@@ -450,7 +450,7 @@ function applyFilters() {
         : `${shown.length} of ${total} shows match`;
       if (tail) tail.hidden = true;
     } else if (Number.isFinite(total)) {
-      count.textContent = `${total} ${totalNoun}`;
+      count.textContent = tail ? `${total} UK ${totalNoun}` : `${total} ${totalNoun}`;
       if (tail) tail.hidden = false;
     }
   }

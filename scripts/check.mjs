@@ -206,8 +206,8 @@ if (index.includes('aria-label="Show filters"')) fail("When and Type should be s
 const homeMain = index.slice(0, index.indexOf('<footer class="site-footer">'));
 const weekendLabels = homeMain.match(/>This weekend</g) || [];
 if (weekendLabels.length !== 1) fail(`Homepage should say This weekend once above the footer, found ${weekendLabels.length}.`);
-if (!index.includes('<span id="result-count-tail"> from organiser websites.</span>')) {
-  fail("Homepage count should read N shows from organiser websites.");
+if (!index.includes(`<strong id="result-count" data-total="${homeCount}">${homeCount} UK ${homeNoun}</strong><span id="result-count-tail">, taken from organiser and society websites.</span>`)) {
+  fail("Homepage subline should be N UK shows, taken from organiser and society websites.");
 }
 if (index.includes("from organiser websites, on one map.")) fail("Homepage count still repeats on one map.");
 const emptyFrame = frameForPoints([]);

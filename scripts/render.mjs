@@ -408,12 +408,14 @@ export function renderListing({ site, path, title, description, ogTitle, ogDescr
     ? `<p class="fine">Dates marked provisional are printed that way by the organiser. Rock, Gem &amp; Bead Shows mark their 2027 list as provisional.</p>`
     : "";
   const eyebrowText = eyebrow || (home ? "UK shows directory" : "Show type");
-  const countTail = home ? " from organiser websites." : "";
+  const countNoun = shows.length === 1 ? "show" : "shows";
+  const countLabel = home ? `${shows.length} UK ${countNoun}` : `${shows.length} ${countNoun}`;
+  const countTail = home ? ", taken from organiser and society websites." : "";
   const hero = `<section class="hero"><div class="wrap">
         <p class="eyebrow">${esc(eyebrowText)}</p>
         <h1>${esc(heading)}</h1>
         <p class="lede">${esc(lede)}</p>
-        <p class="count-line"><strong id="result-count" data-total="${shows.length}">${shows.length} ${shows.length === 1 ? "show" : "shows"}</strong>${countTail ? `<span id="result-count-tail">${countTail}</span>` : ""}</p>
+        <p class="count-line"><strong id="result-count" data-total="${shows.length}">${countLabel}</strong>${countTail ? `<span id="result-count-tail">${countTail}</span>` : ""}</p>
       </div></section>`;
   const body = `${hero}
     <div class="wrap">
