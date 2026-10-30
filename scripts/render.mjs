@@ -377,10 +377,10 @@ function homeSignup() {
 
 const SERIES_NOTE = `<p class="fine">Rock, Gem &amp; Bead Shows are one series. Those weekends are listed under rock, gem and bead, and not under mineral or fossil, because the date list does not split them.</p>`;
 
-function browseLinks() {
+function browseLinks(includeWeekend = true) {
+  const weekend = includeWeekend ? `<a class="chip" href="/this-weekend/">This weekend</a>\n    ` : "";
   return `<div class="chip-row" aria-label="Browse">
-    <a class="chip" href="/this-weekend/">This weekend</a>
-    <a class="chip" href="/county/">Counties</a>
+    ${weekend}<a class="chip" href="/county/">Counties</a>
     <a class="chip" href="/towns/">Towns</a>
   </div>`;
 }
@@ -408,7 +408,7 @@ export function renderListing({ site, path, title, description, ogTitle, ogDescr
     ? `<p class="fine">Dates marked provisional are printed that way by the organiser. Rock, Gem &amp; Bead Shows mark their 2027 list as provisional.</p>`
     : "";
   const eyebrowText = eyebrow || (home ? "UK shows directory" : "Show type");
-  const countTail = home ? " from organiser websites, on one map." : "";
+  const countTail = home ? " from organiser websites." : "";
   const hero = `<section class="hero"><div class="wrap">
         <p class="eyebrow">${esc(eyebrowText)}</p>
         <h1>${esc(heading)}</h1>
@@ -501,7 +501,7 @@ export function renderType(ctx, key) {
     lede: TYPE_INTRO[key],
     home: false,
     typeLock: key,
-    preface: `${browseLinks()}${["rock", "gem", "bead"].includes(key) ? SERIES_NOTE : ""}`,
+    preface: `${browseLinks(false)}${["rock", "gem", "bead"].includes(key) ? SERIES_NOTE : ""}`,
   });
 }
 
@@ -644,7 +644,7 @@ export function renderCounty(ctx, county, towns) {
     heading: `Shows in ${county.name}`,
     lede: `Upcoming shows in ${county.name}. Dates and venues come from organiser websites. Check with the organiser before you travel.`,
     eyebrow: county.nation,
-    preface: `${browseLinks()}${townChips ? `<div class="chip-row" aria-label="Towns">${townChips}</div>` : ""}`,
+    preface: `${browseLinks(false)}${townChips ? `<div class="chip-row" aria-label="Towns">${townChips}</div>` : ""}`,
   });
 }
 
@@ -659,7 +659,7 @@ export function renderTown(ctx, town) {
     heading: `Shows in ${town.name}`,
     lede: `Upcoming shows in ${town.name}${countyBit}. Dates and venues come from organiser websites. Check with the organiser before you travel.`,
     eyebrow: town.county || town.nation,
-    preface: `${browseLinks()}${town.county ? `<p class="fine"><a href="/county/${slugify(town.county)}/">${esc(town.county)}</a></p>` : ""}`,
+    preface: `${browseLinks(false)}${town.county ? `<p class="fine"><a href="/county/${slugify(town.county)}/">${esc(town.county)}</a></p>` : ""}`,
   });
 }
 
@@ -873,7 +873,7 @@ export function renderShow({ site, show, generated, todayISO, places = null }) {
   const email = show.organiser.email ? `<p>Email: <a href="mailto:${esc(show.organiser.email)}">${esc(show.organiser.email)}</a></p>` : "";
   const website = show.organiser.url ? `<p><a href="${esc(show.organiser.url)}">Organiser website</a></p>` : "";
   const retrieved = show.source.url
-    ? `<p>Retrieved ${esc(formatDay(show.source.retrieved))} from <a href="${esc(show.source.url)}">${esc(show.source.url)}</a>.</p>`
+    ? `<p>Retrieved ${esc(formatDay(show.source.retrieved))} from <a href="${esc(show.source.url)}">organiser's page</a>.</p>`
     : `<p>Retrieved ${esc(formatDay(show.source.retrieved))}.</p>`;
   const also = (show.source.also || [])
     .map((item) => `<p>Also: <a href="${esc(item.url)}">${esc(item.url)}</a></p>`)
