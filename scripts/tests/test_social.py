@@ -27,6 +27,8 @@ from social_copy import (  # noqa: E402
     link_facet,
     load_shows,
     password_from_bluesky,
+    post_range,
+    repeated_slugs,
     token_from_pages,
     week_key,
 )
@@ -39,7 +41,14 @@ TOKEN_KEYS = ("MINERALDIGGER_FB_PAGE_TOKEN", "MINERALDIGGER_BLUESKY_APP_PASSWORD
 
 
 def banned(value: str) -> bool:
-    return "!" in value or "\u2014" in value or "\u2013" in value or "Ireland" in value or "Unknown" in value
+    return (
+        "!" in value
+        or "\u2014" in value
+        or "\u2013" in value
+        or "https://" in value.casefold()
+        or "Ireland" in value
+        or "Unknown" in value
+    )
 
 
 def run_facebook(argv: list[str]) -> tuple[int, str]:
@@ -81,11 +90,13 @@ class CopyTests(unittest.TestCase):
         self.assertIn("Kempton Park Racecourse, Sunbury-on-Thames", post["facebook"])
         self.assertIn("Entry £6.", post["facebook"])
         self.assertIn("Saturday 10:00 to 17:00. Sunday 10:00 to 16:00.", post["facebook"])
-        self.assertIn(
-            "https://mineraldigger.com/show/rock-gem-and-bead-show-sunbury-on-thames-2026-10-31/",
-            post["facebook"],
-        )
-        self.assertEqual(post["link"], post["facebook"].rstrip().splitlines()[-1])
+        shown = "mineraldigger.com/show/rock-gem-and-bead-show-sunbury-on-thames-2026-10-31/"
+        self.assertIn(shown, post["facebook"])
+        self.assertEqual(post["facebook"].rstrip().splitlines()[-1], shown)
+        self.assertEqual(post["bluesky"].rstrip().splitlines()[-1], shown)
+        self.assertEqual(post["link"], "https://" + shown)
+        self.assertNotIn("https://", post["facebook"])
+        self.assertNotIn("https://", post["bluesky"])
         self.assertIn("Entry £6.", post["bluesky"])
         self.assertIn("mineraldigger.com", post["bluesky"])
         self.assertLessEqual(len(post["bluesky"]), BLUESKY_LIMIT)
@@ -140,15 +151,18 @@ class CopyTests(unittest.TestCase):
 
     def test_long_bluesky_text_keeps_the_link(self):
         link = "https://mineraldigger.com/rock/"
+        shown = "mineraldigger.com/rock/"
         text = fit_bluesky(["Next on the list is " + ("quartz " * 80), "Entry £6.", "Saturday 10:00 to 17:00."], link)
         self.assertLessEqual(len(text), BLUESKY_LIMIT)
-        self.assertTrue(text.endswith(link))
-        self.assertIn(".\n\n" + link, text)
+        self.assertTrue(text.endswith(shown))
+        self.assertIn(".\n\n" + shown, text)
+        self.assertNotIn("https://", text)
         self.assertFalse(banned(text))
 
     def test_link_facet_counts_utf8_bytes(self):
         url = "https://mineraldigger.com/"
-        text = f"Entry £6.\n\n{url}"
+        shown = "mineraldigger.com/"
+        text = f"Entry £6.\n\n{shown}"
         facet = link_facet(text, url)
         self.assertEqual(facet["index"]["byteStart"], len("Entry £6.\n\n".encode("utf-8")))
         self.assertEqual(facet["index"]["byteEnd"], len(text.encode("utf-8")))
@@ -220,6 +234,10 @@ class FacebookFlowTests(EnvGuard):
                 payload = json.loads(request.data.decode("utf-8"))
                 self.assertEqual(payload["access_token"], "from-file")
                 self.assertIn("mineraldigger.com", payload["message"])
+                self.assertNotIn("https://", payload["message"])
+                self.assertNotIn("!", payload["message"])
+                self.assertTrue(payload["link"].startswith("https://mineraldigger.com/"))
+                self.assertEqual(payload["message"].rstrip().splitlines()[-1], payload["link"].removeprefix("https://"))
                 self.assertTrue(payload["published"])
                 self.assertIn(f"/{PAGE_ID}/feed", request.full_url)
 
@@ -385,10 +403,20 @@ class BlueskyFlowTests(EnvGuard):
                 record = payload["record"]
                 self.assertLessEqual(len(record["text"]), BLUESKY_LIMIT)
                 self.assertIn("mineraldigger.com", record["text"])
+                self.assertNotIn("https://", record["text"])
+                self.assertNotIn("!", record["text"])
                 self.assertEqual(record["langs"], ["en-GB"])
                 facet = record["facets"][0]
-                url = record["text"][record["text"].rfind("https://") :]
-                self.assertEqual(facet["index"]["byteStart"], len(record["text"][: record["text"].rfind(url)].encode("utf-8")))
+                shown = record["text"].rstrip().splitlines()[-1]
+                start = record["text"].rfind(shown)
+                self.assertEqual(facet["index"]["byteStart"], len(record["text"][:start].encode("utf-8")))
+                self.assertEqual(
+                    facet["index"]["byteEnd"],
+                    len(record["text"][:start].encode("utf-8")) + len(shown.encode("utf-8")),
+                )
+                self.assertEqual(facet["features"][0]["uri"], "https://" + shown)
+                self.assertEqual(record["embed"]["external"]["uri"], "https://" + shown)
+                self.assertNotIn("https://", record["embed"]["external"]["description"])
                 self.assertEqual(payload["repo"], "did:plc:mineral")
                 self.assertEqual(payload["collection"], "app.bsky.feed.post")
 
@@ -406,7 +434,9 @@ class BlueskyFlowTests(EnvGuard):
 
                 return Created()
 
-            with mock.patch("urllib.request.urlopen", fake_urlopen):
+            with mock.patch("urllib.request.urlopen", fake_urlopen), mock.patch.object(
+                bluesky_post, "fetch_recent_posts", return_value=[]
+            ):
                 code, output = run_bluesky(
                     ["--today", "2026-10-28", "--publish", "--log", str(log), "--secrets", str(secrets)]
                 )
@@ -419,7 +449,9 @@ class BlueskyFlowTests(EnvGuard):
             self.assertNotIn("jwt-1", raw)
             self.assertNotIn("fair-pass", raw)
 
-            with mock.patch("urllib.request.urlopen", side_effect=AssertionError("duplicate")):
+            with mock.patch("urllib.request.urlopen", side_effect=AssertionError("duplicate")), mock.patch.object(
+                bluesky_post, "fetch_recent_posts", return_value=[]
+            ):
                 again, message = run_bluesky(
                     ["--today", "2026-10-28", "--publish", "--log", str(log), "--secrets", str(secrets)]
                 )
@@ -449,7 +481,9 @@ class BlueskyFlowTests(EnvGuard):
 
                 return Response()
 
-            with mock.patch("urllib.request.urlopen", fake_urlopen):
+            with mock.patch("urllib.request.urlopen", fake_urlopen), mock.patch.object(
+                bluesky_post, "fetch_recent_posts", return_value=[]
+            ):
                 code, output = run_bluesky(["--today", "2026-10-28", "--publish", "--log", str(log)])
             self.assertEqual(code, 1)
             self.assertEqual(calls, ["https://bsky.social/xrpc/com.atproto.server.createSession"])
@@ -457,6 +491,115 @@ class BlueskyFlowTests(EnvGuard):
             self.assertIn("Nothing posted", output)
             self.assertNotIn("app-pass", output)
             self.assertFalse(log.exists())
+
+
+
+KEMPTON = "rock-gem-and-bead-show-sunbury-on-thames-2026-10-31"
+KEMPTON_POSTS = [
+    {"text": "Next up: Kempton Park this weekend, Worcester 7 and 8 November.", "links": [], "posted_at": "2026-10-27T09:28:29Z"},
+    {"text": "On this weekend: Rock, Gem & Bead Show at Kempton Park Racecourse.",
+     "links": [f"https://mineraldigger.com/show/{KEMPTON}/"], "posted_at": "2026-10-31T09:57:01Z"},
+]
+
+
+class DatesAndRepeats(EnvGuard):
+    def test_dates_sit_next_to_their_weekday(self):
+        self.assertEqual(post_range(date(2026, 11, 7), date(2026, 11, 8), TODAY), "Saturday 7 and Sunday 8 November")
+        self.assertEqual(post_range(date(2026, 11, 7), date(2026, 11, 7), TODAY), "Saturday 7 November")
+        self.assertEqual(
+            post_range(date(2026, 10, 31), date(2026, 11, 1), TODAY), "Saturday 31 October to Sunday 1 November"
+        )
+        self.assertEqual(post_range(date(2027, 1, 9), date(2027, 1, 10), TODAY), "Saturday 9 and Sunday 10 January 2027")
+        post = build_post(SHOWS, TODAY, SITE)
+        self.assertIn("Saturday 31 October to Sunday 1 November", post["bluesky"])
+        self.assertNotIn("https://", post["bluesky"])
+        self.assertNotIn("2026", post["bluesky"].split("mineraldigger.com")[0])
+
+    def test_a_show_posted_in_the_last_14_days_is_passed_over(self):
+        skip = repeated_slugs(SHOWS, KEMPTON_POSTS, date(2026, 10, 31))
+        self.assertIn(KEMPTON, skip)
+        self.assertNotIn("Worcester", " ".join(skip).title())
+        post = build_post(SHOWS, date(2026, 10, 31), SITE, angle="next-show", skip=skip)
+        self.assertNotIn("Kempton", post["bluesky"])
+        self.assertNotIn(KEMPTON, post["link"])
+
+    def test_the_guard_lapses_after_14_days(self):
+        self.assertEqual(repeated_slugs(SHOWS, KEMPTON_POSTS[:1], date(2026, 11, 11)) & {KEMPTON}, set())
+
+    def test_publish_stops_when_the_feed_cannot_be_read(self):
+        with TemporaryDirectory() as tmp:
+            log = Path(tmp) / "bluesky_posts.json"
+            os.environ["MINERALDIGGER_BLUESKY_APP_PASSWORD"] = "app-pass"
+            with mock.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("offline")):
+                code, output = run_bluesky(["--today", "2026-10-31", "--publish", "--log", str(log)])
+            self.assertEqual(code, 1)
+            self.assertIn("Nothing posted", output)
+            self.assertFalse(log.exists())
+
+    def test_dry_run_reports_the_repeat(self):
+        with TemporaryDirectory() as tmp:
+            log = Path(tmp) / "bluesky_posts.json"
+            with mock.patch.object(bluesky_post, "fetch_recent_posts", return_value=KEMPTON_POSTS):
+                code, output = run_bluesky(["--today", "2026-10-31", "--angle", "next-show", "--log", str(log)])
+            self.assertEqual(code, 0)
+            self.assertIn(KEMPTON, output.split("Bluesky:")[0])
+            self.assertNotIn("Kempton", output.split("Bluesky:")[1])
+            self.assertNotIn("https://", output.split("Bluesky:")[1])
+
+    def test_allow_repeat_keeps_the_recent_show(self):
+        with TemporaryDirectory() as tmp:
+            log = Path(tmp) / "bluesky_posts.json"
+            with mock.patch.object(bluesky_post, "fetch_recent_posts", return_value=KEMPTON_POSTS):
+                code, output = run_bluesky(
+                    ["--today", "2026-10-31", "--angle", "next-show", "--allow-repeat", "--log", str(log)]
+                )
+            self.assertEqual(code, 0)
+            self.assertIn("Kempton", output.split("Bluesky:")[1])
+            self.assertNotIn("Passing over", output)
+            self.assertFalse(log.exists())
+
+
+def _forbidden_post(text: str) -> dict:
+    return {
+        "week": "2026-W44",
+        "angle": "next-show",
+        "kind": None,
+        "link": "https://mineraldigger.com/rock/",
+        "facebook": text,
+        "bluesky": text,
+        "show_id": "x",
+        "show_slug": "x",
+    }
+
+
+class PublishRefusalTests(EnvGuard):
+    def test_both_scripts_refuse_forbidden_text_and_do_not_post(self):
+        samples = (
+            "See you there!",
+            "Open 10\u201316.",
+            "Open 10\u201416.",
+            "Details at https://mineraldigger.com/rock/",
+            "Details at HTTPS://mineraldigger.com/rock/",
+        )
+        for text in samples:
+            post = _forbidden_post(text)
+            with TemporaryDirectory() as tmp:
+                log = Path(tmp) / "posts.json"
+                with mock.patch.object(bluesky_post, "fetch_recent_posts", return_value=[]), mock.patch.object(
+                    bluesky_post, "build_post", return_value=post
+                ), mock.patch("urllib.request.urlopen", side_effect=AssertionError("posted")):
+                    code, output = run_bluesky(["--today", "2026-10-28", "--publish", "--log", str(log)])
+                self.assertEqual(code, 1, text)
+                self.assertIn("Refusing to publish", output)
+                self.assertFalse(log.exists())
+
+                with mock.patch.object(facebook_post, "build_post", return_value=post), mock.patch(
+                    "urllib.request.urlopen", side_effect=AssertionError("posted")
+                ):
+                    code, output = run_facebook(["--today", "2026-10-28", "--publish", "--log", str(log)])
+                self.assertEqual(code, 1, text)
+                self.assertIn("Refusing to publish", output)
+                self.assertFalse(log.exists())
 
 
 if __name__ == "__main__":

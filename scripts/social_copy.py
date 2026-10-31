@@ -7,16 +7,18 @@ and the next show of that type. Prices are included only when the catalogue
 already has them.
 
 The copy is plain British English: no em dashes, no en dashes, no
-exclamation marks, and no Ireland listings.
+exclamation marks, and no Ireland listings. The post text names the
+page as mineraldigger.com/... . The full https URL stays in the link
+card or the link field, and publish refuses a text that contains one.
 """
 
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from digest import TYPE_LABELS, TYPE_ORDER, format_range, parse_iso, sort_shows
+from digest import MONTHS, TYPE_LABELS, TYPE_ORDER, WEEKDAYS, parse_iso, sort_shows
 
 ROOT = Path(__file__).resolve().parents[1]
 SHOWS_PATH = ROOT / "data" / "shows.json"
@@ -35,6 +37,8 @@ UK_NATIONS = {
     "united kingdom",
 }
 ANGLES = ("next-show", "type-hub")
+REPEAT_DAYS = 14
+GENERIC_VENUE_WORDS = {"racecourse", "showground", "hall", "centre", "center", "school", "academy", "club", "hotel"}
 
 
 class SocialError(RuntimeError):
@@ -241,6 +245,29 @@ def assert_voice(text: str) -> None:
         raise SocialError("Post copy includes an unknown price.")
 
 
+def publish_refusal(text: str) -> str | None:
+    """Why --publish must stop, or None when the text is allowed out.
+
+    The visible post may say mineraldigger.com/.... It may not contain
+    an exclamation mark, an en dash, an em dash, or an https:// URL.
+    """
+    if "!" in text or "\u2013" in text or "\u2014" in text or "https://" in text.casefold():
+        return (
+            "Refusing to publish. The post text contains '!', an en dash, an em dash, or 'https://'."
+        )
+    return None
+
+
+def bare_link(url: str) -> str:
+    """mineraldigger.com/show/... for the post text. The https URL stays on the card."""
+    text = url.strip()
+    lowered = text.lower()
+    for prefix in ("https://", "http://"):
+        if lowered.startswith(prefix):
+            return text[len(prefix):]
+    return text
+
+
 def is_uk(show: dict) -> bool:
     nation = ((show.get("venue") or {}).get("nation") or "").strip().lower()
     return nation == "" or nation in UK_NATIONS
@@ -295,10 +322,30 @@ def listed_name(show: dict) -> str:
     return name
 
 
-def show_detail(show: dict) -> str:
+def post_day(value: date, year: bool = False) -> str:
+    """'Saturday 7 November' for post copy. The year is added only when asked."""
+    text = f"{WEEKDAYS[value.weekday()]} {value.day} {MONTHS[value.month - 1]}"
+    return f"{text} {value.year}" if year else text
+
+
+def post_range(start: date, end: date, today: date | None = None) -> str:
+    """Show dates for post copy, each date next to its weekday and no dashes:
+    'Saturday 7 November', 'Saturday 7 and Sunday 8 November',
+    'Saturday 31 October to Sunday 1 November'. The year appears only when the
+    show is not in the year of the post."""
+    year = today is not None and (start.year != today.year or end.year != today.year)
+    if start == end:
+        return post_day(start, year)
+    if (start.year, start.month) == (end.year, end.month):
+        joiner = " and " if (end - start).days == 1 else " to "
+        return f"{WEEKDAYS[start.weekday()]} {start.day}{joiner}{post_day(end, year)}"
+    return f"{post_day(start, year and start.year != end.year)} to {post_day(end, year)}"
+
+
+def show_detail(show: dict, today: date | None = None) -> str:
     name = listed_name(show)
     place = place_phrase(show)
-    when = format_range(parse_iso(show["start"]), parse_iso(show["end"]))
+    when = post_range(parse_iso(show["start"]), parse_iso(show["end"]), today)
     where = f" at {place}" if place else ""
     return f"{name}{where}, {when}"
 
@@ -308,7 +355,7 @@ def on_now(show: dict, today: date) -> bool:
 
 
 def next_lead(show: dict, today: date) -> str:
-    detail = show_detail(show)
+    detail = show_detail(show, today)
     if on_now(show, today):
         return ensure_period(f"On the MineralDigger list now: {detail}")
     return ensure_period(f"Next on the MineralDigger list is the {detail}")
@@ -319,7 +366,7 @@ def type_lead(kind: str) -> str:
 
 
 def type_follow(show: dict, today: date) -> str:
-    detail = show_detail(show)
+    detail = show_detail(show, today)
     if on_now(show, today):
         return ensure_period(f"On now: {detail}")
     return ensure_period(f"Next listed is the {detail}")
@@ -366,7 +413,9 @@ def hub_url(site_url: str, kind: str) -> str:
 
 def join_parts(parts: list[str], link: str) -> str:
     body = [part.strip() for part in parts if part and part.strip()]
-    body.append(link.strip())
+    shown = bare_link(link)
+    if shown:
+        body.append(shown)
     return "\n\n".join(body)
 
 
@@ -381,7 +430,7 @@ def fit_bluesky(parts: list[str], link: str) -> str:
     if len(text) <= BLUESKY_LIMIT:
         assert_voice(text)
         return text
-    room = BLUESKY_LIMIT - len(link) - 2
+    room = BLUESKY_LIMIT - len(bare_link(link)) - 2
     if room < 24:
         raise SocialError("Bluesky post does not fit in 300 characters.")
     shortened = chosen[0][:room].rsplit(" ", 1)[0].rstrip(" ,;:.")
@@ -396,15 +445,114 @@ def fit_bluesky(parts: list[str], link: str) -> str:
 
 
 def link_facet(text: str, url: str) -> dict | None:
-    start = text.rfind(url)
+    """Link the bare domain in the text. The facet URI keeps the full https URL."""
+    shown = bare_link(url)
+    if not shown:
+        return None
+    start = text.rfind(shown)
     if start < 0:
         return None
     byte_start = len(text[:start].encode("utf-8"))
-    byte_end = byte_start + len(url.encode("utf-8"))
+    byte_end = byte_start + len(shown.encode("utf-8"))
     return {
         "index": {"byteStart": byte_start, "byteEnd": byte_end},
         "features": [{"$type": "app.bsky.richtext.facet#link", "uri": url}],
     }
+
+
+def link_card(link: str, text: str) -> dict:
+    """Bluesky link card. The full URL lives here, not in the post text."""
+    prose = ""
+    for part in text.split("\n\n"):
+        cleaned = part.strip()
+        if cleaned and "mineraldigger.com" not in cleaned.casefold():
+            prose = cleaned
+            break
+    if len(prose) > 280:
+        prose = prose[:280].rsplit(" ", 1)[0].rstrip(" ,;:.")
+        if prose and prose[-1] not in ".?":
+            prose += "."
+    if not prose:
+        prose = "UK rock, gem, mineral, fossil and bead shows."
+    return {
+        "$type": "app.bsky.embed.external",
+        "external": {
+            "uri": link,
+            "title": "MineralDigger",
+            "description": prose,
+        },
+    }
+
+
+def show_keys(show: dict) -> list[str]:
+    """Strings that identify a show in an earlier post: its page slug, and its venue
+    name with and without a generic last word ('Kempton Park Racecourse' and 'Kempton Park')."""
+    keys = []
+    slug = str(show.get("slug") or "").strip()
+    if slug:
+        keys.append(f"/show/{slug}")
+    venue = " ".join(((show.get("venue") or {}).get("name") or "").split()).split(",")[0].strip()
+    if len(venue) >= 6:
+        keys.append(venue)
+        words = venue.split()
+        if len(words) > 2 and words[-1].casefold() in GENERIC_VENUE_WORDS:
+            keys.append(" ".join(words[:-1]))
+    return keys
+
+
+def post_haystack(post: dict) -> str:
+    """Text plus every link in a post (facets, link card), for repeat matching."""
+    bits = [str(post.get("text") or "")]
+    bits += [str(link) for link in post.get("links") or []]
+    return "\n".join(bits).casefold()
+
+
+def _stamp_date(value: str) -> date | None:
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).date()
+    except ValueError:
+        return None
+
+
+def recent_posts(posts: list[dict], today: date, days: int = REPEAT_DAYS) -> list[dict]:
+    cutoff = today - timedelta(days=days)
+    rows = []
+    for post in posts:
+        when = _stamp_date(post.get("posted_at") or "")
+        if when is not None and cutoff <= when <= today:
+            rows.append(post)
+    return rows
+
+
+def posts_from_log(log: dict) -> list[dict]:
+    """Earlier posts in the repo log, shaped like feed posts."""
+    rows = []
+    for row in (log or {}).values():
+        if not isinstance(row, dict):
+            continue
+        links = [row.get("link") or ""]
+        if row.get("show_slug"):
+            links.append(f"/show/{row['show_slug']}/")
+        rows.append({"text": row.get("text") or "", "links": links, "posted_at": row.get("published_at") or ""})
+    return rows
+
+
+def repeated_slugs(shows: list[dict], posts: list[dict], today: date, days: int = REPEAT_DAYS) -> set[str]:
+    """Slugs of upcoming shows already named or linked in a post from the last `days` days."""
+    recent = [post_haystack(post) for post in recent_posts(posts, today, days)]
+    found = set()
+    seen_venues = set()
+    for show in upcoming_shows(shows, today):
+        keys = [key.casefold() for key in show_keys(show)]
+        slug_key, venue_keys = keys[:1], keys[1:]
+        # A venue name only counts for the next show at that venue, so a post about
+        # Kempton Park this month does not hold back the Kempton show next February.
+        if venue_keys and venue_keys[0] in seen_venues:
+            venue_keys = []
+        seen_venues.update(venue_keys[:1])
+        if any(key in hay for hay in recent for key in slug_key + venue_keys):
+            found.add(show["slug"])
+    return found
 
 
 def build_post(
@@ -413,8 +561,12 @@ def build_post(
     site_url: str = SITE_URL,
     angle: str | None = None,
     kind: str | None = None,
+    skip: set[str] | None = None,
 ) -> dict | None:
-    """Return the twin drafts for this ISO week, or None when nothing is upcoming."""
+    """Return the twin drafts for this ISO week, or None when nothing is upcoming.
+
+    skip holds show slugs posted in the last 14 days (repeated_slugs). Those
+    shows are passed over so the same show is not posted again within 14 days."""
     site_url = site_url.rstrip("/") or SITE_URL
     week, number = week_parts(today)
     angle = angle or default_angle(number)
@@ -422,6 +574,8 @@ def build_post(
         raise SocialError("Angle must be next-show or type-hub.")
 
     rows = upcoming_shows(shows, today)
+    if skip:
+        rows = [show for show in rows if show.get("slug") not in skip]
     if not rows:
         return None
 
@@ -478,6 +632,7 @@ def build_post(
         "facebook": facebook,
         "bluesky": bluesky,
         "show_id": show.get("id"),
+        "show_slug": show.get("slug"),
         "show_name": show.get("name"),
     }
 
