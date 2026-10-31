@@ -22,7 +22,10 @@ import bluesky_post  # noqa: E402
 import facebook_post  # noqa: E402
 from social_copy import (  # noqa: E402
     BLUESKY_LIMIT,
+    SocialError,
+    assert_voice,
     build_post,
+    claims_ireland,
     fit_bluesky,
     link_facet,
     load_shows,
@@ -39,7 +42,39 @@ TOKEN_KEYS = ("MINERALDIGGER_FB_PAGE_TOKEN", "MINERALDIGGER_BLUESKY_APP_PASSWORD
 
 
 def banned(value: str) -> bool:
-    return "!" in value or "\u2014" in value or "\u2013" in value or "Ireland" in value or "Unknown" in value
+    return "!" in value or "\u2014" in value or "\u2013" in value or claims_ireland(value) or "Unknown" in value
+
+
+# A made-up Northern Ireland show with a BT postcode. It is not in data/shows.json.
+NI_SHOW = {
+    "id": "sample-ni-2026-12-05-bt71nn",
+    "slug": "belfast-sample-mineral-and-fossil-show-2026-12-05",
+    "name": "Belfast Sample Mineral & Fossil Show",
+    "summary": "Sample Northern Ireland show used by the tests.",
+    "organiser": {"id": "sample-ni", "name": "Sample Society", "url": "https://example.org/", "phone": None, "email": None},
+    "types": ["mineral", "fossil"],
+    "start": "2026-12-05",
+    "end": "2026-12-05",
+    "provisional": False,
+    "year_inferred": False,
+    "times": {"summary": "Saturday 10:00 to 16:00.", "notes": None},
+    "entry": {"kind": "paid", "label": "Entry £3", "adult_gbp": 3, "notes": None},
+    "venue": {
+        "name": "Ulster Hall",
+        "street": "34 Bedford Street",
+        "postcode": "BT2 7FF",
+        "town": "Belfast",
+        "county": "Antrim",
+        "nation": "Northern Ireland",
+        "lat": 54.5953,
+        "lng": -5.9318,
+        "place_note": None,
+    },
+    "dealers": None,
+    "parking": None,
+    "access_notes": None,
+    "source": {"url": "https://example.org/show", "retrieved": "2026-10-31", "notes": None, "also": []},
+}
 
 
 def run_facebook(argv: list[str]) -> tuple[int, str]:
@@ -137,6 +172,39 @@ class CopyTests(unittest.TestCase):
             "entry": {"kind": "paid", "label": "Entry £4"},
         }
         self.assertIsNone(build_post([show], date(2026, 11, 1), SITE))
+
+    def test_northern_ireland_show_is_posted(self):
+        post = build_post([NI_SHOW], date(2026, 11, 30), SITE, angle="next-show")
+        self.assertIsNotNone(post)
+        self.assertIn("Belfast", post["facebook"])
+        self.assertIn("Belfast", post["bluesky"])
+        self.assertIn("/show/belfast-sample-mineral-and-fossil-show-2026-12-05/", post["facebook"])
+        self.assertFalse(banned(post["facebook"]))
+        self.assertFalse(banned(post["bluesky"]))
+        self.assertLessEqual(len(post["bluesky"]), BLUESKY_LIMIT)
+
+    def test_northern_ireland_wording_passes_the_voice_check(self):
+        for text in (
+            "Mineral show at Ulster Hall, Belfast, Northern Ireland.",
+            "Fossil show in County Antrim, NI. Postcode BT2 7FF.",
+            "Shows in Londonderry, Armagh, Down, Fermanagh and Tyrone.",
+        ):
+            assert_voice(text)
+            self.assertFalse(claims_ireland(text))
+
+    def test_ireland_or_republic_claims_are_blocked(self):
+        for text in (
+            "Shows across the UK and Ireland.",
+            "Mineral shows in Ireland.",
+            "Now listing Republic of Ireland shows.",
+            "New ROI dates added.",
+            "Shows in Eire.",
+            "Search by Eircode.",
+            "Northern Ireland and Ireland shows.",
+        ):
+            self.assertTrue(claims_ireland(text), text)
+            with self.assertRaises(SocialError):
+                assert_voice(text)
 
     def test_long_bluesky_text_keeps_the_link(self):
         link = "https://mineraldigger.com/rock/"
