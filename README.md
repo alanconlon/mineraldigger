@@ -203,9 +203,11 @@ python3 scripts/buttondown_draft.py
 
 Ann drafts the weekly posts. The Diggers CEO publishes them after Alan has OK'd the text.
 
-`scripts/facebook_post.py` and `scripts/bluesky_post.py` read upcoming UK shows from `data/shows.json`. With no extra flag they print a draft and stop. A dry run makes no Facebook or Bluesky request, and it leaves the logs untouched.
+`scripts/facebook_post.py` and `scripts/bluesky_post.py` read upcoming UK shows from `data/shows.json`. With no extra flag they print a draft and stop. A dry run leaves both logs untouched. The Facebook dry run makes no request. The Bluesky dry run reads the public `@mineraldigger.com` feed, without logging in, so it can pass over a show posted in the last 14 days by its page link or its venue. `--allow-repeat` keeps that show. If the feed cannot be read, a dry run uses the log only and `--publish` stops without posting.
 
-Even ISO weeks lead with the next show and link to that show on mineraldigger.com. Odd weeks lead with a type hub (`/rock/`, `/gem/`, `/mineral/`, `/fossil/`, `/bead/`) and the next show of that type. The copy is plain British English, in the same voice as the Friday email, with no em dashes and no exclamation marks. A door price is included only when the catalogue already has one.
+Even ISO weeks lead with the next show and link to that show on mineraldigger.com. Odd weeks lead with a type hub (`/rock/`, `/gem/`, `/mineral/`, `/fossil/`, `/bead/`) and the next show of that type. The copy is plain British English, in the same voice as the Friday email, with no em dashes, no en dashes and no exclamation marks. Dates sit next to the weekday, as in Saturday 7 November. A door price is included only when the catalogue already has one.
+
+The post text writes the page as `mineraldigger.com/...`. The full `https://mineraldigger.com/...` URL is only the Facebook link field or the Bluesky link card. `--publish` refuses the post when the text contains `!`, an en dash, an em dash, or `https://`.
 
 ```bash
 python3 scripts/facebook_post.py --today 2026-10-28

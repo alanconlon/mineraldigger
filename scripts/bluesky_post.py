@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
 """Draft or publish the MineralDigger Bluesky post for this week.
 
-Dry run is the default. The script prints the post and does not call
-Bluesky. --publish sends it as mineraldigger.com after Alan has OK'd
-the text.
+Dry run is the default. It prints the post and does not log in or
+publish. It does read the public @mineraldigger.com feed so a show
+posted in the last 14 days, by its page link or its venue, is passed
+over. --allow-repeat keeps that show. If the feed cannot be read,
+--publish stops and a dry run uses the log only.
+
+--publish sends it as mineraldigger.com after Alan has OK'd the text.
+The post text uses mineraldigger.com/... . The full https URL is only
+the link card. Publish refuses a text that contains !, an en dash, an
+em dash, or https://.
 
 The app password is MINERALDIGGER_BLUESKY_APP_PASSWORD, or the
 mineraldigger.com entry in ~/.secrets/bluesky.json. That file is not
@@ -40,6 +47,7 @@ from social_copy import (  # noqa: E402
     SocialError,
     build_post,
     display_path,
+    link_card,
     link_facet,
     load_json,
     load_log,
@@ -47,9 +55,13 @@ from social_copy import (  # noqa: E402
     load_site,
     normal_handle,
     now_stamp,
+    REPEAT_DAYS,
     password_from_bluesky,
+    posts_from_log,
     print_draft,
+    publish_refusal,
     redact,
+    repeated_slugs,
     save_log,
     week_recorded,
 )
@@ -58,6 +70,38 @@ LOG_PATH = ROOT / "growth" / "bluesky_posts.json"
 SECRETS_PATH = Path.home() / ".secrets" / "bluesky.json"
 ENV_PASSWORD = "MINERALDIGGER_BLUESKY_APP_PASSWORD"
 PDS = "https://bsky.social"
+PUBLIC_API = "https://public.api.bsky.app"
+
+
+def fetch_recent_posts(handle: str = BLUESKY_HANDLE, api: str = PUBLIC_API, limit: int = 50) -> list[dict]:
+    """The account's own recent posts from the public Bluesky API (no login), with
+    every link in each post, so a show posted by hand or by another script still counts."""
+    url = (
+        f"{api.rstrip('/')}/xrpc/app.bsky.feed.getAuthorFeed"
+        f"?actor={handle}&limit={limit}&filter=posts_no_replies"
+    )
+    request = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "MineralDiggerSocial/1"})
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, ValueError) as exc:
+        raise SocialError(f"Could not read recent {handle} posts from Bluesky. {exc}") from exc
+    rows = []
+    for item in data.get("feed") or []:
+        post = item.get("post") or {}
+        if item.get("reason"):  # reposts of other accounts
+            continue
+        record = post.get("record") or {}
+        links = []
+        for facet in record.get("facets") or []:
+            for feature in facet.get("features") or []:
+                if feature.get("uri"):
+                    links.append(feature["uri"])
+        external = ((record.get("embed") or {}).get("external") or {}).get("uri")
+        if external:
+            links.append(external)
+        rows.append({"text": record.get("text") or "", "links": links, "posted_at": record.get("createdAt") or ""})
+    return rows
 
 
 def resolve_password(secrets_path: Path) -> str | None:
@@ -101,6 +145,9 @@ def _xrpc(pds: str, method: str, payload: dict, token: str | None, secrets: list
 
 
 def publish_post(password: str, text: str, link: str, pds: str = PDS) -> dict:
+    blocked = publish_refusal(text)
+    if blocked:
+        raise SocialError(blocked)
     secrets = [password]
     session = _xrpc(
         pds,
@@ -127,6 +174,7 @@ def publish_post(password: str, text: str, link: str, pds: str = PDS) -> dict:
     facet = link_facet(text, link)
     if facet:
         record["facets"] = [facet]
+    record["embed"] = link_card(link, text)
     created = _xrpc(
         pds,
         "com.atproto.repo.createRecord",
@@ -152,6 +200,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--today", help="YYYY-MM-DD for the week and the show list. Defaults to today.")
     parser.add_argument("--angle", choices=ANGLES, help="next-show or type-hub. Defaults to the week's rotation.")
     parser.add_argument("--type", dest="kind", choices=TYPE_ORDER, help="Type hub to lead with on a type-hub week.")
+    parser.add_argument(
+        "--allow-repeat",
+        action="store_true",
+        help=f"Skip the {REPEAT_DAYS}-day guard that passes over shows already posted.",
+    )
     parser.add_argument("--shows", type=Path, default=ROOT / "data" / "shows.json", help=argparse.SUPPRESS)
     parser.add_argument("--site", type=Path, default=ROOT / "data" / "site.json", help=argparse.SUPPRESS)
     parser.add_argument("--log", type=Path, default=LOG_PATH, help=argparse.SUPPRESS)
@@ -170,14 +223,36 @@ def main(argv: list[str] | None = None) -> int:
     try:
         shows = load_shows(args.shows)
         site = load_site(args.site)
-        post = build_post(shows, today, site, angle=args.angle, kind=args.kind)
         log = load_log(args.log)
     except SocialError as exc:
         print(exc, file=sys.stderr)
         return 1
 
+    skip: set[str] = set()
+    if not args.allow_repeat:
+        earlier = posts_from_log(log)
+        try:
+            earlier += fetch_recent_posts()
+        except Exception as exc:  # noqa: BLE001
+            if args.publish:
+                print(f"{exc} Nothing posted, so a show is not repeated by mistake.", file=sys.stderr)
+                return 1
+            print(f"Note: {exc} The repeat check used the log only.", file=sys.stderr)
+        skip = repeated_slugs(shows, earlier, today)
+        if skip:
+            print(f"Passing over shows posted in the last {REPEAT_DAYS} days: {', '.join(sorted(skip))}")
+
+    try:
+        post = build_post(shows, today, site, angle=args.angle, kind=args.kind, skip=skip)
+    except SocialError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+
     if post is None:
-        print("No upcoming UK shows. Nothing drafted.")
+        if skip:
+            print(f"Every upcoming UK show that fits was posted in the last {REPEAT_DAYS} days. Nothing drafted.")
+        else:
+            print("No upcoming UK shows. Nothing drafted.")
         return 0
 
     recorded = week_recorded(log, post["week"])
@@ -191,6 +266,11 @@ def main(argv: list[str] | None = None) -> int:
             "Nothing posted. Pass --force to post this week again.",
             file=sys.stderr,
         )
+        return 1
+
+    blocked = publish_refusal(post["bluesky"])
+    if blocked:
+        print(blocked, file=sys.stderr)
         return 1
 
     try:
@@ -219,6 +299,7 @@ def main(argv: list[str] | None = None) -> int:
         "link": post["link"],
         "text": post["bluesky"],
         "show_id": post["show_id"],
+        "show_slug": post.get("show_slug"),
         "published_at": now_stamp(),
         "uri": result["uri"],
         "cid": result.get("cid"),

@@ -3,7 +3,9 @@
 
 Dry run is the default. The script prints the post and does not call
 Facebook. --publish sends it to the Page in growth/facebook_page.json
-after Alan has OK'd the text.
+after Alan has OK'd the text. The post text uses mineraldigger.com/... .
+The full https URL is only the link field. Publish refuses a text that
+contains !, an en dash, an em dash, or https://.
 
 The page token is MINERALDIGGER_FB_PAGE_TOKEN, or the matching page in
 ~/.secrets/fb_pages.json. That file is not committed.
@@ -44,6 +46,7 @@ from social_copy import (  # noqa: E402
     load_site,
     now_stamp,
     print_draft,
+    publish_refusal,
     redact,
     save_log,
     token_from_pages,
@@ -74,6 +77,9 @@ def resolve_token(page_id: str, secrets_path: Path) -> str | None:
 
 
 def publish_page(page_id: str, token: str, message: str, link: str, api_base: str = GRAPH) -> dict:
+    blocked = publish_refusal(message)
+    if blocked:
+        raise SocialError(blocked)
     url = f"{api_base.rstrip('/')}/{page_id}/feed"
     payload = {
         "message": message,
@@ -170,6 +176,11 @@ def main(argv: list[str] | None = None) -> int:
             "Nothing posted. Pass --force to post this week again.",
             file=sys.stderr,
         )
+        return 1
+
+    blocked = publish_refusal(post["facebook"])
+    if blocked:
+        print(blocked, file=sys.stderr)
         return 1
 
     try:
