@@ -1,15 +1,14 @@
 name: Refresh and deploy
 
 # Daily show-data refresh for the Cloudflare Pages project mineraldigger.
-# GitHub schedules are UTC. 05:15 UTC is 05:15 in winter (GMT) and 06:15 in
-# summer (BST), early morning in Europe/London.
+# The timer is the Cloudflare Worker diggers-rebuild (Diggers account), not a
+# GitHub schedule. It dispatches this workflow daily at 05:17 UTC, which is
+# 05:17 in winter (GMT) and 06:17 in summer (BST), early morning in Europe/London.
 # This does not run on push. Merging the workflow file does not deploy.
 # The refreshed catalogue is built and deployed from the runner. It is not
 # committed. Catalogue changes on main still go through pull requests.
 
 on:
-  schedule:
-    - cron: "15 5 * * *"
   workflow_dispatch:
 
 permissions:
