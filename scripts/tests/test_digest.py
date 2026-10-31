@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import buttondown_draft  # noqa: E402
+from social_copy import claims_ireland  # noqa: E402
 from digest import (  # noqa: E402
     empty_friday_sponsor,
     issue_friday,
@@ -63,7 +64,7 @@ def paragraph_for(markdown: str, slug: str) -> str:
 
 def banned(value: str) -> bool:
     prose = value.replace("<!-- buttondown-editor-mode: plaintext -->", "")
-    return "!" in prose or "\u2014" in prose or "\u2013" in prose or "Ireland" in prose
+    return "!" in prose or "\u2014" in prose or "\u2013" in prose or claims_ireland(prose)
 
 
 class DigestTests(unittest.TestCase):

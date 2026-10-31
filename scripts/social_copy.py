@@ -7,12 +7,15 @@ and the next show of that type. Prices are included only when the catalogue
 already has them.
 
 The copy is plain British English: no em dashes, no en dashes, no
-exclamation marks, and no Ireland listings.
+exclamation marks, and no Republic of Ireland listings. Northern Ireland
+is part of the UK, so Northern Ireland shows and place names are fine, but
+copy must never claim Ireland or Republic of Ireland coverage.
 """
 
 from __future__ import annotations
 
 import json
+import re
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -31,10 +34,17 @@ UK_NATIONS = {
     "scotland",
     "wales",
     "northern ireland",
+    "ni",
     "uk",
     "united kingdom",
 }
 ANGLES = ("next-show", "type-hub")
+
+# "Northern Ireland" is a UK nation. Anything else that names Ireland, the
+# Republic, Eire or an Eircode reads as a claim that the site covers it.
+NORTHERN_IRELAND = re.compile(r"\bNorthern\s+Ireland\b", re.IGNORECASE)
+IRELAND_CLAIM = re.compile(r"\bIreland\b|\bIrish\s+Republic\b|\b[E\u00c9]ire\b|\bEircodes?\b", re.IGNORECASE)
+ROI_CLAIM = re.compile(r"\bROI\b")
 
 
 class SocialError(RuntimeError):
@@ -232,11 +242,17 @@ def password_from_bluesky(data: dict, handle: str) -> str | None:
     return None
 
 
+def claims_ireland(text: str) -> bool:
+    """True when copy names Ireland or the Republic other than as Northern Ireland."""
+    rest = NORTHERN_IRELAND.sub(" ", text)
+    return bool(IRELAND_CLAIM.search(rest) or ROI_CLAIM.search(rest))
+
+
 def assert_voice(text: str) -> None:
     if "!" in text or "\u2014" in text or "\u2013" in text:
         raise SocialError("Post copy uses an em dash, an en dash, or an exclamation mark.")
-    if "Ireland" in text:
-        raise SocialError("Post copy mentions Ireland. MineralDigger lists UK shows.")
+    if claims_ireland(text):
+        raise SocialError("Post copy claims Ireland coverage. MineralDigger lists UK shows, including Northern Ireland.")
     if "Unknown" in text:
         raise SocialError("Post copy includes an unknown price.")
 

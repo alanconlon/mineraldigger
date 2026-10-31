@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { assetHash } from "./asset-hash.mjs";
 import { featuredIds, stripeReady } from "./feature.mjs";
 import { frameForPoints } from "../src/js/format.js";
-import { offerValidFrom, organizerLink, renderFeature } from "./render.mjs";
+import { groupPlaces, offerValidFrom, organizerLink, renderFeature, renderHome, renderShow } from "./render.mjs";
 import { validateSubmission } from "../functions/api/validate.js";
 import submitWorker, { resetRateLimit, MINERALDIGGER_SUBMIT_FROM, MINERALDIGGER_SUBMIT_TO } from "../workers/submit/src/index.js";
 
@@ -15,6 +15,21 @@ const failures = [];
 
 function fail(message) {
   failures.push(message);
+}
+
+// Northern Ireland is part of the UK, so it may be named. Anything else that
+// names Ireland, the Republic, Eire or an Eircode, or pairs the UK with
+// somewhere else, reads as a claim that MineralDigger covers more than the UK.
+function claimsIreland(text) {
+  const rest = String(text).replace(/\bNorthern\s+Ireland\b/gi, " ");
+  return /\bIreland\b|\bIrish\s+Republic\b|\b[EÉ]ire\b|\bEircodes?\b|UK\s*&|UK\s*\+|UK\s+and\s+Ireland/i.test(rest) || /\bROI\b|\bIE\b/.test(rest);
+}
+
+for (const text of ["Shows across the UK.", "Belfast, Antrim, Northern Ireland", "County Down, NI, BT2 7FF", "Shows in Northern Ireland, Scotland, Wales and England."]) {
+  if (claimsIreland(text)) fail(`claimsIreland should allow: ${text}`);
+}
+for (const text of ["UK & Ireland", "UK and Ireland", "UK+IE", "Shows in Ireland.", "Republic of Ireland", "ROI shows", "Eire", "Search by Eircode", "Northern Ireland and Ireland"]) {
+  if (!claimsIreland(text)) fail(`claimsIreland should block: ${text}`);
 }
 
 function jpegSize(buffer) {
@@ -377,7 +392,7 @@ if (/\bfairs?\b/i.test(about)) fail("About page still calls shows fairs.");
 if (!about.includes("society mineral and fossil shows")) fail("About page should say society mineral and fossil shows.");
 if (!about.includes("psychic shows")) fail("About page should say psychic shows.");
 if (!about.includes("across the UK")) fail("About page should stay UK-only.");
-if (/Ireland|UK\s*&|UK\s*\+/i.test(about)) fail("About page should not mention Ireland.");
+if (claimsIreland(about)) fail("About page should not claim Ireland or Republic of Ireland coverage.");
 
 const stripeFile = JSON.parse(await readFile(join(root, "data/stripe.json"), "utf8"));
 if (/leave the string empty/i.test(stripeFile._note || "")) fail("stripe.json note still says to leave links empty.");
@@ -531,7 +546,7 @@ for (const file of files) {
     fail(`Footer in ${file} should put Terms next to Privacy.`);
   }
   if (/\bVAT\b/i.test(textOnly(raw))) fail(`VAT wording in ${file}`);
-  if (/Ireland|UK\s*&|UK\s*\+|fairdigger|auctiondigger|alanconlon\.com|\/digest\//i.test(foot)) {
+  if (claimsIreland(foot) || /fairdigger|auctiondigger|alanconlon\.com|\/digest\//i.test(foot)) {
     fail(`Footer in ${file} has a banned link or a non-UK blurb`);
   }
 }
@@ -600,7 +615,9 @@ if (!privacy.includes("your postcode if you choose to give it")) {
   fail("Privacy page does not mention the optional Friday email postcode.");
 }
 if (/fairdigger|auctiondigger|alanconlon\.com/i.test(privacy)) fail("Privacy page names a sister site.");
-if (privacy.includes("UK & Ireland") || privacy.includes("UK+IE") || privacy.includes("Eircode")) {
+// The privacy page names Ireland for the operator and the Data Protection
+// Commission, so only Fair's coverage wording is banned here.
+if (/UK\s*(?:&|\+|and)\s*(?:Ireland|IE)\b|Eircode|Republic of Ireland/i.test(privacy)) {
   fail("Privacy page uses Fair's geography.");
 }
 if (!privacy.includes("saved on that phone")) fail("Privacy page does not mention pages saved on the phone.");
@@ -1261,6 +1278,53 @@ for (const file of files) {
     if (!target) continue;
     if (!existsSync(target)) fail(`Broken link ${match[1]} in ${relative(dist, file)}`);
   }
+}
+
+// A made-up Northern Ireland show with a BT postcode. It must render, land on
+// the map, and keep the site copy UK only.
+{
+  const site = JSON.parse(await readFile(join(root, "data/site.json"), "utf8"));
+  const niShow = {
+    id: "sample-ni-2026-12-05-bt27ff",
+    slug: "belfast-sample-mineral-and-fossil-show-2026-12-05",
+    name: "Belfast Sample Mineral & Fossil Show",
+    summary: "Sample Northern Ireland show used by the checks.",
+    organiser: { id: "sample-ni", name: "Sample Society", url: "https://example.org/", phone: null, email: null },
+    types: ["mineral", "fossil"],
+    start: "2026-12-05",
+    end: "2026-12-05",
+    provisional: false,
+    year_inferred: false,
+    times: { summary: "Saturday 10:00 to 16:00.", notes: null },
+    entry: { kind: "paid", label: "Entry £3", adult_gbp: 3, notes: null },
+    venue: { name: "Ulster Hall", street: "34 Bedford Street", postcode: "BT2 7FF", town: "Belfast", county: "Antrim", nation: "Northern Ireland", lat: 54.5953, lng: -5.9318, place_note: null },
+    dealers: null,
+    parking: null,
+    access_notes: null,
+    source: { url: "https://example.org/show", retrieved: "2026-10-31", notes: null, also: [] },
+  };
+  const niShows = [...catalogue.shows.slice(0, 2), niShow];
+  const niPlaces = groupPlaces(niShows);
+  const niCounty = niPlaces.counties.get("antrim");
+  if (!niCounty || niCounty.nation !== "Northern Ireland") fail("A Northern Ireland show should group under Antrim in Northern Ireland.");
+  if (!niPlaces.towns.has("belfast")) fail("A Northern Ireland show should add Belfast to the towns.");
+  const niHome = renderHome({ site, shows: niShows, generated: "2026-10-31T12:00:00Z", today: new Date("2026-10-31T12:00:00Z"), todayISO: "2026-10-31", stripe: { links: {} } });
+  const niPins = [...niHome.matchAll(/data-lat="([0-9.-]+)" data-lng="([0-9.-]+)"/g)].map((match) => [Number(match[1]), Number(match[2])]);
+  if (!niPins.some(([lat, lng]) => lat === 54.5953 && lng === -5.9318)) fail("The Northern Ireland sample show should have a map pin on the homepage.");
+  if (!niHome.includes('data-href="/show/belfast-sample-mineral-and-fossil-show-2026-12-05/"')) fail("The Northern Ireland sample show should be listed on the homepage.");
+  const niFrame = frameForPoints(niPins);
+  if (niFrame.method !== "fitBounds" || !niFrame.points.some((point) => point.join(",") === "54.5953,-5.9318")) {
+    fail("The list map should frame the Northern Ireland pin.");
+  }
+  if (claimsIreland(niHome)) fail("Homepage with a Northern Ireland show should not claim Ireland coverage.");
+  if (!niHome.includes("UK rock, gem, mineral, fossil and bead shows on one map.")) fail("Homepage heading should stay UK with a Northern Ireland show.");
+  const niPage = renderShow({ site, show: niShow, generated: "2026-10-31T12:00:00Z", todayISO: "2026-10-31", places: { counties: new Set(niPlaces.counties.keys()), towns: new Set(niPlaces.towns.keys()) } });
+  if (!niPage.includes("Belfast") || !niPage.includes("Northern Ireland") || !niPage.includes("BT2 7FF")) fail("The Northern Ireland show page should name Belfast, Northern Ireland and the BT postcode.");
+  if (!niPage.includes('id="detail-map" data-lat="54.5953" data-lng="-5.9318"')) fail("The Northern Ireland show page should have its venue map.");
+  if (!niPage.includes('"addressCountry":"GB"') && !niPage.includes('"addressCountry": "GB"')) fail("The Northern Ireland show schema should use addressCountry GB.");
+  if (!/"priceCurrency":\s*"GBP"/.test(niPage)) fail("The Northern Ireland show should price in GBP.");
+  if (/€|EUR\b/.test(niPage)) fail("The Northern Ireland show page should not mention euro pricing.");
+  if (claimsIreland(niPage)) fail("The Northern Ireland show page should not claim Ireland coverage.");
 }
 
 if (failures.length) {
