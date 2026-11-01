@@ -6,6 +6,8 @@ import { assetHash } from "./asset-hash.mjs";
 import { featuredIds, stripeReady } from "./feature.mjs";
 import { frameForPoints } from "../src/js/format.js";
 import { EMPTY_SHOWS_NOTE, listingPaths, mergePlaces, offerValidFrom, organizerLink, renderCounty, renderFeature, renderTown, renderType } from "./render.mjs";
+import { onRequestPost } from "../functions/api/submit.js";
+import { TURNSTILE_ERROR } from "../functions/api/turnstile.js";
 import { validateSubmission } from "../functions/api/validate.js";
 import submitWorker, { resetRateLimit, MINERALDIGGER_SUBMIT_FROM, MINERALDIGGER_SUBMIT_TO } from "../workers/submit/src/index.js";
 
@@ -367,6 +369,9 @@ if (!digestFoot.includes(">Stay in touch</h2>") || !digestFoot.includes('href="/
   fail("Digest footer should still include Stay in touch and Add to your phone.");
 }
 const newsletterJs = await readFile(join(dist, "js/newsletter.js"), "utf8");
+if (newsletterJs.includes("turnstile") || newsletterJs.includes("challenges.cloudflare.com")) {
+  fail("Friday email script should not load Turnstile.");
+}
 if (!newsletterJs.includes('location.href = f.getAttribute("data-thanks") || "/thanks/"')) {
   fail("Sign-up script does not follow data-thanks to /thanks/.");
 }
@@ -430,6 +435,18 @@ if (!submitJs.includes("Mail is not connected")) fail("Submit fallback should st
 if (!submitJs.includes('href="mailto:hello@mineraldigger.com"')) fail("Submit fallback is missing a mailto to hello@mineraldigger.com.");
 if (submitJs.includes("mineraldigger.hq@gmail.com")) fail("Submit fallback still names the HQ Gmail.");
 if (submitJs.includes("once the mailbox is open")) fail("Submit fallback still waits on the old mailbox.");
+if (!submitJs.includes("0x4AAAAAAFvgWt9D_bkbp5-h")) fail("Submit script is missing the Turnstile site key.");
+if (!submitJs.includes('action: "submit"')) fail("Submit script is missing the Turnstile action.");
+if (!submitJs.includes('"cf-turnstile-response"')) fail("Submit script does not send the Turnstile token.");
+if (!submitJs.includes("turnstile.reset")) fail("Submit script does not reset the Turnstile widget.");
+if (!submitJs.includes("Please complete the security check, then send the listing again.")) {
+  fail("Submit script is missing the Turnstile error.");
+}
+if (!submit.includes('id="submit-turnstile"')) fail("Submit page is missing the Turnstile slot.");
+if (!submit.includes('src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onSubmitTurnstileLoad&render=explicit"')) {
+  fail("Submit page is missing the Turnstile script.");
+}
+if (!submit.includes("window.onSubmitTurnstileLoad")) fail("Submit page is missing the Turnstile load callback.");
 const siteFile = JSON.parse(await readFile(join(root, "data/site.json"), "utf8"));
 if (siteFile.email !== "hello@mineraldigger.com") fail("data/site.json email is not hello@mineraldigger.com.");
 const wrangler = await readFile(join(root, "workers/submit/wrangler.toml"), "utf8");
@@ -454,6 +471,10 @@ for (const file of files) {
   const html = textOnly(raw);
   if (html.includes("\u2014")) fail(`Em dash in ${file}`);
   if (html.includes("!")) fail(`Exclamation mark in ${file}`);
+  const submitPage = relative(dist, file).split(sep).join("/") === "submit/index.html";
+  if (!submitPage && (raw.includes("challenges.cloudflare.com/turnstile") || raw.includes("submit-turnstile") || raw.includes("cf-turnstile"))) {
+    fail(`Turnstile should stay on the submit page only: ${file}`);
+  }
   if (/2 working days|two working days/i.test(raw)) fail(`Old working-day turnaround in ${file}`);
   if (/gumroad|crystaldigger/i.test(html)) fail(`Banned name in ${file}`);
   if (raw.includes("mineraldigger.hq@gmail.com")) fail(`Generated page still names the HQ Gmail: ${file}`);
@@ -588,7 +609,10 @@ if (!privacy.includes("does not add the analytics script for visitors from the E
 }
 if (!privacy.includes("__cf_bm")) fail("Privacy page should name the Cloudflare security cookie __cf_bm.");
 if (!privacy.includes("30 minutes of inactivity")) fail("Privacy page should say how long __cf_bm lasts.");
-if (!privacy.includes("Last updated 29 October 2026")) fail("Privacy last updated line is wrong.");
+if (!privacy.includes("Last updated 1 November 2026")) fail("Privacy last updated line is wrong.");
+if (!privacy.includes("Cloudflare Turnstile checks that a person sent the form.")) {
+  fail("Privacy page does not describe Turnstile on the submit form.");
+}
 if (privacy.includes("Last updated:")) fail("Privacy Last updated should not use a colon.");
 if (/does not use analytics|doesn't use analytics|do not use analytics/i.test(privacy)) {
   fail("Privacy page still says there are no analytics.");
@@ -1181,6 +1205,7 @@ const sent = [];
 const env = {
   MINERALDIGGER_SUBMIT_TO,
   MINERALDIGGER_SUBMIT_FROM,
+  TURNSTILE_SECRET_KEY: "test-secret",
   SEND_EMAIL: {
     async send(message) {
       sent.push(message);
@@ -1188,32 +1213,107 @@ const env = {
     },
   },
 };
-async function post(body, origin, ip = "203.0.113.8") {
+const realFetch = globalThis.fetch;
+let verifyCalls = 0;
+let lastVerifyIp = "";
+globalThis.fetch = async (url, init) => {
+  if (String(url) !== "https://challenges.cloudflare.com/turnstile/v0/siteverify") {
+    throw new Error(`Unexpected fetch during submit checks: ${url}`);
+  }
+  verifyCalls += 1;
+  const params = new URLSearchParams(init && init.body);
+  lastVerifyIp = params.get("remoteip") || "";
+  if (params.get("secret") !== "test-secret") {
+    return new Response(JSON.stringify({ success: false, "error-codes": ["invalid-input-secret"] }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }
+  const token = params.get("response");
+  if (token === "upstream-down") return new Response("nope", { status: 500 });
+  if (token === "network-down") throw new Error("network");
+  const cases = {
+    "valid-token": { success: true, action: "submit", hostname: "mineraldigger.com" },
+    "valid-token-uk": { success: true, action: "submit", hostname: "www.mineraldigger.co.uk" },
+    "bad-host": { success: true, action: "submit", hostname: "evil.example" },
+    "bad-action": { success: true, action: "login", hostname: "mineraldigger.com" },
+  };
+  const result = cases[token] || { success: false, "error-codes": ["invalid-input-response"] };
+  return new Response(JSON.stringify(result), { status: 200, headers: { "content-type": "application/json" } });
+};
+try {
+async function post(body, origin, ip = "203.0.113.8", token = "valid-token") {
+  const payload = token === null ? body : { ...body, "cf-turnstile-response": token };
   const headers = { "content-type": "application/json", "cf-connecting-ip": ip };
   if (origin) headers.Origin = origin;
   const response = await submitWorker.fetch(
-    new Request("https://mineraldigger.com/api/submit", { method: "POST", headers, body: JSON.stringify(body) }),
+    new Request("https://mineraldigger.com/api/submit", { method: "POST", headers, body: JSON.stringify(payload) }),
     env,
   );
   return { status: response.status, body: await response.json() };
 }
 const foreign = await post(listing, "https://evil.example");
 if (foreign.status !== 403 || foreign.body.error !== "Bad origin.") fail("Foreign origin was not refused.");
-const honey = await post({ ...listing, company_website: "https://spam.example" }, "https://mineraldigger.com");
+const checksBeforeHoney = verifyCalls;
+const honey = await post({ ...listing, company_website: "https://spam.example" }, "https://mineraldigger.com", "203.0.113.8", null);
 if (honey.status !== 200 || honey.body.delivery !== "accepted" || sent.length !== 0) fail("Honeypot should accept and not email.");
+if (verifyCalls !== checksBeforeHoney) fail("Honeypot should not call Turnstile.");
+const invalid = await post({ show_name: "Nope" }, "https://mineraldigger.com", "203.0.113.21");
+if (invalid.status !== 400) fail("Invalid submission should still be a 400.");
+if (verifyCalls !== checksBeforeHoney) fail("An invalid listing should not call Turnstile.");
+const missing = await post(listing, "https://mineraldigger.com", "203.0.113.30", null);
+if (missing.status !== 403 || missing.body.error !== TURNSTILE_ERROR) fail("A listing without a Turnstile token was not refused.");
+const rejected = await post(listing, "https://mineraldigger.com", "203.0.113.31", "not-a-token");
+if (rejected.status !== 403 || rejected.body.error !== TURNSTILE_ERROR || sent.length !== 0) {
+  fail("A failed Turnstile check was not refused.");
+}
+const badHost = await post(listing, "https://mineraldigger.com", "203.0.113.32", "bad-host");
+if (badHost.status !== 403) fail("A Turnstile token from another host was accepted.");
+const badAction = await post(listing, "https://mineraldigger.com", "203.0.113.33", "bad-action");
+if (badAction.status !== 403) fail("A Turnstile token for another action was accepted.");
+const down = await post(listing, "https://mineraldigger.com", "203.0.113.34", "upstream-down");
+if (down.status !== 403) fail("A Turnstile outage should refuse the listing.");
+const network = await post(listing, "https://mineraldigger.com", "203.0.113.35", "network-down");
+if (network.status !== 403) fail("A Turnstile network error should refuse the listing.");
+const noIp = await submitWorker.fetch(
+  new Request("https://mineraldigger.com/api/submit", {
+    method: "POST",
+    headers: { "content-type": "application/json", Origin: "https://mineraldigger.com" },
+    body: JSON.stringify({ ...listing, "cf-turnstile-response": "valid-token" }),
+  }),
+  env,
+);
+const noIpBody = await noIp.json();
+if (noIp.status !== 403 || noIpBody.error !== TURNSTILE_ERROR) fail("A listing without CF-Connecting-IP was not refused.");
+const noSecret = await submitWorker.fetch(
+  new Request("https://mineraldigger.com/api/submit", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.36", Origin: "https://mineraldigger.com" },
+    body: JSON.stringify({ ...listing, "cf-turnstile-response": "valid-token" }),
+  }),
+  { MINERALDIGGER_SUBMIT_TO, MINERALDIGGER_SUBMIT_FROM, SEND_EMAIL: env.SEND_EMAIL },
+);
+const noSecretBody = await noSecret.json();
+if (noSecret.status !== 403 || noSecretBody.error !== TURNSTILE_ERROR || sent.length !== 0) {
+  fail("A missing Turnstile secret should refuse the listing.");
+}
 for (let i = 0; i < 5; i += 1) {
   const ok = await post(listing, "https://mineraldigger.co.uk");
   if (ok.status !== 200 || ok.body.delivery !== "emailed") fail(`Submission ${i + 1} was not emailed.`);
 }
 if (sent.length !== 5) fail(`Expected 5 emails, saw ${sent.length}.`);
+if (lastVerifyIp !== "203.0.113.8") fail("Turnstile siteverify did not receive CF-Connecting-IP.");
 const mail = sent[0];
 const from = typeof mail.from === "string" ? mail.from : mail.from.email;
 if (from !== "submissions@mineraldigger.com" || mail.to !== "mineraldigger.hq@gmail.com" || mail.replyTo !== "fair@example.com") {
   fail("Submission email was not addressed to mineraldigger.hq@gmail.com.");
 }
 if (!String(mail.text).includes("fossil")) fail("Submission email dropped the show types.");
+if (String(mail.text).includes("valid-token")) fail("Submission email included the Turnstile token.");
 const limited = await post(listing, "https://www.mineraldigger.com");
 if (limited.status !== 429) fail("Rate limit did not trip on the sixth listing.");
+const uk = await post(listing, "https://mineraldigger.co.uk", "203.0.113.40", "valid-token-uk");
+if (uk.status !== 200 || uk.body.delivery !== "emailed") fail("A token for www.mineraldigger.co.uk was refused.");
 resetRateLimit();
 const openBinding = {
   ...env,
@@ -1232,7 +1332,7 @@ async function postOpen(ip) {
         "cf-connecting-ip": ip,
         Origin: "https://mineraldigger.com",
       },
-      body: JSON.stringify(listing),
+      body: JSON.stringify({ ...listing, "cf-turnstile-response": "valid-token" }),
     }),
     openBinding,
   );
@@ -1248,12 +1348,48 @@ const unconfigured = await submitWorker.fetch(
   new Request("https://mineraldigger.com/api/submit", {
     method: "POST",
     headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.9", Origin: "https://www.mineraldigger.co.uk" },
-    body: JSON.stringify(listing),
+    body: JSON.stringify({ ...listing, "cf-turnstile-response": "valid-token" }),
   }),
-  {},
+  { TURNSTILE_SECRET_KEY: "test-secret" },
 );
 const unconfiguredBody = await unconfigured.json();
 if (unconfigured.status !== 200 || unconfiguredBody.delivery !== "unconfigured") fail("Missing email binding should stay unconfigured.");
+
+const pagesHoney = await onRequestPost({
+  request: new Request("https://mineraldigger.com/api/submit", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.50" },
+    body: JSON.stringify({ ...listing, company_website: "https://spam.example" }),
+  }),
+  env: { TURNSTILE_SECRET_KEY: "test-secret", SUBMISSION_WEBHOOK_URL: "https://example.invalid/hook" },
+});
+const pagesHoneyBody = await pagesHoney.json();
+if (pagesHoney.status !== 200 || pagesHoneyBody.delivery !== "accepted") fail("Pages fallback honeypot should accept and not forward.");
+const pagesMissing = await onRequestPost({
+  request: new Request("https://mineraldigger.com/api/submit", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.51" },
+    body: JSON.stringify(listing),
+  }),
+  env: { TURNSTILE_SECRET_KEY: "test-secret", SUBMISSION_WEBHOOK_URL: "https://example.invalid/hook" },
+});
+const pagesMissingBody = await pagesMissing.json();
+if (pagesMissing.status !== 403 || !pagesMissingBody.errors || pagesMissingBody.errors[0] !== TURNSTILE_ERROR) {
+  fail("Pages fallback should refuse a listing without a Turnstile token.");
+}
+const pagesOk = await onRequestPost({
+  request: new Request("https://mineraldigger.com/api/submit", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.52" },
+    body: JSON.stringify({ ...listing, "cf-turnstile-response": "valid-token" }),
+  }),
+  env: { TURNSTILE_SECRET_KEY: "test-secret" },
+});
+const pagesOkBody = await pagesOk.json();
+if (pagesOk.status !== 200 || pagesOkBody.delivery !== "unconfigured") fail("Pages fallback should stay unconfigured after Turnstile passes.");
+} finally {
+  globalThis.fetch = realFetch;
+}
 
 const publicExt = /\.(html|js|json|txt|xml|ics|webmanifest|css|svg)$/;
 async function generatedFiles(dir) {

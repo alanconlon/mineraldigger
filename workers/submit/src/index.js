@@ -1,4 +1,5 @@
 import { validateSubmission } from "../../../functions/api/validate.js";
+import { connectingIp, turnstilePasses, TURNSTILE_ERROR } from "../../../functions/api/turnstile.js";
 
 export const MINERALDIGGER_SUBMIT_TO = "mineraldigger.hq@gmail.com";
 export const MINERALDIGGER_SUBMIT_FROM = "submissions@mineraldigger.com";
@@ -127,6 +128,11 @@ export default {
     if (!result.ok) {
       return json({ ok: false, error: result.errors[0], errors: result.errors }, 400, decision.origin);
     }
+
+    // After the honeypot, before the rate limit and the email. A missing
+    // secret, a bad token, or a siteverify failure all refuse the listing.
+    const allowed = await turnstilePasses(body["cf-turnstile-response"], connectingIp(request), env);
+    if (!allowed) return json({ ok: false, error: TURNSTILE_ERROR }, 403, decision.origin);
 
     if (await limited(request, env)) {
       return json(

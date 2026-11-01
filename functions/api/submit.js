@@ -1,5 +1,6 @@
 // Pages fallback for /api/submit when the zone route is not attached.
 // Production mail is workers/submit (Cloudflare send_email). That route wins on the custom domains.
+import { connectingIp, turnstilePasses, TURNSTILE_ERROR } from "./turnstile.js";
 import { validateSubmission } from "./validate.js";
 
 function json(body, status = 200) {
@@ -19,6 +20,9 @@ export async function onRequestPost(context) {
   const result = validateSubmission(body);
   if (!result.ok) return json({ ok: false, errors: result.errors }, 400);
   if (result.spam) return json({ ok: true, delivery: "accepted" });
+
+  const allowed = await turnstilePasses(body["cf-turnstile-response"], connectingIp(context.request), context.env);
+  if (!allowed) return json({ ok: false, errors: [TURNSTILE_ERROR] }, 403);
 
   const hook = context.env && context.env.SUBMISSION_WEBHOOK_URL;
   if (!hook) return json({ ok: true, delivery: "unconfigured" });

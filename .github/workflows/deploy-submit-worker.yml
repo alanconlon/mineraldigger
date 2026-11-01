@@ -1,0 +1,36 @@
+name: Deploy submit worker
+
+# Deploys the mineraldigger-submit Worker from workers/submit.
+# Start it by hand from the Actions tab. It does not run on push, so merging
+# this file does not deploy.
+# Deploy the Pages site first, so /submit/ is already sending a Turnstile token.
+# wrangler deploy keeps secrets already stored on the Worker, including
+# TURNSTILE_SECRET_KEY. This workflow does not set or print that secret.
+# It needs the same repository secrets as the Pages deploy:
+#   CLOUDFLARE_API_TOKEN
+#   CLOUDFLARE_ACCOUNT_ID
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-submit-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy mineraldigger-submit
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: workers/submit
+          command: deploy

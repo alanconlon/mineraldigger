@@ -11,6 +11,8 @@
 #   3. Allow the sender submissions@mineraldigger.com (the domain must be on this account).
 # MINERALDIGGER_SUBMIT_TO and destination_address must stay the same address.
 # There is no secret to put for the destination. The Gmail address itself has to be verified.
+# TURNSTILE_SECRET_KEY is already set with `wrangler secret put`. It is not a
+# var in this file. `wrangler deploy` keeps that secret. Do not commit the value.
 
 name = "mineraldigger-submit"
 main = "src/index.js"
