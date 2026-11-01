@@ -26,9 +26,12 @@ import {
   renderTerms,
   renderTown,
   renderTownIndex,
+  renderRegion,
   renderType,
   renderWeekend,
   groupPlaces,
+  mergePlaces,
+  listingPaths,
 } from "./render.mjs";
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "..");
@@ -201,7 +204,9 @@ async function main() {
   await writeFile(join(dist, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml\n`);
 
   const ctx = { site, shows: upcoming, generated, today, todayISO, stripe };
-  const places = groupPlaces(upcoming);
+  const listings = await readJson(join(root, "data/listings.json"));
+  // Place pages used to be omitted below one upcoming show. Saved pages stay, including a count of zero.
+  const places = mergePlaces(groupPlaces(upcoming), listings);
   const placeSets = {
     counties: new Set(places.counties.keys()),
     towns: new Set(places.towns.keys()),
@@ -215,6 +220,9 @@ async function main() {
   }
   for (const town of places.towns.values()) {
     await writePage(`town/${town.slug}/index.html`, renderTown(ctx, town));
+  }
+  for (const region of places.regions.values()) {
+    await writePage(`region/${region.slug}/index.html`, renderRegion(ctx, region));
   }
   for (const key of ["rock", "gem", "mineral", "fossil", "bead"]) {
     await writePage(`${key}/index.html`, renderType(ctx, key));
@@ -232,9 +240,9 @@ async function main() {
   await writePage("404.html", renderNotFound({ site, generated }));
 
   // /thanks/, /thanks/payment/ and /offline/ are noindex and stay out of the sitemap. /digest/ redirects to /newsletter/. IndexNow runs after deploy, not during the build.
+  // A low upcoming count does not take a listing page out of the sitemap, so IndexNow still receives it.
   const paths = ["/", "/this-weekend/", "/county/", "/towns/", "/feature/", "/submit/", "/newsletter/", "/app/", "/about/", "/privacy/", "/terms/", "/rock/", "/gem/", "/mineral/", "/fossil/", "/bead/"];
-  for (const county of places.counties.values()) paths.push(`/county/${county.slug}/`);
-  for (const town of places.towns.values()) paths.push(`/town/${town.slug}/`);
+  paths.push(...listingPaths(places));
   for (const show of shows) {
     await writePage(`show/${show.slug}/index.html`, renderShow({ site, show, generated, todayISO, places: placeSets }));
     await writePage(`show/${show.slug}/event.ics`, ics(show, todayISO, site));

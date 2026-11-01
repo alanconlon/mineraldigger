@@ -6,6 +6,7 @@ data/indexnow_state.json. The hash ignores the "Data last refreshed" date,
 the show "Retrieved" date, the offer validFrom stamp, and asset ?v= tokens.
 POSTs only new or changed URLs to https://api.indexnow.org/indexnow.
 The host is mineraldigger.com. mineraldigger.co.uk is never submitted.
+Every mineraldigger.com URL in the sitemap is eligible. A low show count does not remove one.
 
 --stamp-sitemap rewrites each sitemap lastmod. An unchanged page keeps the
 stored date. A new or changed page uses the build date. The state file is

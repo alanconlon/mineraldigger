@@ -19,6 +19,9 @@ const TYPES = [
   ["bead", "Bead", "/bead/"],
 ];
 
+// Shown on a listing page that is still live when nothing upcoming is listed.
+export const EMPTY_SHOWS_NOTE = "No shows listed right now, check back.";
+
 const TYPE_INTRO = {
   rock: "Rock shows across the UK, plus the rock, gem and bead weekends that include them. MineralDigger is a free calendar and map of dates and venues from organiser sites. Always confirm times and tickets with the organiser before you travel.",
   gem: "Gem shows and the rock, gem and bead weekends that list gems. MineralDigger puts UK dates, venues and entry on one map so you can see what is on this weekend and later in the year. Confirm with the organiser before you set off.",
@@ -101,7 +104,44 @@ export function groupPlaces(shows) {
       towns.get(slug).shows.push(show);
     }
   }
-  return { counties, towns };
+  return { counties, towns, regions: new Map() };
+}
+
+// Saved listing pages stay even when they have no upcoming shows. New places are added, never removed.
+export function mergePlaces(places, listings = {}) {
+  const counties = new Map(places.counties || []);
+  const towns = new Map(places.towns || []);
+  const regions = new Map(places.regions || []);
+  for (const county of listings.counties || []) {
+    if (county.slug && !counties.has(county.slug)) {
+      counties.set(county.slug, { slug: county.slug, name: county.name, nation: county.nation || "UK", shows: [] });
+    }
+  }
+  for (const town of listings.towns || []) {
+    if (town.slug && !towns.has(town.slug)) {
+      towns.set(town.slug, {
+        slug: town.slug,
+        name: town.name,
+        county: town.county || "",
+        nation: town.nation || "UK",
+        shows: [],
+      });
+    }
+  }
+  for (const region of listings.regions || []) {
+    if (region.slug && !regions.has(region.slug)) {
+      regions.set(region.slug, { slug: region.slug, name: region.name, nation: region.nation || "UK", shows: [] });
+    }
+  }
+  return { counties, towns, regions };
+}
+
+export function listingPaths(places) {
+  const paths = [];
+  for (const county of places.counties.values()) paths.push(`/county/${county.slug}/`);
+  for (const town of places.towns.values()) paths.push(`/town/${town.slug}/`);
+  for (const region of places.regions.values()) paths.push(`/region/${region.slug}/`);
+  return paths;
 }
 
 const NATION_ORDER = ["England", "Wales", "Scotland", "Northern Ireland"];
@@ -421,6 +461,7 @@ export function renderListing({ site, path, title, description, ogTitle, ogDescr
   const countNoun = shows.length === 1 ? "show" : "shows";
   const countLabel = home ? `${shows.length} UK ${countNoun}` : `${shows.length} ${countNoun}`;
   const countTail = home ? ", taken from organiser and society websites." : "";
+  const noneListed = shows.length ? "" : `<p class="empty-note">${esc(EMPTY_SHOWS_NOTE)}</p>\n            `;
   const hero = `<section class="hero"><div class="wrap">
         <p class="eyebrow">${esc(eyebrowText)}</p>
         <h1>${esc(heading)}</h1>
@@ -456,7 +497,7 @@ export function renderListing({ site, path, title, description, ogTitle, ogDescr
             <p id="empty-copy"></p>
           </div>
           <div id="show-list">
-            ${featured.length ? `<section class="month"><h2>Featured</h2>${featured.map(card).join("")}</section>` : ""}
+            ${noneListed}${featured.length ? `<section class="month"><h2>Featured</h2>${featured.map(card).join("")}</section>` : ""}
             ${months(rest)}
           </div>
           ${home ? placeLinks() : ""}
@@ -608,7 +649,11 @@ export function renderCountyIndex(ctx, counties) {
       return `<section class="month"><h2>${esc(nation)}</h2><div class="chip-row">${chips}</div></section>`;
     })
     .join("");
-  const count = counties.size;
+  const count = [...counties.values()].filter((county) => county.shows.length).length;
+  const countyNoun = count === 1 ? "county has" : "counties have";
+  const countyLede = count
+    ? `${count} ${countyNoun} an upcoming show. Each listing is checked against the organiser's own site.`
+    : "No county has an upcoming show right now. Each listing is checked against the organiser's own site.";
   return indexPage({
     site: ctx.site,
     path: "/county/",
@@ -616,7 +661,7 @@ export function renderCountyIndex(ctx, counties) {
     description: "UK rock, gem, mineral, fossil and bead shows by county. Dates and venues from organiser websites.",
     eyebrow: "Places",
     heading: "Shows by county",
-    lede: `${count} ${count === 1 ? "county has" : "counties have"} an upcoming show. Each listing is checked against the organiser's own site.`,
+    lede: countyLede,
     generated: ctx.generated,
     inner,
   });
@@ -626,7 +671,11 @@ export function renderTownIndex(ctx, towns) {
   const chips = byNation(towns.values())
     .map((town) => `<a class="chip" href="/town/${town.slug}/">${esc(town.name)} <b>${town.shows.length}</b></a>`)
     .join("");
-  const count = towns.size;
+  const count = [...towns.values()].filter((town) => town.shows.length).length;
+  const townNoun = count === 1 ? "town has" : "towns have";
+  const townLede = count
+    ? `${count} ${townNoun} an upcoming show. Open a town for the dates and the venue.`
+    : "No town has an upcoming show right now. Open a town for the dates and the venue.";
   return indexPage({
     site: ctx.site,
     path: "/towns/",
@@ -634,7 +683,7 @@ export function renderTownIndex(ctx, towns) {
     description: "UK rock, gem, mineral, fossil and bead shows by town. Dates and venues from organiser websites.",
     eyebrow: "Places",
     heading: "Shows by town",
-    lede: `${count} ${count === 1 ? "town has" : "towns have"} an upcoming show. Open a town for the dates and the venue.`,
+    lede: townLede,
     generated: ctx.generated,
     inner: `<div class="chip-row">${chips}</div>`,
   });
@@ -657,6 +706,20 @@ export function renderCounty(ctx, county, towns) {
     lede: `Upcoming shows in ${county.name}. Dates and venues come from organiser websites. Check with the organiser before you travel.`,
     eyebrow: county.nation,
     preface: `${browseLinks(false)}${townChips ? `<div class="chip-row" aria-label="Towns">${townChips}</div>` : ""}`,
+  });
+}
+
+export function renderRegion(ctx, region) {
+  return renderListing({
+    ...ctx,
+    shows: region.shows,
+    path: `/region/${region.slug}/`,
+    title: `Shows in ${region.name} | MineralDigger`,
+    description: `Upcoming rock, gem, mineral, fossil and bead shows in ${region.name}. Dates, venues and entry from organiser sites.`,
+    heading: `Shows in ${region.name}`,
+    lede: `Upcoming shows in ${region.name}. Dates and venues come from organiser websites. Check with the organiser before you travel.`,
+    eyebrow: region.nation || "UK",
+    preface: browseLinks(false),
   });
 }
 

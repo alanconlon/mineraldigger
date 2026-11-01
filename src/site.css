@@ -312,6 +312,13 @@ p { margin: 0 0 0.8rem; }
   padding: 1rem 1.05rem;
 }
 .empty[hidden] { display: none; }
+.empty-note {
+  background: var(--card);
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  padding: 1rem 1.05rem;
+  margin: 0 0 1rem;
+}
 .noscript {
   background: var(--prov-bg);
   border-radius: 12px;
