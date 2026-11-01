@@ -194,6 +194,22 @@ class RunTests(unittest.TestCase):
             self.assertEqual(saved["urls"]["https://mineraldigger.com/"]["hash"], indexnow.content_hash(HOME))
             self.assertEqual(saved["urls"]["https://mineraldigger.com/"]["lastmod"], "2026-10-30")
 
+    def test_http_202_updates_the_state_file(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sitemap, state, dist = write_site(root, {"host": "mineraldigger.com", "urls": {}})
+            response = mock.Mock()
+            response.status = 202
+            response.__enter__ = mock.Mock(return_value=response)
+            response.__exit__ = mock.Mock(return_value=False)
+            with mock.patch("urllib.request.urlopen", return_value=response):
+                code, output = run_main(["--sitemap", str(sitemap), "--state", str(state), "--dist", str(dist)])
+            self.assertEqual(code, 0)
+            self.assertIn("IndexNow 202 for 2 URLs", output)
+            saved = json.loads(state.read_text(encoding="utf-8"))
+            self.assertEqual(saved["urls"]["https://mineraldigger.com/"]["hash"], indexnow.content_hash(HOME))
+            self.assertEqual(saved["urls"]["https://mineraldigger.com/show/a/"]["hash"], indexnow.content_hash(SHOW))
+
     def test_http_400_logs_the_code_and_keeps_the_state_file(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
