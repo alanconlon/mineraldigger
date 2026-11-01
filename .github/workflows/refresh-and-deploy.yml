@@ -7,12 +7,16 @@ name: Refresh and deploy
 # This does not run on push. Merging the workflow file does not deploy.
 # The refreshed catalogue is built and deployed from the runner. It is not
 # committed. Catalogue changes on main still go through pull requests.
+# After IndexNow accepts URLs (HTTP 200 or 202), this job commits
+# data/indexnow_state.json so the next run can skip pages that did not change.
+# The commit message contains [skip ci]. A push that lands during the commit
+# is rebased and retried.
 
 on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: refresh-and-deploy
@@ -24,6 +28,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -51,3 +57,30 @@ jobs:
 
       - name: Tell IndexNow about changed pages
         run: python3 scripts/indexnow.py
+
+      - name: Commit IndexNow state if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git restore --worktree --staged -- data/shows.json data/listings.json || true
+          git add -- data/indexnow_state.json
+          if git diff --cached --quiet; then
+            echo "IndexNow state is unchanged."
+            exit 0
+          fi
+          git commit -m "[skip ci] Record the IndexNow state"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Push was rejected. Rebasing onto origin/main and retrying."
+            git fetch origin main
+            if ! git rebase origin/main; then
+              git rebase --abort || true
+              echo "Rebase hit a conflict. Stopping."
+              exit 1
+            fi
+            sleep $((attempt * 2))
+          done
+          echo "Could not push the IndexNow state."
+          exit 1
