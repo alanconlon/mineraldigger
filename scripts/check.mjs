@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { assetHash } from "./asset-hash.mjs";
 import { featuredIds, stripeReady } from "./feature.mjs";
 import { frameForPoints } from "../src/js/format.js";
-import { offerValidFrom, organizerLink, renderFeature } from "./render.mjs";
+import { EMPTY_SHOWS_NOTE, listingPaths, mergePlaces, offerValidFrom, organizerLink, renderCounty, renderFeature, renderTown, renderType } from "./render.mjs";
 import { validateSubmission } from "../functions/api/validate.js";
 import submitWorker, { resetRateLimit, MINERALDIGGER_SUBMIT_FROM, MINERALDIGGER_SUBMIT_TO } from "../workers/submit/src/index.js";
 
@@ -850,6 +850,46 @@ if (!sitemap.includes("<loc>https://mineraldigger.com/this-weekend/</loc>")) fai
 if (!sitemap.includes("<loc>https://mineraldigger.com/county/</loc>")) fail("Sitemap is missing the county index.");
 if (!sitemap.includes("<loc>https://mineraldigger.com/county/surrey/</loc>")) fail("Sitemap is missing Surrey.");
 if (!sitemap.includes("<loc>https://mineraldigger.com/towns/</loc>")) fail("Sitemap is missing the town index.");
+const listings = JSON.parse(await readFile(join(root, "data/listings.json"), "utf8"));
+const listingPages = [
+  ...(listings.counties || []).map((row) => [`county/${row.slug}/index.html`, `/county/${row.slug}/`, row.name]),
+  ...(listings.towns || []).map((row) => [`town/${row.slug}/index.html`, `/town/${row.slug}/`, row.name]),
+  ...(listings.regions || []).map((row) => [`region/${row.slug}/index.html`, `/region/${row.slug}/`, row.name]),
+  ...["rock", "gem", "mineral", "fossil", "bead"].map((key) => [`${key}/index.html`, `/${key}/`, key]),
+];
+if (!listings.counties?.length || !listings.towns?.length) fail("Listing registry is missing the live county and town pages.");
+for (const [file, path, label] of listingPages) {
+  const pageUrl = `https://mineraldigger.com${path}`;
+  if (!sitemap.includes(`<loc>${pageUrl}</loc>`)) fail(`Sitemap dropped ${pageUrl}.`);
+  let html;
+  try {
+    html = await readFile(join(dist, file), "utf8");
+  } catch {
+    fail(`${label} page is missing at ${path}.`);
+    continue;
+  }
+  if (html.includes('name="robots" content="noindex"')) fail(`${path} is noindex.`);
+  if (/coming soon/i.test(html)) fail(`${path} says coming soon.`);
+  if (!html.includes(`<link rel="canonical" href="${pageUrl}">`)) fail(`${path} is missing its canonical URL.`);
+}
+const keptPlaces = mergePlaces(
+  { counties: new Map(), towns: new Map(), regions: new Map() },
+  { counties: [{ slug: "example", name: "Example", nation: "England" }], towns: [{ slug: "quiet-town", name: "Quiet Town", county: "Example", nation: "England" }], regions: [{ slug: "quiet-region", name: "Quiet Region", nation: "England" }] },
+);
+const keptPaths = listingPaths(keptPlaces);
+if (!keptPaths.includes("/county/example/") || !keptPaths.includes("/town/quiet-town/") || !keptPaths.includes("/region/quiet-region/")) {
+  fail("A saved listing with no shows should stay on the sitemap path list.");
+}
+const emptyCtx = { site: { url: "https://mineraldigger.com", name: "MineralDigger" }, generated: "2026-11-01", shows: [] };
+const emptyTown = renderTown(emptyCtx, { slug: "quiet-town", name: "Quiet Town", county: "Example", nation: "England", shows: [] });
+const emptyCounty = renderCounty(emptyCtx, { slug: "example", name: "Example", nation: "England", shows: [] }, new Map());
+const emptyType = renderType(emptyCtx, "fossil");
+for (const [label, html] of [["town", emptyTown], ["county", emptyCounty], ["type", emptyType]]) {
+  if (!html.includes(EMPTY_SHOWS_NOTE)) fail(`An empty ${label} page should say there are no shows listed right now.`);
+  if (html.includes('name="robots" content="noindex"')) fail(`An empty ${label} page should stay indexable.`);
+  if (/coming soon/i.test(html)) fail(`An empty ${label} page should not say coming soon.`);
+}
+if (!siteJs.includes("pageEmptyAtRest")) fail("An empty listing should keep its own no-shows note when the filters are at rest.");
 const weekendPage = await readFile(join(dist, "this-weekend/index.html"), "utf8");
 const weekendPins = [...weekendPage.matchAll(/data-lat="([0-9.-]+)" data-lng="([0-9.-]+)"/g)].map((match) => [Number(match[1]), Number(match[2])]);
 const weekendFrame = frameForPoints(weekendPins);
@@ -904,6 +944,7 @@ if (!countyIndex.includes("<h1>Shows by county</h1>") || !countyIndex.includes('
 }
 const surrey = await readFile(join(dist, "county/surrey/index.html"), "utf8");
 if (!surrey.includes("<h1>Shows in Surrey</h1>")) fail("Surrey page heading is wrong.");
+if (surrey.includes(EMPTY_SHOWS_NOTE)) fail("Surrey still has shows, so it should not use the empty listing note.");
 if (!surrey.includes("Sunbury-on-Thames")) fail("Surrey page is missing its town.");
 function weekendControls(html) {
   const main = html.slice(0, html.indexOf('<footer class="site-footer">'));

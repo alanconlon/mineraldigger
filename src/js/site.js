@@ -458,7 +458,13 @@ function applyFilters() {
   const empty = document.getElementById("empty");
   const title = document.getElementById("empty-title");
   const copy = document.getElementById("empty-copy");
-  if (empty && title && copy) {
+  const pageTotal = Number(count?.dataset.total);
+  const pageEmptyAtRest = pageTotal === 0 && !origin && !queryRaw && when === "all";
+  if (empty && title && copy && pageEmptyAtRest) {
+    empty.hidden = true;
+    title.textContent = "";
+    copy.textContent = "";
+  } else if (empty && title && copy) {
     empty.hidden = shown.length !== 0;
     if (shown.length === 0) {
       if (origin) {

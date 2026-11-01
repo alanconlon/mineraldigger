@@ -1,0 +1,207 @@
+{
+  "note": "County, town and region pages in this file stay on the site when the upcoming show count is low. A refresh adds a page the first time it has an upcoming show, and it does not remove that page.",
+  "counties": [
+    {
+      "slug": "cheshire",
+      "name": "Cheshire",
+      "nation": "England"
+    },
+    {
+      "slug": "derbyshire",
+      "name": "Derbyshire",
+      "nation": "England"
+    },
+    {
+      "slug": "devon",
+      "name": "Devon",
+      "nation": "England"
+    },
+    {
+      "slug": "east-sussex",
+      "name": "East Sussex",
+      "nation": "England"
+    },
+    {
+      "slug": "essex",
+      "name": "Essex",
+      "nation": "England"
+    },
+    {
+      "slug": "hampshire",
+      "name": "Hampshire",
+      "nation": "England"
+    },
+    {
+      "slug": "kent",
+      "name": "Kent",
+      "nation": "England"
+    },
+    {
+      "slug": "monmouthshire",
+      "name": "Monmouthshire",
+      "nation": "Wales"
+    },
+    {
+      "slug": "north-yorkshire",
+      "name": "North Yorkshire",
+      "nation": "England"
+    },
+    {
+      "slug": "nottinghamshire",
+      "name": "Nottinghamshire",
+      "nation": "England"
+    },
+    {
+      "slug": "oxfordshire",
+      "name": "Oxfordshire",
+      "nation": "England"
+    },
+    {
+      "slug": "surrey",
+      "name": "Surrey",
+      "nation": "England"
+    },
+    {
+      "slug": "tyne-and-wear",
+      "name": "Tyne and Wear",
+      "nation": "England"
+    },
+    {
+      "slug": "warwickshire",
+      "name": "Warwickshire",
+      "nation": "England"
+    },
+    {
+      "slug": "west-sussex",
+      "name": "West Sussex",
+      "nation": "England"
+    },
+    {
+      "slug": "wiltshire",
+      "name": "Wiltshire",
+      "nation": "England"
+    },
+    {
+      "slug": "worcestershire",
+      "name": "Worcestershire",
+      "nation": "England"
+    }
+  ],
+  "towns": [
+    {
+      "slug": "ardingly",
+      "name": "Ardingly",
+      "county": "West Sussex",
+      "nation": "England"
+    },
+    {
+      "slug": "bakewell",
+      "name": "Bakewell",
+      "county": "Derbyshire",
+      "nation": "England"
+    },
+    {
+      "slug": "benfleet",
+      "name": "Benfleet",
+      "county": "Essex",
+      "nation": "England"
+    },
+    {
+      "slug": "brighton",
+      "name": "Brighton",
+      "county": "East Sussex",
+      "nation": "England"
+    },
+    {
+      "slug": "brockenhurst",
+      "name": "Brockenhurst",
+      "county": "Hampshire",
+      "nation": "England"
+    },
+    {
+      "slug": "canterbury",
+      "name": "Canterbury",
+      "county": "Kent",
+      "nation": "England"
+    },
+    {
+      "slug": "chepstow",
+      "name": "Chepstow",
+      "county": "Monmouthshire",
+      "nation": "Wales"
+    },
+    {
+      "slug": "harrogate",
+      "name": "Harrogate",
+      "county": "North Yorkshire",
+      "nation": "England"
+    },
+    {
+      "slug": "haywards-heath",
+      "name": "Haywards Heath",
+      "county": "West Sussex",
+      "nation": "England"
+    },
+    {
+      "slug": "kidlington",
+      "name": "Kidlington",
+      "county": "Oxfordshire",
+      "nation": "England"
+    },
+    {
+      "slug": "marks-tey",
+      "name": "Marks Tey",
+      "county": "Essex",
+      "nation": "England"
+    },
+    {
+      "slug": "melksham",
+      "name": "Melksham",
+      "county": "Wiltshire",
+      "nation": "England"
+    },
+    {
+      "slug": "nantwich",
+      "name": "Nantwich",
+      "county": "Cheshire",
+      "nation": "England"
+    },
+    {
+      "slug": "newark",
+      "name": "Newark",
+      "county": "Nottinghamshire",
+      "nation": "England"
+    },
+    {
+      "slug": "newcastle-upon-tyne",
+      "name": "Newcastle upon Tyne",
+      "county": "Tyne and Wear",
+      "nation": "England"
+    },
+    {
+      "slug": "newton-abbot",
+      "name": "Newton Abbot",
+      "county": "Devon",
+      "nation": "England"
+    },
+    {
+      "slug": "stoneleigh",
+      "name": "Stoneleigh",
+      "county": "Warwickshire",
+      "nation": "England"
+    },
+    {
+      "slug": "sunbury-on-thames",
+      "name": "Sunbury-on-Thames",
+      "county": "Surrey",
+      "nation": "England"
+    },
+    {
+      "slug": "worcester",
+      "name": "Worcester",
+      "county": "Worcestershire",
+      "nation": "England"
+    }
+  ],
+  "regions": []
+}

@@ -11,6 +11,7 @@ Live mode fetches HTML only. It does not read Facebook, Mineralica, or dealer di
 Rock, Gem & Bead Shows robots.txt allows /. Their homepage is the source for their dates.
 rockexchange.uk is the one host fetched with unverified TLS and a browser user agent.
 If one organiser site fails, that organiser's previous shows are kept and the run continues.
+A county, town or region page with a low upcoming count is warned about and kept.
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from assemble import assemble  # noqa: E402
+from listings import LISTINGS_PATH, fetch_live_sitemap, load_listings, retain_listings, save_listings, warn_low_counts  # noqa: E402
 from parsers.hampshire import parse_hampshire  # noqa: E402
 from parsers.nature_unearthed import parse_nature  # noqa: E402
 from parsers.oxfordshows import parse_oxford  # noqa: E402
@@ -230,6 +232,9 @@ def main() -> None:
                 file=sys.stderr,
             )
             shows = merge_kept(shows, kept)
+    extra_urls = fetch_live_sitemap() if args.live else []
+    retained = retain_listings(load_listings(LISTINGS_PATH), shows, today, extra_urls)
+    warn_low_counts(retained, shows, today)
     summarise(shows)
     if args.write:
         if args.live and args.sources:
@@ -238,6 +243,8 @@ def main() -> None:
             raise SystemExit("No shows to write.")
         write_shows(shows, today)
         print(f"Wrote {OUT}")
+        if save_listings(LISTINGS_PATH, retained):
+            print(f"Wrote {LISTINGS_PATH}")
 
 
 if __name__ == "__main__":
