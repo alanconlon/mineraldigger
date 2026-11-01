@@ -466,6 +466,7 @@ textarea { min-height: 7rem; resize: vertical; }
   width: 0;
   overflow: hidden;
 }
+#submit-turnstile { min-height: 65px; }
 .errors {
   background: #f8e8e2;
   border-radius: 12px;

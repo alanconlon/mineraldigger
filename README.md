@@ -124,9 +124,11 @@ Paid placement data, still empty:
 `/submit/` posts JSON to `/api/submit`.
 
 - Locally, with no webhook, the server writes `data/inbox/*.json`. That folder is gitignored. The reply says it was saved on the machine and not emailed.
-- On the public hostnames, `workers/submit/` is the mail worker. It accepts POST `/api/submit` from `https://mineraldigger.com`, `https://www.mineraldigger.com`, `https://mineraldigger.co.uk` and `https://www.mineraldigger.co.uk`. A filled honeypot (`company_website`) is accepted and not emailed. The sixth listing from the same IP inside ten minutes is refused. The message is from `submissions@mineraldigger.com` to `mineraldigger.hq@gmail.com` (`MINERALDIGGER_SUBMIT_TO` in `workers/submit/src/index.js` and in `workers/submit/wrangler.toml`).
+- On the public hostnames, `workers/submit/` is the mail worker. It accepts POST `/api/submit` from `https://mineraldigger.com`, `https://www.mineraldigger.com`, `https://mineraldigger.co.uk` and `https://www.mineraldigger.co.uk`. `/submit/` loads Cloudflare Turnstile and sends the token as `cf-turnstile-response`. The worker checks that token with Cloudflare before it emails the listing. The check uses `TURNSTILE_SECRET_KEY`, the token, and `CF-Connecting-IP`. A missing or failed check is HTTP 403, and the page asks the visitor to try the security check again. A filled honeypot (`company_website`) is accepted and not emailed, and it is not sent to Turnstile. The sixth listing from the same IP inside ten minutes is refused. The message is from `submissions@mineraldigger.com` to `mineraldigger.hq@gmail.com` (`MINERALDIGGER_SUBMIT_TO` in `workers/submit/src/index.js` and in `workers/submit/wrangler.toml`).
 - `mineraldigger.hq@gmail.com` has to be a verified Email Routing destination before Cloudflare will deliver that mail. The worker is in the repo. It does not assume routing is already on. If the binding is missing, or the destination is not verified, the form says mail is not connected and shows a copy of the listing. Nothing is stored.
-- `functions/api/submit.js` remains a Pages fallback for when that zone route is not attached. It forwards to `SUBMISSION_WEBHOOK_URL` only when that variable is set.
+- `functions/api/submit.js` remains a Pages fallback for when that zone route is not attached. It uses the same Turnstile check, then forwards to `SUBMISSION_WEBHOOK_URL` only when that variable is set. On localhost and `127.0.0.1` the page can still save a listing in `data/inbox/` when the widget has no token. The public worker does not allow that.
+
+Deploy the site first, then the worker. The live worker ignores the extra token field, so listings keep working while the new page goes out. After the worker deploy, a listing without a passing token is refused. Deploying the worker first would refuse listings until the new page is live.
 
 Deploy the worker from `workers/submit/` after `npx wrangler login`:
 
@@ -134,7 +136,16 @@ Deploy the worker from `workers/submit/` after `npx wrangler login`:
 npx wrangler deploy
 ```
 
+That command keeps secrets already stored on the worker, including `TURNSTILE_SECRET_KEY`. Do not put that value in the repo or in the workflow.
+
 The account id in `wrangler.toml` is `f856dac626b67bcd86aee0824fad569f`. The routes are only `/api/submit` on `mineraldigger.com` and `mineraldigger.co.uk`, including `www`. There is no secret for the destination address. Alan verifies `mineraldigger.hq@gmail.com` as an Email Routing destination, and the sender domain `mineraldigger.com` has to be on the same account so `submissions@mineraldigger.com` can send.
+
+`.github/workflows/deploy-submit-worker.yml` deploys the same worker when someone starts it from the Actions tab. A merge does not deploy it. It reads two repository secrets, the same names the Pages workflow uses:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+The token needs permission to deploy this worker. The workflow does not set `TURNSTILE_SECRET_KEY`. If the Pages fallback is actually reached, that project needs the same secret name. The custom-domain routes above win when they are attached, so the fallback stays unused.
 
 ## Deploy to Cloudflare Pages
 
@@ -232,7 +243,7 @@ Bluesky posts as `mineraldigger.com`. The app password is `MINERALDIGGER_BLUESKY
 ## Still to do before a public launch
 
 - Keep `mineraldigger.co.uk` on the same Pages project as `mineraldigger.com`, with no redirect between them
-- In Email Routing, verify the destination `mineraldigger.hq@gmail.com`, then run `npx wrangler deploy` from `workers/submit/`
+- In Email Routing, verify the destination `mineraldigger.hq@gmail.com`, then run `npx wrangler deploy` from `workers/submit/` after the submit page that sends the Turnstile token is already live
 
 Not in this version: DNS, mailing the Friday list automatically, Facebook scraping, mind-body-spirit listings, and Ireland. Sign-up is on `/newsletter/` through Buttondown. The Friday email scripts above create a Buttondown draft only. Weekly Facebook and Bluesky posts are drafted with the scripts above and go out only when someone runs both with `--publish` after Alan has OK'd the text. Live Stripe checkout for the four products is on `/feature/`. Facebook and Bluesky are linked from the footer.
 

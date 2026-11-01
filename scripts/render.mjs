@@ -1241,9 +1241,17 @@ export function renderSubmit({ site, generated }) {
           <label><input type="checkbox" name="confirm_scope" value="yes" required> This is a rock, gem, mineral, fossil or bead show.</label>
           <label><input type="checkbox" name="confirm_permission" value="yes" required> I am the organiser, or I have their permission to send this.</label>
         </div>
+        <div id="submit-turnstile"></div>
         <button class="pay" type="submit">Send listing</button>
       </form>
     </div></article>
+    <script>
+      window.mdRenderSubmitTurnstile = function () {};
+      window.onSubmitTurnstileLoad = function () {
+        window.mdRenderSubmitTurnstile();
+      };
+    </script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onSubmitTurnstileLoad&render=explicit" async defer></script>
     <script type="module" src="${assetUrl("/js/submit.js")}"></script>`;
   return layout({
     site,
@@ -1328,7 +1336,7 @@ export function renderPrivacy({ site, generated }) {
   const body = `<article class="page"><div class="wrap-narrow prose">
       <p class="eyebrow">Privacy</p>
       <h1>Privacy</h1>
-      <p class="fine">Last updated 29 October 2026</p>
+      <p class="fine">Last updated 1 November 2026</p>
       <p class="lede">MineralDigger (mineraldigger.com) is run by Alan Conlon in Ireland. This page explains what information we collect, why, who handles it for us, and how long we keep it. Questions or requests: <a href="mailto:${esc(email)}">${esc(email)}</a>.</p>
       <h2>Browsing the site</h2>
       <p>You do not need an account to use MineralDigger. We use Cloudflare Web Analytics, which is cookieless and does not track you across sites. It counts page views and gives rough visitor numbers. It does not collect personal data. Web Analytics on this site runs in lite mode. In lite mode Cloudflare does not add the analytics script for visitors from the EU, so those visits are not counted. Cloudflare's notes on the same setting also cover visitors whose traffic reaches a data centre in the UK or the rest of the EEA, so those visits may not be counted either. MineralDigger does not use advertising trackers or its own cookies. Cloudflare may set a security cookie called __cf_bm when it checks that a visitor is not a bot. It expires after 30 minutes of inactivity. It is not an analytics cookie, and Cloudflare does not use it to track you from site to site.</p>
@@ -1340,7 +1348,7 @@ export function renderPrivacy({ site, generated }) {
       <h2>The Friday email</h2>
       <p>If you <a href="${NEWSLETTER_PATH}">sign up for the Friday email</a>, we collect your email address, and your postcode if you choose to give it, so we can send the weekly list of shows. Sign-ups and sending are handled by Buttondown. Every email has an unsubscribe link. We keep your address until you unsubscribe.</p>
       <h2>Submitting a show</h2>
-      <p>The <a href="/submit/">submit form</a> asks for the show details (name, types, dates, times, venue, street, town, postcode, entry and website) and the organiser's name, email and phone. We use this to check and list the show, and to contact you about it. The form is sent by email to <a href="mailto:${esc(email)}">${esc(email)}</a> through Cloudflare. The show details are published on the site. Your email address is not. We keep submission emails while the show is listed and for a reasonable time afterwards in case of questions, and will delete them sooner if you ask.</p>
+      <p>The <a href="/submit/">submit form</a> asks for the show details (name, types, dates, times, venue, street, town, postcode, entry and website) and the organiser's name, email and phone. We use this to check and list the show, and to contact you about it. The form is sent by email to <a href="mailto:${esc(email)}">${esc(email)}</a> through Cloudflare. Before that email is sent, Cloudflare Turnstile checks that a person sent the form. Turnstile receives the IP address of the connection and tells us whether the check passed. It is not used for advertising. The show details are published on the site. Your email address is not. We keep submission emails while the show is listed and for a reasonable time afterwards in case of questions, and will delete them sooner if you ask.</p>
       <h2>Payments</h2>
       <p>Featured listings and sponsorships are paid through Stripe. Stripe processes the payment, and we never see your full card details. We receive your name, email address, billing address where Stripe asks for it, and what you tell checkout (which show it is, or which organiser for a year pass), so we can set up what you paid for. We keep payment records for as long as Irish tax law requires (generally six years). Keeping them is a legal obligation.</p>
       <h2>Emailing us</h2>
@@ -1349,7 +1357,7 @@ export function renderPrivacy({ site, generated }) {
       <ul>
         <li><strong>Buttondown</strong>: Friday email sign-ups and sending.</li>
         <li><strong>Stripe</strong>: payments for featured shows and sponsorships.</li>
-        <li><strong>Cloudflare</strong>: hosting, Web Analytics, and passing on the submission form.</li>
+        <li><strong>Cloudflare</strong>: hosting, Web Analytics, the Turnstile check on the submit form, and passing on the submission form.</li>
         <li><strong>postcodes.io</strong>: postcode and place lookups when you search by distance.</li>
         <li><strong>Google (Gmail)</strong>: our email inbox.</li>
       </ul>
