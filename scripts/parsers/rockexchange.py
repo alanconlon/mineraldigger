@@ -7,7 +7,12 @@ SOURCE = "https://rockexchange.uk/"
 TYPES = ["rock", "gem", "mineral", "fossil"]
 
 
-def parse_rockexchange(html: str, today: date | None = None, retrieved: str | None = None) -> list[dict]:
+def parse_rockexchange(
+    html: str,
+    today: date | None = None,
+    retrieved: str | None = None,
+    overrides: dict | None = None,
+) -> list[dict]:
     today = today or date.today()
     retrieved = retrieved or today.isoformat()
     from htmltext import html_to_text
@@ -70,39 +75,40 @@ def parse_rockexchange(html: str, today: date | None = None, retrieved: str | No
             phone = f"{digits[:5]} {digits[5:]}"
     postcode = "DE45 1JA" if re.search(r"DE45\s*1JA", text, re.I) else None
 
+    from overrides import apply_row_override
+
     rows = []
     for start, end in spans:
-        # rockexchange.uk is the only known society site. Its certificate expired
-        # in 2021 and the host returns HTTP 500. There is no replacement URL.
-        # A weekend that has not ended does not publish that address. The phone stays.
-        publish_url = None if end >= today.isoformat() else SOURCE
-        rows.append(
-            {
-                "organiser_id": "bakewell-rock-exchange",
-                "organiser_name": "Peak Lapidary and Mineral Society",
-                "organiser_url": publish_url,
-                "organiser_phone": phone,
-                "name": "Bakewell Rock Exchange",
-                "types": list(TYPES),
-                "start": start,
-                "end": end,
-                "provisional": False,
-                "year_inferred": False,
-                "venue_name": "Lady Manners School",
-                "street": None,
-                "postcode": postcode,
-                "times_summary": times,
-                "times_notes": None,
-                "entry_kind": "paid" if price else "unknown",
-                "entry_adult_gbp": price,
-                "entry_notes": " ".join(notes) or None,
-                "dealers": dealers,
-                "parking": parking,
-                "access_notes": access,
-                "source_url": publish_url,
-                "source_retrieved": retrieved,
-                "source_notes": "Both weekends, the door price and the opening times are on the one show page.",
-                "summary": "Rocks, minerals, fossils and gemstones. Organised by the Peak Lapidary and Mineral Society.",
-            }
-        )
+        # The page is read from rockexchange.uk. That host is not published.
+        # data/organiser-overrides.json clears the organiser URL, and the
+        # blocked host is removed from the source URL as well. A past weekend
+        # uses the same rule as one that is still ahead. The phone stays.
+        row = {
+            "organiser_id": "bakewell-rock-exchange",
+            "organiser_name": "Peak Lapidary and Mineral Society",
+            "organiser_url": SOURCE,
+            "organiser_phone": phone,
+            "name": "Bakewell Rock Exchange",
+            "types": list(TYPES),
+            "start": start,
+            "end": end,
+            "provisional": False,
+            "year_inferred": False,
+            "venue_name": "Lady Manners School",
+            "street": None,
+            "postcode": postcode,
+            "times_summary": times,
+            "times_notes": None,
+            "entry_kind": "paid" if price else "unknown",
+            "entry_adult_gbp": price,
+            "entry_notes": " ".join(notes) or None,
+            "dealers": dealers,
+            "parking": parking,
+            "access_notes": access,
+            "source_url": SOURCE,
+            "source_retrieved": retrieved,
+            "source_notes": "Both weekends, the door price and the opening times are on the one show page.",
+            "summary": "Rocks, minerals, fossils and gemstones. Organised by the Peak Lapidary and Mineral Society.",
+        }
+        rows.append(apply_row_override(row, overrides))
     return rows

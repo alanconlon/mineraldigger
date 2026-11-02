@@ -63,7 +63,7 @@ Rules the parsers follow:
 - The Sussex page prints "Saturday 14th November" and no year. 14 November 2026 is that Saturday, so the row uses it and the show page says the year was matched, not printed.
 - Haywards Heath College's street and postcode come from the college contact page, not from the show page. See `data/venue-supplements.json`.
 - Map coordinates are postcode centroids from postcodes.io, saved in `data/venues.json`.
-- Upcoming Bakewell rows do not publish https://rockexchange.uk/. That host has an expired certificate and returns HTTP 500, and there is no replacement URL. The phone number stays. The 2026 weekend has passed, so that row still records the URL it was read from.
+- Bakewell rows do not publish https://rockexchange.uk/, including weekends that have passed. That host has an invalid certificate and returns HTTP 500, and there is no replacement URL. `data/organiser-overrides.json` clears the organiser URL, and the parser removes that host from the source URL as well. The phone number stays. The site is still fetched so the dates can be read.
 
 Refresh from the saved fixtures (no network):
 
@@ -170,7 +170,7 @@ python3 scripts/indexnow.py
 
 `dist` is the Pages root for that command. Wrangler also picks up `functions/` beside it. Dashboard drag and drop of a zip publishes the static files only and does not compile `functions/`. The public `/api/submit` mail path is the worker route above, not the Pages function.
 
-Daily refresh is `.github/workflows/refresh-and-deploy.yml`. It runs at 05:15 UTC (05:15 GMT, 06:15 BST), and it can also be started by hand with `workflow_dispatch`. The job fetches the organiser pages (`python3 scripts/refresh.py --live --write`), runs `npm run build`, and deploys with Wrangler. It does not commit `data/shows.json`. Catalogue changes on main still go through pull requests. The deployment is marked dirty because the refreshed catalogue exists only on the runner. When IndexNow accepts URLs, the job commits `data/indexnow_state.json` with `[skip ci]` in the message, and rebases if another push lands first.
+Daily refresh is `.github/workflows/refresh-and-deploy.yml`. It runs at 05:17 UTC (05:17 GMT, 06:17 BST), and it can also be started by hand with `workflow_dispatch`. The job runs `npm test` on the committed catalogue first, so a failing parser test or page check blocks the deploy. It then fetches the organiser pages (`python3 scripts/refresh.py --live --write`), builds again, and runs `node scripts/check.mjs` on that refreshed build before it deploys with Wrangler. The tests do not fetch the live sites. It does not commit `data/shows.json`. Catalogue changes on main still go through pull requests. The deployment is marked dirty because the refreshed catalogue exists only on the runner. When IndexNow accepts URLs, the job commits `data/indexnow_state.json` with `[skip ci]` in the message, and rebases if another push lands first.
 
 ```bash
 npx wrangler pages deploy dist --project-name mineraldigger --branch main
@@ -249,4 +249,4 @@ Not in this version: DNS, mailing the Friday list automatically, Facebook scrapi
 
 ## Brand
 
-The name is MineralDigger. Types are rock, gem, mineral, fossil and bead. The homepage does not carry mind-body-spirit, psychic, healing or wellbeing copy. Spelling is British. The published pages do not use em dashes or exclamation marks.
+The name is MineralDigger. Types are rock, gem, mineral, fossil and bead. The homepage does not carry mind-body-spirit, psychic, healing or wellbeing copy. Spelling is British. The published pages do not use en dashes, em dashes or exclamation marks.

@@ -25,7 +25,7 @@ export const EMPTY_SHOWS_NOTE = "No shows listed right now, check back.";
 const TYPE_INTRO = {
   rock: "Rock shows across the UK, plus the rock, gem and bead weekends that include them. MineralDigger is a free calendar and map of dates and venues from organiser sites. Always confirm times and tickets with the organiser before you travel.",
   gem: "Gem shows and the rock, gem and bead weekends that list gems. MineralDigger puts UK dates, venues and entry on one map so you can see what is on this weekend and later in the year. Confirm with the organiser before you set off.",
-  mineral: "Mineral shows and society fairs with a date on the organiser site. MineralDigger is a free UK calendar and map for collectors, not a club or society. Check entry, times and any changes with the organiser before you travel.",
+  mineral: "Mineral shows and society shows with a date on the organiser site. MineralDigger is a free UK calendar and map for collectors, not a club or society. Check entry, times and any changes with the organiser before you travel.",
   fossil: "Fossil shows, and mineral weekends that include fossils. MineralDigger lists UK dates and venues from organiser websites on one map. Use it as a finder, then confirm times, tickets and changes with the organiser before you go.",
   bead: "Bead shows, including the rock, gem and bead weekends. MineralDigger is a free UK calendar and map of dates, venues and entry from organiser sites. Use it to plan a trip, then check with the organiser before you travel.",
 };
@@ -33,7 +33,7 @@ const TYPE_INTRO = {
 const TYPE_DESCRIPTION = {
   rock: "UK rock shows and rock, gem and bead weekends on one map. Free calendar from organiser sites.",
   gem: "UK gem shows and rock, gem and bead weekends. Dates, venues and entry on MineralDigger.",
-  mineral: "UK mineral shows and society fairs on one map. Free calendar; confirm with the organiser.",
+  mineral: "UK mineral shows and society shows on one map. Free calendar; confirm with the organiser.",
   fossil: "UK fossil shows and mineral weekends that include fossils. Free map calendar on MineralDigger.",
   bead: "UK bead shows and rock, gem and bead weekends. Dates and venues on MineralDigger.",
 };
@@ -816,7 +816,15 @@ export function organizerLink(show) {
   return { url: "", from: "" };
 }
 
-function jsonLd(show, site, generated) {
+function jsonLd(show, site, generated, todayISO) {
+  // A show whose end date is before today is over, and the page says so.
+  // schema.org has no completed status. EventScheduled means the event is
+  // taking place or has taken place, and Google treats that value, or a
+  // missing eventStatus, as scheduled to happen. Cancelled, postponed and
+  // rescheduled would be false. The Event node is left off so a past page
+  // does not say the show is still scheduled or that tickets are in stock.
+  // The page stays indexable and in the sitemap. BreadcrumbList stays.
+  if (show.end < todayISO) return "";
   const pageUrl = new URL(`/show/${show.slug}/`, site.url).href;
   const link = organizerLink(show);
   const performer = {
@@ -983,7 +991,7 @@ export function renderShow({ site, show, generated, todayISO, places = null }) {
       ${also}
       <p>Always check the organiser's page for times, tickets and any changes before you set off.</p>
     </div></article>
-    ${jsonLd(show, site, generated)}
+    ${jsonLd(show, site, generated, todayISO)}
     ${crumbs.script}`;
   return layout({
     site,

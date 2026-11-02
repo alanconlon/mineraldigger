@@ -36,17 +36,27 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Refresh show data
-        run: python3 scripts/refresh.py --live --write
-
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
 
-      - name: Install and build
-        run: npm ci && npm run build
+      - name: Install
+        run: npm ci
+
+      # Parser tests and the page checks run on the committed catalogue.
+      # They must not read the live sites. A failure here blocks the deploy.
+      - name: Test
+        run: npm test
+
+      - name: Refresh show data
+        run: python3 scripts/refresh.py --live --write
+
+      # The refreshed catalogue is what gets deployed. Check it again so a
+      # parser regression cannot publish a page the suite would reject.
+      - name: Rebuild and check the refreshed site
+        run: node scripts/build.mjs && node scripts/check.mjs
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v4

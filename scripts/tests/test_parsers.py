@@ -1,6 +1,6 @@
 """Parser tests. Fixture HTML is reduced from the organiser pages checked on 25 October 2026.
 
-If a full page was downloaded to /tmp/md-sources, the same expectations are run against it.
+These tests read the saved fixtures and data/organiser-overrides.json. They do not fetch organiser sites.
 """
 
 import sys
@@ -15,6 +15,7 @@ from assemble import assemble  # noqa: E402
 from parsers.hampshire import parse_hampshire  # noqa: E402
 from parsers.nature_unearthed import parse_nature  # noqa: E402
 from parsers.oxfordshows import parse_oxford  # noqa: E402
+from overrides import apply_row_override, scrub_shows  # noqa: E402
 from parsers.rockexchange import parse_rockexchange  # noqa: E402
 from parsers.rockngem import parse_rockngem  # noqa: E402
 from parsers.smls import parse_smls  # noqa: E402
@@ -22,7 +23,7 @@ from refresh import rows_from_fixtures  # noqa: E402
 
 TODAY = date(2026, 10, 25)
 FIXTURES = ROOT / "fixtures"
-LIVE = Path("/tmp/md-sources")
+BAKEWELL_HTML = (FIXTURES / "rockexchange.html").read_text(encoding="utf-8")
 
 
 def banned(value: str) -> bool:
@@ -107,7 +108,7 @@ class FixtureTests(unittest.TestCase):
         self.assertIn("10:00 to 16:00", rows[0]["times_summary"])
 
     def test_bakewell_both_years(self):
-        rows = parse_rockexchange((FIXTURES / "rockexchange.html").read_text(encoding="utf-8"), today=TODAY)
+        rows = parse_rockexchange(BAKEWELL_HTML, today=TODAY)
         self.assertEqual([(row["start"], row["end"]) for row in rows], [("2026-10-10", "2026-10-11"), ("2027-10-09", "2027-10-10")])
         self.assertEqual(rows[1]["entry_adult_gbp"], 3)
         self.assertIn("£5 for both days", rows[1]["entry_notes"])
@@ -115,9 +116,52 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual(rows[0]["dealers"], "70+")
         self.assertEqual(rows[0]["organiser_phone"], "01433 620304")
         self.assertEqual(rows[1]["organiser_phone"], "01433 620304")
-        self.assertEqual(rows[0]["organiser_url"], "https://rockexchange.uk/")
-        self.assertIsNone(rows[1]["organiser_url"])
-        self.assertIsNone(rows[1]["source_url"])
+        for day in (date(2026, 10, 1), TODAY, date(2028, 1, 1)):
+            parsed = parse_rockexchange(BAKEWELL_HTML, today=day)
+            self.assertEqual(len(parsed), 2)
+            for row in parsed:
+                self.assertIsNone(row["organiser_url"])
+                self.assertIsNone(row["source_url"])
+                self.assertNotIn("rockexchange.uk", json_blob([row]))
+
+    def test_bakewell_override_can_name_a_replacement_and_still_blocks_the_host(self):
+        replacement = {
+            "organisers": {"bakewell-rock-exchange": {"url": "https://peaklapidary.example/shows"}},
+            "blocked_hosts": ["rockexchange.uk"],
+        }
+        rows = parse_rockexchange(BAKEWELL_HTML, today=date(2026, 10, 1), overrides=replacement)
+        self.assertTrue(rows)
+        self.assertTrue(all(row["organiser_url"] == "https://peaklapidary.example/shows" for row in rows))
+        self.assertTrue(all(row["source_url"] is None for row in rows))
+        blocked = {
+            "organisers": {"bakewell-rock-exchange": {"url": "https://www.rockexchange.uk/next"}},
+            "blocked_hosts": ["rockexchange.uk"],
+        }
+        row = apply_row_override(
+            {
+                "organiser_id": "bakewell-rock-exchange",
+                "organiser_url": "https://rockexchange.uk/",
+                "source_url": "https://rockexchange.uk/",
+            },
+            blocked,
+        )
+        self.assertIsNone(row["organiser_url"])
+        self.assertIsNone(row["source_url"])
+        kept = scrub_shows(
+            [
+                {
+                    "organiser": {"id": "bakewell-rock-exchange", "url": "https://rockexchange.uk/", "phone": "01433 620304"},
+                    "source": {
+                        "url": "https://www.rockexchange.uk/",
+                        "also": [{"url": "https://rockexchange.uk/dates"}],
+                    },
+                }
+            ]
+        )
+        self.assertIsNone(kept[0]["organiser"]["url"])
+        self.assertEqual(kept[0]["organiser"]["phone"], "01433 620304")
+        self.assertIsNone(kept[0]["source"]["url"])
+        self.assertEqual(kept[0]["source"]["also"], [])
 
     def test_smls_year_is_matched_not_printed(self):
         rows = parse_smls((FIXTURES / "smls.html").read_text(encoding="utf-8"), today=TODAY)
@@ -155,10 +199,12 @@ class FixtureTests(unittest.TestCase):
         self.assertTrue(rgbs)
         self.assertTrue(all(show["types"] == ["rock", "gem", "bead"] for show in rgbs))
         sussex = next(show for show in shows if show["organiser"]["id"] == "smls")
-        bakewell_2027 = next(show for show in shows if show["id"] == "bakewell-rock-exchange-2027-10-09-de451ja")
-        self.assertIsNone(bakewell_2027["organiser"]["url"])
-        self.assertIsNone(bakewell_2027["source"]["url"])
-        self.assertEqual(bakewell_2027["organiser"]["phone"], "01433 620304")
+        self.assertNotIn("rockexchange.uk", blob)
+        for year in ("2026-10-10", "2027-10-09"):
+            bakewell = next(show for show in shows if show["id"] == f"bakewell-rock-exchange-{year}-de451ja")
+            self.assertIsNone(bakewell["organiser"]["url"])
+            self.assertIsNone(bakewell["source"]["url"])
+            self.assertEqual(bakewell["organiser"]["phone"], "01433 620304")
         self.assertEqual(sussex["venue"]["postcode"], "RH16 1LT")
         self.assertEqual(sussex["venue"]["street"], "Harlands Road")
         self.assertIn("college contact page", sussex["source"]["notes"])
@@ -168,38 +214,6 @@ def json_blob(shows: list[dict]) -> str:
     import json
 
     return json.dumps(shows)
-
-
-class LiveHtmlTests(unittest.TestCase):
-    def test_downloaded_rockngem(self):
-        path = LIVE / "rockngem.html"
-        if not path.exists():
-            self.skipTest("no download")
-        rows = parse_rockngem(path.read_text(encoding="utf-8", errors="replace"), today=TODAY)
-        self.assertEqual(len(rows), 30)
-        self.assertEqual(sum(row["provisional"] for row in rows), 27)
-        kempton = next(row for row in rows if row["start"] == "2026-10-31")
-        self.assertEqual(kempton["entry_adult_gbp"], 6)
-
-    def test_downloaded_independents(self):
-        if not (LIVE / "oxford.html").exists():
-            self.skipTest("no download")
-        oxford = parse_oxford((LIVE / "oxford.html").read_text(encoding="utf-8", errors="replace"), today=TODAY)
-        self.assertEqual(sorted(row["start"] for row in oxford), ["2026-11-29", "2027-03-21", "2027-05-23", "2027-07-25"])
-        nature = parse_nature(
-            (LIVE / "nature.html").read_text(encoding="utf-8", errors="replace"),
-            (LIVE / "nature-ex.html").read_text(encoding="utf-8", errors="replace"),
-            today=TODAY,
-        )
-        self.assertEqual([row["start"] for row in nature], ["2026-10-17", "2027-03-13", "2027-10-16"])
-        bakewell = parse_rockexchange((LIVE / "bakewell.html").read_text(encoding="utf-8", errors="replace"), today=TODAY)
-        self.assertEqual([row["start"] for row in bakewell], ["2026-10-10", "2027-10-09"])
-        smls = parse_smls((LIVE / "smls.html").read_text(encoding="utf-8", errors="replace"), today=TODAY)
-        self.assertEqual(smls[0]["start"], "2026-11-14")
-        self.assertTrue(smls[0]["year_inferred"])
-        hants = parse_hampshire((LIVE / "hants.html").read_text(encoding="utf-8", errors="replace"), today=TODAY)
-        self.assertEqual(hants[0]["start"], "2026-09-19")
-        self.assertEqual(hants[0]["entry_adult_gbp"], 2)
 
 
 if __name__ == "__main__":

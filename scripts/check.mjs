@@ -63,6 +63,58 @@ function textOnly(html) {
     .replace(/<script[\s\S]*?<\/script>/gi, "");
 }
 
+function decodeEntities(value) {
+  return String(value)
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(Number(dec)))
+    .replace(/&mdash;/g, "\u2014")
+    .replace(/&ndash;/g, "\u2013")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, " ");
+}
+
+function visibleText(html) {
+  const labelled = [...html.matchAll(/\b(?:alt|title|aria-label)\s*=\s*"([^"]*)"/gi)].map((match) => match[1]);
+  const meta = [...html.matchAll(/<meta\b[^>]*\bcontent\s*=\s*"([^"]*)"/gi)].map((match) => match[1]);
+  const body = html
+    .replace(/<!DOCTYPE[^>]*>/gi, "")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ");
+  return decodeEntities(`${body} ${labelled.join(" ")} ${meta.join(" ")}`);
+}
+
+function linkedHosts(html) {
+  const hosts = [];
+  for (const match of html.matchAll(/\b(?:href|src)\s*=\s*"([^"]+)"/gi)) {
+    try {
+      hosts.push(new URL(match[1], "https://mineraldigger.com").hostname.replace(/^www\./i, "").toLowerCase());
+    } catch {
+      hosts.push(String(match[1]).toLowerCase());
+    }
+  }
+  return hosts;
+}
+
+function sisterHost(host) {
+  return /(?:^|\.)(?:fairdigger|auctiondigger)\./i.test(host);
+}
+
+async function textBuildFiles(dir) {
+  const found = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) found.push(...(await textBuildFiles(path)));
+    else if (/\.(html|ics|json|xml|txt)$/i.test(entry.name)) found.push(path);
+  }
+  return found;
+}
+
 async function htmlFiles(dir) {
   const found = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
@@ -129,8 +181,8 @@ const hubs = {
   mineral: {
     heading: "Mineral shows",
     title: "Mineral shows in the UK | MineralDigger",
-    description: "UK mineral shows and society fairs on one map. Free calendar; confirm with the organiser.",
-    lede: "Mineral shows and society fairs with a date on the organiser site. MineralDigger is a free UK calendar and map for collectors, not a club or society. Check entry, times and any changes with the organiser before you travel.",
+    description: "UK mineral shows and society shows on one map. Free calendar; confirm with the organiser.",
+    lede: "Mineral shows and society shows with a date on the organiser site. MineralDigger is a free UK calendar and map for collectors, not a club or society. Check entry, times and any changes with the organiser before you travel.",
   },
   fossil: {
     heading: "Fossil shows",
@@ -153,6 +205,7 @@ for (const [key, copy] of Object.entries(hubs)) {
   if (!page.includes(`<meta name="description" content="${copy.description}">`)) fail(`${key} hub description is wrong.`);
   if (!page.includes(`property="og:title" content="${copy.title}"`)) fail(`${key} hub og:title should match the title.`);
   if (!page.includes(`property="og:description" content="${copy.description}"`)) fail(`${key} hub og:description should match the description.`);
+  if (key === "mineral" && /\bfairs?\b/i.test(visibleText(page))) fail("Mineral hub still says fair or fairs.");
 }
 if (!index.includes('rel="canonical" href="https://mineraldigger.com/"')) fail("Homepage canonical is not https://mineraldigger.com/.");
 if (!index.includes('property="og:url" content="https://mineraldigger.com/"')) fail("Homepage og:url is not https://mineraldigger.com/.");
@@ -469,8 +522,13 @@ const files = await htmlFiles(dist);
 for (const file of files) {
   const raw = await readFile(file, "utf8");
   const html = textOnly(raw);
-  if (html.includes("\u2014")) fail(`Em dash in ${file}`);
-  if (html.includes("!")) fail(`Exclamation mark in ${file}`);
+  const visible = visibleText(raw);
+  if (visible.includes("\u2014") || visible.includes("\u2013")) fail(`En or em dash in visible text of ${relative(dist, file)}`);
+  if (visible.includes("!")) fail(`Exclamation mark in visible text of ${relative(dist, file)}`);
+  if (/\bfairs?\b/i.test(visible)) fail(`Visible copy says fair or fairs in ${relative(dist, file)}`);
+  for (const host of linkedHosts(raw)) {
+    if (sisterHost(host)) fail(`Link to ${host} in ${relative(dist, file)}`);
+  }
   const submitPage = relative(dist, file).split(sep).join("/") === "submit/index.html";
   if (!submitPage && (raw.includes("challenges.cloudflare.com/turnstile") || raw.includes("submit-turnstile") || raw.includes("cf-turnstile"))) {
     fail(`Turnstile should stay on the submit page only: ${file}`);
@@ -555,6 +613,11 @@ for (const file of files) {
   if (/Ireland|UK\s*&|UK\s*\+|fairdigger|auctiondigger|alanconlon\.com|\/digest\//i.test(foot)) {
     fail(`Footer in ${file} has a banned link or a non-UK blurb`);
   }
+}
+
+for (const file of await textBuildFiles(dist)) {
+  const raw = await readFile(file, "utf8");
+  if (/rockexchange\.uk/i.test(raw)) fail(`Built file still names rockexchange.uk: ${relative(dist, file)}`);
 }
 
 const robots = await readFile(join(dist, "robots.txt"), "utf8");
@@ -838,24 +901,29 @@ if (!index.includes(`Data last refreshed ${refreshedLong}.`)) {
 if (catalogue.shows.length < 35 || catalogue.shows.length > 50) fail(`Unexpected show count ${catalogue.shows.length}`);
 const upcoming = catalogue.shows.filter((show) => show.end >= "2026-10-25");
 if (upcoming.length < 35) fail(`Not enough upcoming shows: ${upcoming.length}`);
-for (const show of upcoming) {
-  if (JSON.stringify(show).includes("rockexchange.uk")) {
-    fail(`${show.id} is still upcoming and still links to rockexchange.uk.`);
+for (const show of catalogue.shows) {
+  if (JSON.stringify(show).toLowerCase().includes("rockexchange.uk")) {
+    fail(`${show.id} still links to rockexchange.uk.`);
   }
 }
-const bakewell2027 = catalogue.shows.find((show) => show.slug === "bakewell-rock-exchange-bakewell-2027-10-09");
-if (!bakewell2027) fail("Bakewell 2027 show is missing.");
-else if (bakewell2027.organiser.url || bakewell2027.source.url) fail("Bakewell 2027 still publishes rockexchange.uk.");
-else if (bakewell2027.organiser.phone !== "01433 620304") fail("Bakewell 2027 phone changed.");
-const bakewellPage = await readFile(join(dist, "show/bakewell-rock-exchange-bakewell-2027-10-09/index.html"), "utf8");
-if (bakewellPage.includes("rockexchange.uk")) fail("Bakewell 2027 page still links to rockexchange.uk.");
-if (bakewellPage.includes("Organiser website")) fail("Bakewell 2027 page still renders an organiser website link.");
-if (!bakewellPage.includes("01433 620304") || !bakewellPage.includes('href="tel:01433620304"')) {
-  fail("Bakewell 2027 page is missing the organiser phone.");
-}
-const bakewellIcs = await readFile(join(dist, "show/bakewell-rock-exchange-bakewell-2027-10-09/event.ics"), "utf8");
-if (bakewellIcs.includes("rockexchange.uk") || bakewellIcs.includes("URL:")) {
-  fail("Bakewell 2027 calendar still links out.");
+for (const slug of ["bakewell-rock-exchange-bakewell-2026-10-10", "bakewell-rock-exchange-bakewell-2027-10-09"]) {
+  const bakewell = catalogue.shows.find((show) => show.slug === slug);
+  if (!bakewell) {
+    fail(`${slug} is missing.`);
+    continue;
+  }
+  if (bakewell.organiser.url || bakewell.source.url) fail(`${slug} still publishes rockexchange.uk.`);
+  if (bakewell.organiser.phone !== "01433 620304") fail(`${slug} phone changed.`);
+  const bakewellPage = await readFile(join(dist, "show", slug, "index.html"), "utf8");
+  if (/rockexchange\.uk/i.test(bakewellPage)) fail(`${slug} page still links to rockexchange.uk.`);
+  if (bakewellPage.includes("Organiser website")) fail(`${slug} page still renders an organiser website link.`);
+  if (!bakewellPage.includes("01433 620304") || !bakewellPage.includes('href="tel:01433620304"')) {
+    fail(`${slug} page is missing the organiser phone.`);
+  }
+  const bakewellIcs = await readFile(join(dist, "show", slug, "event.ics"), "utf8");
+  if (/rockexchange\.uk/i.test(bakewellIcs) || bakewellIcs.includes("URL:")) {
+    fail(`${slug} calendar still links out.`);
+  }
 }
 const rgbs = catalogue.shows.filter((show) => show.organiser?.id === "rockngem");
 if (rgbs.length < 20) fail(`Expected the Rock, Gem & Bead series, found ${rgbs.length}.`);
@@ -1040,14 +1108,26 @@ for (const show of catalogue.shows) {
     continue;
   }
   const parsed = eventJsonLd(html);
-  if (parsed.error || parsed.events.length !== 1) {
+  if (parsed.error) {
+    fail(`${show.slug} has invalid JSON-LD.`);
+    continue;
+  }
+  const past = show.end < isoToday();
+  if (past) {
+    if (!html.includes("This date has passed. Check the organiser for the next one.")) {
+      fail(`${show.slug} should say this date has passed.`);
+    }
+    if (parsed.events.length || html.includes("EventScheduled") || html.includes("https://schema.org/InStock")) {
+      fail(`${show.slug} is past and still publishes EventScheduled or in-stock tickets.`);
+    }
+    if (html.includes('name="robots" content="noindex"')) fail(`${show.slug} is past and is noindex.`);
+    if (!sitemap.includes(`<loc>${pageUrl}</loc>`)) fail(`${show.slug} is past and is missing from the sitemap.`);
+  } else if (html.includes("This date has passed")) {
+    fail(`${show.slug} is still ahead and says the date has passed.`);
+  } else if (parsed.events.length !== 1) {
     fail(`${show.slug} should have one Event JSON-LD script.`);
     continue;
   }
-  const event = parsed.events[0];
-  const refreshed = show.source?.retrieved || catalogue.generated;
-  if (event.name !== show.name) fail(`${show.slug} structured data name should stay the catalogue name.`);
-  if (event.url !== pageUrl) fail(`${show.slug} Event url is not the mineraldigger.com show page.`);
   if (/year is matched|year was matched|matches the weekday|does not print the year|college contact page/i.test(html)) {
     fail(`${show.slug} publishes an internal note.`);
   }
@@ -1076,6 +1156,14 @@ for (const show of catalogue.shows) {
     const rawHref = String(show.source.url).replace(/&/g, "&amp;");
     if (html.includes(`>${rawHref}</a>`)) fail(`${show.slug} still prints the source URL as the link text.`);
   }
+  if (past || parsed.events.length !== 1) continue;
+  const event = parsed.events[0];
+  const refreshed = show.source?.retrieved || catalogue.generated;
+  if (event.eventStatus !== "https://schema.org/EventScheduled") {
+    fail(`${show.slug} should be EventScheduled while the date is still ahead.`);
+  }
+  if (event.name !== show.name) fail(`${show.slug} structured data name should stay the catalogue name.`);
+  if (event.url !== pageUrl) fail(`${show.slug} Event url is not the mineraldigger.com show page.`);
   if (JSON.stringify(event.image) !== JSON.stringify(["https://mineraldigger.com/og-image.jpg"])) {
     fail(`${show.slug} Event image is not the og-image array.`);
   }
@@ -1135,8 +1223,19 @@ for (const show of catalogue.shows) {
   }
 }
 
-if (organizerCounts.organiser + organizerCounts.source + organizerCounts.omitted !== catalogue.shows.length) {
-  fail("Organizer URL tally does not cover every show.");
+const ahead = catalogue.shows.filter((show) => show.end >= isoToday());
+if (organizerCounts.organiser + organizerCounts.source + organizerCounts.omitted !== ahead.length) {
+  fail("Organizer URL tally does not cover every show that is still ahead.");
+}
+const pastExamples = [
+  "rock-gem-and-bead-show-sunbury-on-thames-2026-10-31",
+  "south-of-england-mineral-show-ardingly-2026-10-17",
+  "bakewell-rock-exchange-bakewell-2026-10-10",
+];
+for (const slug of pastExamples) {
+  const show = catalogue.shows.find((item) => item.slug === slug);
+  if (!show) fail(`${slug} is missing.`);
+  else if (!(show.end < isoToday())) fail(`${slug} should be past on this build date.`);
 }
 const aggregatorFallback = organizerLink({
   organiser: { name: "Club", url: "https://www.facebook.com/club" },

@@ -1,0 +1,9 @@
+{
+  "_note": "Applied by the parsers on every refresh, including a weekend that has already passed. A null url clears that organiser's website. blocked_hosts are removed from organiser and source URLs, including a row kept from an older catalogue. rockexchange.uk has an invalid certificate and there is no replacement. The phone number stays.",
+  "organisers": {
+    "bakewell-rock-exchange": {
+      "url": null
+    }
+  },
+  "blocked_hosts": ["rockexchange.uk"]
+}
