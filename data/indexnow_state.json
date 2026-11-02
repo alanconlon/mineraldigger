@@ -2,8 +2,8 @@
   "host": "mineraldigger.com",
   "urls": {
     "https://mineraldigger.com/": {
-      "hash": "b9d395315920312fa73b0df3a0953a145cd0b5430174b224bc77589e1dcd2954",
-      "lastmod": "2026-11-01"
+      "hash": "3d90548c161fe710a6c40026743210a8065008d8ae56226e2f5879fb318f1229",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/about/": {
       "hash": "47879954d1a1d6f5f021bff74a78a455bbf1cbc7e046dc18f021f60041326613",
@@ -14,12 +14,12 @@
       "lastmod": "2026-10-30"
     },
     "https://mineraldigger.com/bead/": {
-      "hash": "02df83596d21d1ca2d625dc3a3d83c82ed3fab0e8d6890d8de95fd341b964681",
-      "lastmod": "2026-11-01"
+      "hash": "445c7122a1e53d0791e3d91c19b3865c0919b44ddb8fc47f6f8afa3d04382fbe",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/county/": {
-      "hash": "4c02e992ffba36e9789ce13bdf49b9075276808bd695d488c5c1873116fb1ec2",
-      "lastmod": "2026-10-30"
+      "hash": "9b921fb0f624ce6d29c9af88424e48fd15ea384c289c59f71d9e474e43dde95a",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/county/cheshire/": {
       "hash": "c4ddb07ddfc0ac8a2d1733f8002aa37d032c8da88e763ddfb0f7f2fe836e6779",
@@ -66,8 +66,8 @@
       "lastmod": "2026-10-30"
     },
     "https://mineraldigger.com/county/surrey/": {
-      "hash": "c6f9fce6b85441b4c73143b373219a77acd15e02572505323bd68b11bd2cc48b",
-      "lastmod": "2026-11-01"
+      "hash": "6aa0ef1efa6daef9393c477d2127625fdc65f87134b3fc46ceb87f550b461456",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/county/tyne-and-wear/": {
       "hash": "aee9f0336fe741ea7d26ed7ba3fb9c99375d8edef847ef59896e79109e94aeb5",
@@ -98,8 +98,8 @@
       "lastmod": "2026-10-30"
     },
     "https://mineraldigger.com/gem/": {
-      "hash": "4ca008923c7344a65e554e98d0c19a8a94801737987c90c3cbd98df1480df872",
-      "lastmod": "2026-11-01"
+      "hash": "479835bb4c73b9bdb730d4d4c133c9ddbe6803c762383609557219f09dc9d34f",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/mineral/": {
       "hash": "cc507ad6cf69fbe6e3c2d576cc58a5f7b2a23fd27ea9a4a0d3af3a2526ad9979",
@@ -114,176 +114,176 @@
       "lastmod": "2026-11-01"
     },
     "https://mineraldigger.com/rock/": {
-      "hash": "803364eb64a5bcbac351010886bc298fa9ae86493b0fb6d300c12c37adf77924",
-      "lastmod": "2026-11-01"
+      "hash": "0126688451a5e9a0b58a0f522c53e049cfc3e3f7f0a9a7abf1d44e0c4107aa42",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/bakewell-rock-exchange-bakewell-2026-10-10/": {
-      "hash": "7b95f0c9c3be05d7fd1bb99be3dc133ff492addcec6329f1ad851253b6156e5d",
-      "lastmod": "2026-11-01"
+      "hash": "25788a3ef021871229c636cb68f3764ebddc6ec371e84c8f35a09f0694f7ccd2",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/bakewell-rock-exchange-bakewell-2027-10-09/": {
-      "hash": "c112eb4e959907e5f998395e786dd20e0141c02ccceda98d885955e2bc3aa2d6",
-      "lastmod": "2026-11-01"
+      "hash": "17a3e5dba009fe16eaeefbde62fb74cab30a9064dfb39d40fef735158bd4435d",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/hampshire-mineral-and-fossil-show-southampton-2026-09-19/": {
-      "hash": "87813ca040c58ec540235080c62e785537076286d9013743106d239f5480b962",
-      "lastmod": "2026-11-01"
+      "hash": "1640525546edbc1ec9d8ca223b1543e3e4fa4c91a742a29a57db0cad15e0aae0",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/oxford-mineral-and-fossil-show-kidlington-2026-11-29/": {
-      "hash": "fa6278e9048eea9a67ba2912a58b1e0e9b7decdcda0490a4541d51c1085be7b5",
-      "lastmod": "2026-11-01"
+      "hash": "43441f3a1d11524dddd46c662d8b5bc6588272ed8370a13034f1c49b330e1570",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/oxford-mineral-and-fossil-show-kidlington-2027-03-21/": {
-      "hash": "99e931ebf04c426d68299a523448398f630d5eab54ef93652fb5458243f65643",
-      "lastmod": "2026-11-01"
+      "hash": "99376bc0dcca5bc2e2a43eb26acd60e7f2bfa72a6ca23204d53a601254c28e7b",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/oxford-mineral-and-fossil-show-kidlington-2027-05-23/": {
-      "hash": "38c7489749f9b1457df12ac7e43bc5d21df0d1189fbb0a915e7bd3a8c5d09a9b",
-      "lastmod": "2026-11-01"
+      "hash": "1ba75b7fbd34d68db974f73307bcbfa0a35570169251e350bbe92f37264c9551",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/oxford-mineral-and-fossil-show-kidlington-2027-07-25/": {
-      "hash": "603c81cbad546011263af41be2fe8a55e6d9d6db37754490ac2a8f23e49d9410",
-      "lastmod": "2026-11-01"
+      "hash": "4bce59fc4d0796143050cd32515ba65427ed52a2389819bf98e4ead184062630",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-benfleet-2027-07-10/": {
-      "hash": "95bbdf0ec009561dd875df0e739346ca38521dd4792baf2cde70c0074b762c68",
-      "lastmod": "2026-11-01"
+      "hash": "a387067eb6f610a4f79060e62ff4712b94b236c4d2ce04068f45f1f5b9a4f85e",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-brighton-2027-01-16/": {
-      "hash": "d561081042e358c48ad6da534e7e24a593231b177ecdf3897fd0590532de6a3c",
-      "lastmod": "2026-11-01"
+      "hash": "48689c5c9aab464948df6bd30531eca816e1b893ea9dc7612202cc3b206efe6c",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-brighton-2027-07-03/": {
-      "hash": "a093ee779a04e2bff42112e03b74663291845e3739241e3b85e1c3b8085bd938",
-      "lastmod": "2026-11-01"
+      "hash": "379cb94da60eb5afec579d0feb34605a45298c9eecd4854593ca10f2900389ef",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-brockenhurst-2027-02-13/": {
-      "hash": "f293e9f1044e9d822bc6fb6022b6354d52fb2d927b086f6e5d2d3d2a618d9fbd",
-      "lastmod": "2026-11-01"
+      "hash": "1a11926f0ab6c459ee18a8d59b0dcf872a23a934cd6dbb69b45ba2df2208b8d2",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-brockenhurst-2027-07-31/": {
-      "hash": "241eafcc8097b6ef58816425aff0f7e654364ea00167cf90f8090c338e7cf84e",
-      "lastmod": "2026-11-01"
+      "hash": "06b217e8537c15ed586460a1f880849cf2c53f0eb40ea9240d246b50edc8bd01",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-canterbury-2027-01-30/": {
-      "hash": "ce66a232063c6cab8c005831e5519086d705028dfdaa7f14d0c27be6166a05c0",
-      "lastmod": "2026-11-01"
+      "hash": "dcfc6ea6b85b63a64ce21d23e146a918cf7500a5510bb0ad89830d6e380e24f1",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-canterbury-2027-08-14/": {
-      "hash": "7e538bc9478a83add6900a20600dd5978a1b66c9432c0a405c3ca84db1324d6b",
-      "lastmod": "2026-11-01"
+      "hash": "4df371f7dc6d340a3df7e9c667502ecd633dec205b5613427e0f95d201aff478",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-chepstow-2027-02-06/": {
-      "hash": "671feabc7750f6ddfdb6725f5f98147b749cea4fcfc1ef0c396a5c24e2779c3f",
-      "lastmod": "2026-11-01"
+      "hash": "3588fdfbfad630d3720a789a9c34d43705db0bf349a1c2e475981fbcbaa0ebe6",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-chepstow-2027-06-12/": {
-      "hash": "0a4361b47737389ad7d4db5e63f102b80f230cd53178183eba9b73ea272270c2",
-      "lastmod": "2026-11-01"
+      "hash": "6cf3829b0074b1a3bd74a0b12addd4cbeb7a89cb1f7765750393fa00c09a5dc4",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-harrogate-2027-03-05/": {
-      "hash": "fc2adba99e13bbfb942bf1f58a51b241bfec0c4a9a7484c3b4ec3732b998ea38",
-      "lastmod": "2026-11-01"
+      "hash": "c22ae13c998c17138f713c02ff84ffaa72b8d6a4d0f631db3db55831fd5d939e",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-harrogate-2027-08-21/": {
-      "hash": "8cd150ccfc70eca1289591c409648bb492aac2a46248d590bde84a815e76e2e7",
-      "lastmod": "2026-11-01"
+      "hash": "c7e475c1476ba89307ececd3ebc07005bdd8126aefe62bcc74aaf182a8172831",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-marks-tey-2027-06-05/": {
-      "hash": "d9d5f8a2bb2995d07c0d96233d49a15cb5362f8a2ccfed5ad5088c6f0c772548",
-      "lastmod": "2026-11-01"
+      "hash": "6a5142aa290a37f5b7bdcd4adf209ab5c1653238466e80ab1e39b95bf338ccb2",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-melksham-2027-08-07/": {
-      "hash": "ca57ea4497b9e4aee84bb0638ce158fcd2895393e32c9b23b9dd5b4b31987ac4",
-      "lastmod": "2026-11-01"
+      "hash": "58a18e23bf7d6b0c4f5d09127b0e0610bff73459487271aa458740b988f52589",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-nantwich-2027-02-27/": {
-      "hash": "46a487b865bf446dde6b281c74f105f20ce32695b4719997e5f7f0b812e107ad",
-      "lastmod": "2026-11-01"
+      "hash": "dd2993a68a747e92cb098363cdcb795cdea6b15971d51fd039f54d9034a19193",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-nantwich-2027-09-18/": {
-      "hash": "314c4bcdd3141d4ba487c7b8b956567921c1834e8eb3e8c18086cba00ea1ef91",
-      "lastmod": "2026-11-01"
+      "hash": "72deabcf4c8635fd6d1640fa552aaecf64f2d990b224e294e492d2908a39a14f",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-newark-2027-04-17/": {
-      "hash": "af1284a807408838dee9e4f54ecb2d8cc5244cfbd54173c75f1897840add73ef",
-      "lastmod": "2026-11-01"
+      "hash": "497b555af1a948a3949a8e698b76afff5efc904f07525a37ea8492b5fa8b38ff",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-newark-2027-09-11/": {
-      "hash": "ee57c9de706a072a63d2520f7412a4b376e76dbed1062cf400d1f569abcc1e2d",
-      "lastmod": "2026-11-01"
+      "hash": "f7c1b061889a92f97c1d73713ebb9048cf5139cc4bf8bfcc7d1b55db7c2efd55",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-newcastle-upon-tyne-2026-11-14/": {
-      "hash": "c0083ae5c55f1d0f9b0e2f78c062c261c01afc4d9394adbe7aa8ebf6c5e46d77",
-      "lastmod": "2026-11-01"
+      "hash": "d4c37701b81ba4bf3606d93ccf3c40f44ee646e8ce4ad7a5154fbc69c765ff19",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-newcastle-upon-tyne-2027-05-08/": {
-      "hash": "7457b7b52a291c07331ed52ce01ded4465bf4355964f4521bb806a57a6426111",
-      "lastmod": "2026-11-01"
+      "hash": "919cbdcc219bd83a5ac965aa27ba471eb3160a9b5a8c0c4dd156353bfecd3cf1",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-newcastle-upon-tyne-2027-09-25/": {
-      "hash": "ccdad6498884a86da85855b19b8fed8ee2db88b279e7c68983b9436799fbc3f1",
-      "lastmod": "2026-11-01"
+      "hash": "e0024f8ac6a0475d23880f39d110a73b508db123c2cb51fb5f6e5dd9bc567f89",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-newton-abbot-2027-10-02/": {
-      "hash": "e6a6d066e5022e4850af8f79f1525d47ced7adaf53055fcc4e0f848606f0f06a",
-      "lastmod": "2026-11-01"
+      "hash": "e97a492b5abf95c3b13c52e1489997a370044b5b3af8ff54e58433c2efbda628",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-stoneleigh-2027-04-10/": {
-      "hash": "5cbf8470b7d60353d84e0be18e0b142710ddd0e8b19316fad4e2c8e488886aae",
-      "lastmod": "2026-11-01"
+      "hash": "2430b72230eb6e1ed3261a206820fce6686d72a6f485b3576de2de92204813bb",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-stoneleigh-2027-09-04/": {
-      "hash": "263eaf26495ae44961c8cc903fabbf93b62aa02ff4db110514abbd606695af95",
-      "lastmod": "2026-11-01"
+      "hash": "d86c05eab870fefa3ed579d1e9ee67b19353a682a9daf129aa521f12daddc215",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-sunbury-on-thames-2026-10-31/": {
-      "hash": "c93342e94268b258e15ee1213473a806163f6da503b18ccf4803ba9c6db8b6aa",
-      "lastmod": "2026-11-01"
+      "hash": "7cef0e201e823d4a3c5bb378f79d48b4e3b072abc4283c22b1f26db1a502c4e4",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-sunbury-on-thames-2027-02-20/": {
-      "hash": "c1008905a3bb3727b76df4c5f1118e191e9413005ba797b5285ecf4c8f8d46d7",
-      "lastmod": "2026-11-01"
+      "hash": "35262976f9de8922c74eaa8e183efd6af8370076f6695aad5d35c57d29412f41",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-sunbury-on-thames-2027-07-24/": {
-      "hash": "deb79078235ca928557276dcdd0ad866b14c14ef6936ffbec6bd01ff08deb301",
-      "lastmod": "2026-11-01"
+      "hash": "90eaf32e36476891fe570954b2af22d5af6aa6a0f1c2fd963010e94d3b196a0b",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-sunbury-on-thames-2027-10-30/": {
-      "hash": "233a3adb273a2b01766e7d44c83af03a22460fbf22ee3ffe8732f5f4b25cdf47",
-      "lastmod": "2026-11-01"
+      "hash": "33a6e22531514e4e6195692d5a91066a129d74b6e6ba0a55f5e8afe8be977bbf",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-worcester-2026-11-07/": {
-      "hash": "0460ea1c5ef8dca116b6414d6020606a3394b10a8ee09e52a1a8841a1381ad3e",
-      "lastmod": "2026-11-01"
+      "hash": "4fa1c612427fef62e1fcf8a9a94a69c95b94353e32ce3f485e9eefae7a7a1e9b",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-worcester-2027-01-23/": {
-      "hash": "88155d588456f0e15e5a6e0fe7de57388293f33895a04d29fbef64257bc7ca09",
-      "lastmod": "2026-11-01"
+      "hash": "218747af494367fdd6345ca5f6f7d4df3533d16f8686d31258f7de88e00c8af2",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-worcester-2027-05-22/": {
-      "hash": "c09790c753f65626d3f7f73c69513a71d0a156895b7b100f72d83d990d87cc79",
-      "lastmod": "2026-11-01"
+      "hash": "c4f19e1bac8af765e046166c493ddfff6e68e73327201f3922396d7d6e1e9325",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/rock-gem-and-bead-show-worcester-2027-11-06/": {
-      "hash": "1d9df0b520a9bfdb30e989235c256ba1f5b3155ee7156726584018779bc924a0",
-      "lastmod": "2026-11-01"
+      "hash": "7332512d5272e2c70872cc46818b72acfb507c0f8fc6d2545011066c758ead61",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/south-of-england-mineral-show-ardingly-2026-10-17/": {
-      "hash": "9fa8c60c0ad965d5a96e6c64c5d99d5475e657df6dd9a26a0153d13dc266dc9e",
-      "lastmod": "2026-11-01"
+      "hash": "fff4ac62b57edc9b39e5c04c74497f74879692d4cd6e2bccba5643c96905bbd6",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/south-of-england-mineral-show-ardingly-2027-03-13/": {
-      "hash": "1368e7fc5bd688d453088f9a9b5e362e2cca22d7a0bbd24f4304e1be2c438643",
-      "lastmod": "2026-11-01"
+      "hash": "5e67082a4d38bcb42207a8bd3c06997526d1cfb6ab5b457de42976fd478258e7",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/south-of-england-mineral-show-ardingly-2027-10-16/": {
-      "hash": "738b5c5a53325fe17076ec1a71e4f8ab8afa61e38ef66826d22be9c247d0c343",
-      "lastmod": "2026-11-01"
+      "hash": "0f254f45bdf87c98c32003e9948eb819592d758998668e4035c29386eda5ffdf",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/show/sussex-mineral-crystal-and-fossil-show-haywards-heath-2026-11-14/": {
-      "hash": "22bc2635370c1780eb7de19bbc747e5aade944c67be47280bcb232f789e4bc44",
-      "lastmod": "2026-11-01"
+      "hash": "d8a737bbdce803718f281d4efce4ff32d0d70decea579f7b38a08ecfdf7a6b36",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/submit/": {
       "hash": "65e4bd1102c79263a1a5afe508ea7ea09b81916947870a5fc7e80f86c20f0874",
@@ -294,8 +294,8 @@
       "lastmod": "2026-10-30"
     },
     "https://mineraldigger.com/this-weekend/": {
-      "hash": "5a921414d184d59efc655d71ceaada7e1e559f9a2c596b33ce9a3e7ad9518737",
-      "lastmod": "2026-11-01"
+      "hash": "637f1e969496b5aabe428d7aa0172a76656c8864862ca3a744fdfdb25ccab856",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/town/ardingly/": {
       "hash": "7833b6c501f75d319d1d91b02aa7366a888929881f1f992ecb1208ab7532c2b3",
@@ -366,16 +366,16 @@
       "lastmod": "2026-10-30"
     },
     "https://mineraldigger.com/town/sunbury-on-thames/": {
-      "hash": "de172581196b5bb685ce30e4dab16c7e2507322c85a265c7cc16e52218c7a307",
-      "lastmod": "2026-11-01"
+      "hash": "ac9ccdd2397cad51b03fd52053279cfd7ae1efcc53e23dd8a008b8f8dc01e320",
+      "lastmod": "2026-11-02"
     },
     "https://mineraldigger.com/town/worcester/": {
       "hash": "6e1c46cdfff22e2655f18fbbf5fa8aa91a8d2243fc6b1d183a8f8a1c0d7cef5b",
       "lastmod": "2026-10-30"
     },
     "https://mineraldigger.com/towns/": {
-      "hash": "b445ee2ed20cfdcbc495166037e7ffefd40cc925ecc17fbf9a471c58b3cb005d",
-      "lastmod": "2026-10-30"
+      "hash": "a0682f79ff2b0d2a337443b0d91a1ed6025713adf5462dab7e10d594c6cd25da",
+      "lastmod": "2026-11-02"
     }
   }
 }
