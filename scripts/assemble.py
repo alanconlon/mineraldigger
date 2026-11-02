@@ -4,6 +4,8 @@ import json
 import re
 from pathlib import Path
 
+from overrides import apply_show_override
+
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 
@@ -119,7 +121,7 @@ def assemble(rows: list[dict]) -> list[dict]:
                 "also": extra_sources,
             },
         }
-        shows.append(record)
+        shows.append(apply_show_override(record))
     if problems:
         raise SystemExit("Could not place every parsed show:\n- " + "\n- ".join(problems))
     shows.sort(key=lambda item: (item["start"], item["name"], item["id"]))
