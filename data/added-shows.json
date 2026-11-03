@@ -1,0 +1,39 @@
+{
+  "_note": "Shows added by hand. scripts/refresh.py merges these rows into the catalogue on every fixtures and live refresh, after the organiser pages are parsed. A parsed row with the same id is kept. Dates, times, entry and the venue come from the organiser page in source_url.",
+  "shows": [
+    {
+      "organiser_id": "dean-heritage-centre",
+      "organiser_name": "Dean Heritage Centre",
+      "organiser_url": "https://www.deanheritagecentre.org/event-details-registration/christmas-market-2026-11-21-10-00",
+      "organiser_phone": "01594 822170",
+      "organiser_email": "info@deanheritagecentre.com",
+      "name": "Dean Heritage Centre Christmas Market",
+      "summary": "A general Christmas makers' market in the Forest of Dean. Herefordshire & Worcestershire Earth Heritage Trust will have a fossil and mineral stall, raising funds for their School Fossil Box project.",
+      "types": ["fossil", "mineral"],
+      "start": "2026-11-21",
+      "end": "2026-11-22",
+      "provisional": false,
+      "year_inferred": false,
+      "venue_name": "Dean Heritage Centre",
+      "street": "Camp Mill",
+      "postcode": "GL14 2UB",
+      "times_summary": "Saturday 10:00 to 16:00. Sunday 10:00 to 16:00.",
+      "times_notes": null,
+      "entry_kind": "free",
+      "entry_adult_gbp": 0,
+      "entry_notes": null,
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source_url": "https://www.deanheritagecentre.org/event-details-registration/christmas-market-2026-11-21-10-00",
+      "source_retrieved": "2026-11-03",
+      "source_notes": "Date, opening times and free entry are on the Dean Heritage Centre event pages. The Saturday page is the source. The Sunday page is the same market. The fossil and mineral stall is not on those pages.",
+      "source_also": [
+        {
+          "url": "https://www.deanheritagecentre.org/event-details-registration/christmas-market-2026-11-22-10-00",
+          "note": "Sunday 22 November 2026, 10:00 to 16:00."
+        }
+      ]
+    }
+  ]
+}

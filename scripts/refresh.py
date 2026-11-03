@@ -11,9 +11,11 @@ Live mode fetches HTML only. It does not read Facebook, Mineralica, or dealer di
 Rock, Gem & Bead Shows robots.txt allows /. Their homepage is the source for their dates.
 rockexchange.uk is the one host fetched with unverified TLS and a browser user agent.
 If one organiser site fails, that organiser's previous shows are kept and the run continues.
-A blocked host in data/organiser-overrides.json is removed before the file is written,
-including from a row that was kept. A county, town or region page with a low
-upcoming count is warned about and kept.
+Shows in data/added-shows.json are merged after the parse, in both modes, so a
+refresh does not drop a show that was added by hand. A parsed row with the same
+id is kept. A blocked host in data/organiser-overrides.json is removed before
+the file is written, including from a row that was kept. A county, town or
+region page with a low upcoming count is warned about and kept.
 """
 
 from __future__ import annotations
@@ -42,6 +44,7 @@ from parsers.smls import parse_smls  # noqa: E402
 
 FIXTURES = ROOT / "fixtures"
 OUT = ROOT / "data" / "shows.json"
+ADDED_PATH = ROOT / "data" / "added-shows.json"
 UA = (
     "Mozilla/5.0 (compatible; MineralDiggerRefresh/0.1; +https://mineraldigger.com) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -184,6 +187,32 @@ def merge_kept(fresh: list[dict], kept: list[dict]) -> list[dict]:
     return merged
 
 
+def load_added_rows(path: Path = ADDED_PATH) -> list[dict]:
+    """Parser rows for shows that are not on a scraped organiser list."""
+    if not path.is_file():
+        return []
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    rows = payload.get("shows") if isinstance(payload, dict) else payload
+    if not isinstance(rows, list):
+        return []
+    return [row for row in rows if isinstance(row, dict)]
+
+
+def added_shows(path: Path = ADDED_PATH) -> list[dict]:
+    rows = load_added_rows(path)
+    if not rows:
+        return []
+    return assemble(rows)
+
+
+def include_added(shows: list[dict], path: Path = ADDED_PATH) -> list[dict]:
+    """Keep hand-added shows. A parsed row with the same id wins."""
+    extra = added_shows(path)
+    if not extra:
+        return shows
+    return merge_kept(shows, extra)
+
+
 def write_shows(shows: list[dict], today: date) -> None:
     payload = {
         "generated": today.isoformat(),
@@ -235,6 +264,7 @@ def main() -> None:
                 file=sys.stderr,
             )
             shows = merge_kept(shows, kept)
+    shows = include_added(shows)
     shows = scrub_shows(shows)
     extra_urls = fetch_live_sitemap() if args.live else []
     retained = retain_listings(load_listings(LISTINGS_PATH), shows, today, extra_urls)

@@ -51,7 +51,9 @@ npm run dev
 | Sussex Mineral and Lapidary Society | https://www.smls.online/show | 1 |
 | Southampton Mineral & Fossil Society | https://sotonminfoss.org.uk/smfsshow.htm | 1 |
 
-41 weekends in total. On 25 October 2026, 38 of them are still ahead. The Hampshire show (19 September 2026), Bakewell 2026 and the October 2026 Ardingly show stay in the file and on their own pages, and drop off the homepage once the date has passed.
+41 weekends come from those pages. On 25 October 2026, 38 of them are still ahead. The Hampshire show (19 September 2026), Bakewell 2026 and the October 2026 Ardingly show stay in the file and on their own pages, and drop off the homepage once the date has passed.
+
+Shows that are not on those six pages are kept in `data/added-shows.json`. Both refresh modes merge those rows after the parse, then scrub blocked hosts, so the next daily refresh does not drop them. A parsed row with the same id is left as the parser wrote it. The Dean Heritage Centre Christmas Market is stored there. The dates, times, free entry and venue are from the centre's own event pages. The fossil and mineral stall note is from the Trust, and the show page says so.
 
 Rules the parsers follow:
 
@@ -77,7 +79,7 @@ Refresh from the live sites:
 python3 scripts/refresh.py --live --write
 ```
 
-Live refresh fetches the six sources above. `rockexchange.uk` is the one host fetched with unverified TLS and a browser user agent, because its certificate is self-signed and expired and it refuses the refresh user agent. If one organiser site fails, the script logs a warning and keeps that organiser's shows from the current `data/shows.json`. The other sources are still written. Naming only some sources with `--live --write` is still refused.
+Live refresh fetches the six sources above, then merges `data/added-shows.json`. `rockexchange.uk` is the one host fetched with unverified TLS and a browser user agent, because its certificate is self-signed and expired and it refuses the refresh user agent. If one organiser site fails, the script logs a warning and keeps that organiser's shows from the current `data/shows.json`. The other sources are still written. Naming only some sources with `--live --write` is still refused. A hand-added show is still merged when a source fails.
 
 Then run `npm run build`.
 

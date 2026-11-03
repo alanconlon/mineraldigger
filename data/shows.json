@@ -373,6 +373,62 @@
       }
     },
     {
+      "id": "dean-heritage-centre-2026-11-21-gl142ub",
+      "slug": "dean-heritage-centre-christmas-market-soudley-2026-11-21",
+      "name": "Dean Heritage Centre Christmas Market",
+      "summary": "A general Christmas makers' market in the Forest of Dean. Herefordshire & Worcestershire Earth Heritage Trust will have a fossil and mineral stall, raising funds for their School Fossil Box project.",
+      "organiser": {
+        "id": "dean-heritage-centre",
+        "name": "Dean Heritage Centre",
+        "url": "https://www.deanheritagecentre.org/event-details-registration/christmas-market-2026-11-21-10-00",
+        "phone": "01594 822170",
+        "email": "info@deanheritagecentre.com"
+      },
+      "types": [
+        "fossil",
+        "mineral"
+      ],
+      "start": "2026-11-21",
+      "end": "2026-11-22",
+      "provisional": false,
+      "year_inferred": false,
+      "times": {
+        "summary": "Saturday 10:00 to 16:00. Sunday 10:00 to 16:00.",
+        "notes": null
+      },
+      "entry": {
+        "kind": "free",
+        "label": "Free entry",
+        "adult_gbp": 0,
+        "notes": null
+      },
+      "venue": {
+        "name": "Dean Heritage Centre",
+        "street": "Camp Mill",
+        "postcode": "GL14 2UB",
+        "town": "Soudley",
+        "county": "Gloucestershire",
+        "nation": "England",
+        "lat": 51.790134,
+        "lng": -2.487043,
+        "place_note": "The organiser prints Soudley, Forest of Dean. Postcode GL14 2UB is in the parish of Ruspidge and Soudley."
+      },
+      "dealers": null,
+      "parking": null,
+      "access_notes": null,
+      "source": {
+        "url": "https://www.deanheritagecentre.org/event-details-registration/christmas-market-2026-11-21-10-00",
+        "retrieved": "2026-11-03",
+        "notes": "Date, opening times and free entry are on the Dean Heritage Centre event pages. The Saturday page is the source. The Sunday page is the same market. The fossil and mineral stall is not on those pages.",
+        "also": [
+          {
+            "url": "https://www.deanheritagecentre.org/event-details-registration/christmas-market-2026-11-22-10-00",
+            "note": "Sunday 22 November 2026, 10:00 to 16:00."
+          }
+        ]
+      }
+    },
+    {
       "id": "oxford-shows-2026-11-29-ox51ab",
       "slug": "oxford-mineral-and-fossil-show-kidlington-2026-11-29",
       "name": "Oxford Mineral & Fossil Show",
