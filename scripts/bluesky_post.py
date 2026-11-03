@@ -12,9 +12,13 @@ The post text uses mineraldigger.com/... . The full https URL is only
 the link card. Publish refuses a text that contains !, an en dash, an
 em dash, or https://.
 
-The app password is MINERALDIGGER_BLUESKY_APP_PASSWORD, or the
-mineraldigger.com entry in ~/.secrets/bluesky.json. That file is not
-committed.
+The app password is looked up in this order. Nothing here is committed,
+and a missing password names each place without printing a value.
+
+1. MINERALDIGGER_BLUESKY_APP_PASSWORD
+2. The mineraldigger.com entry in ~/.secrets/bluesky.json, or the key
+   mineraldigger_bluesky_app_password in that file
+3. The secret file ~/.secrets/mineraldigger_bluesky_app_password
 
 Posts are logged in growth/bluesky_posts.json under the ISO week
 (2026-W44). A week that is already logged is skipped unless --force
@@ -43,10 +47,12 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from social_copy import (  # noqa: E402
     ANGLES,
     BLUESKY_HANDLE,
+    BLUESKY_PASSWORD_KEY,
     TYPE_ORDER,
     SocialError,
     build_post,
     display_path,
+    display_secret,
     link_card,
     link_facet,
     load_json,
@@ -60,6 +66,7 @@ from social_copy import (  # noqa: E402
     posts_from_log,
     print_draft,
     publish_refusal,
+    read_secret_file,
     redact,
     repeated_slugs,
     save_log,
@@ -69,6 +76,7 @@ from social_copy import (  # noqa: E402
 LOG_PATH = ROOT / "growth" / "bluesky_posts.json"
 SECRETS_PATH = Path.home() / ".secrets" / "bluesky.json"
 ENV_PASSWORD = "MINERALDIGGER_BLUESKY_APP_PASSWORD"
+PASSWORD_FILE_KEYS = ("app_password", "password", BLUESKY_PASSWORD_KEY)
 PDS = "https://bsky.social"
 PUBLIC_API = "https://public.api.bsky.app"
 
@@ -104,13 +112,27 @@ def fetch_recent_posts(handle: str = BLUESKY_HANDLE, api: str = PUBLIC_API, limi
     return rows
 
 
+def missing_password_message(secrets_path: Path) -> str:
+    named = secrets_path.parent / BLUESKY_PASSWORD_KEY
+    return (
+        f"No Bluesky app password for {BLUESKY_HANDLE}. "
+        f"Looked for the environment variable {ENV_PASSWORD}, "
+        f"the {BLUESKY_HANDLE} entry or the {BLUESKY_PASSWORD_KEY} key in {display_secret(secrets_path)}, "
+        f"and the secret file {display_secret(named)}. "
+        "Nothing posted. Values are not printed."
+    )
+
+
 def resolve_password(secrets_path: Path) -> str | None:
     env = os.environ.get(ENV_PASSWORD, "").strip()
     if env:
         return env
-    if not secrets_path.is_file():
-        return None
-    return password_from_bluesky(load_json(secrets_path), BLUESKY_HANDLE)
+    if secrets_path.is_file():
+        data = load_json(secrets_path)
+        found = password_from_bluesky(data, BLUESKY_HANDLE)
+        if found:
+            return found
+    return read_secret_file(secrets_path.parent / BLUESKY_PASSWORD_KEY, PASSWORD_FILE_KEYS)
 
 
 def _xrpc(pds: str, method: str, payload: dict, token: str | None, secrets: list[str]) -> dict:
@@ -279,11 +301,7 @@ def main(argv: list[str] | None = None) -> int:
         print(exc, file=sys.stderr)
         return 1
     if not password:
-        print(
-            f"No Bluesky app password for {BLUESKY_HANDLE}. "
-            f"Set {ENV_PASSWORD} or add that handle to ~/.secrets/bluesky.json.",
-            file=sys.stderr,
-        )
+        print(missing_password_message(args.secrets), file=sys.stderr)
         return 1
 
     try:
