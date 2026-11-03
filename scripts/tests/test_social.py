@@ -32,6 +32,7 @@ from social_copy import (  # noqa: E402
     password_from_bluesky,
     post_range,
     read_secret_file,
+    publish_refusal,
     repeated_slugs,
     token_from_pages,
     user_token_from_pages,
@@ -264,15 +265,25 @@ class FacebookFlowTests(EnvGuard):
             secrets = Path(tmp) / "fb_pages.json"
             secrets.write_text(json.dumps({PAGE_ID: "from-file", "111": "other-page"}), encoding="utf-8")
             calls = []
+            posted = {}
 
             def fake_urlopen(request, timeout=30):
                 calls.append(request)
                 self.assertNotIn("from-file", request.full_url)
                 if request.get_method() == "GET":
-                    self.assertTrue(request_path(request).endswith("/posts"))
-                    self.assertFalse(request_path(request).endswith("/feed"))
                     self.assertEqual(request.get_header("Authorization"), "Bearer from-file")
-                    return JsonResponse({"data": []})
+                    path = request_path(request)
+                    if path.endswith("/posts"):
+                        self.assertFalse(path.endswith("/feed"))
+                        return JsonResponse({"data": []})
+                    self.assertIn(f"{PAGE_ID}_555", path)
+                    return JsonResponse(
+                        {
+                            "id": f"{PAGE_ID}_555",
+                            "message": posted["message"],
+                            "attachments": {"data": [{"unshimmed_url": posted["link"]}]},
+                        }
+                    )
                 payload = json.loads(request.data.decode("utf-8"))
                 self.assertEqual(payload["access_token"], "from-file")
                 self.assertIn("mineraldigger.com", payload["message"])
@@ -282,18 +293,9 @@ class FacebookFlowTests(EnvGuard):
                 self.assertEqual(payload["message"].rstrip().splitlines()[-1], payload["link"].removeprefix("https://"))
                 self.assertTrue(payload["published"])
                 self.assertTrue(request_path(request).endswith("/feed"))
-
-                class Response:
-                    def __enter__(self):
-                        return self
-
-                    def __exit__(self, *args):
-                        return False
-
-                    def read(self):
-                        return json.dumps({"id": f"{PAGE_ID}_555"}).encode("utf-8")
-
-                return Response()
+                posted["message"] = payload["message"]
+                posted["link"] = payload["link"]
+                return JsonResponse({"id": f"{PAGE_ID}_555"})
 
             with mock.patch("urllib.request.urlopen", fake_urlopen):
                 code, output = run_facebook(
@@ -310,9 +312,10 @@ class FacebookFlowTests(EnvGuard):
                     ]
                 )
             self.assertEqual(code, 0, output)
-            self.assertEqual(len(calls), 2)
+            self.assertEqual(len(calls), 3)
             self.assertTrue(request_path(calls[0]).endswith("/posts"))
             self.assertTrue(request_path(calls[1]).endswith("/feed"))
+            self.assertIn(f"{PAGE_ID}_555", request_path(calls[2]))
             saved = json.loads(log.read_text(encoding="utf-8"))
             self.assertIn("2026-W44", saved)
             self.assertEqual(saved["2026-W44"]["post_id"], f"{PAGE_ID}_555")
@@ -372,26 +375,30 @@ class FacebookFlowTests(EnvGuard):
             )
             os.environ["MINERALDIGGER_FB_PAGE_TOKEN"] = "token-1"
             calls = []
+            posted = {}
 
             def fake_urlopen(request, timeout=30):
                 calls.append(request.get_method() + " " + request_path(request))
-
-                class Response:
-                    def __enter__(self):
-                        return self
-
-                    def __exit__(self, *args):
-                        return False
-
-                    def read(self):
-                        return json.dumps({"id": f"{PAGE_ID}_9"}).encode("utf-8")
-
-                return Response()
+                if request.get_method() == "POST":
+                    payload = json.loads(request.data.decode("utf-8"))
+                    posted["message"] = payload["message"]
+                    posted["link"] = payload["link"]
+                    return JsonResponse({"id": f"{PAGE_ID}_9"})
+                return JsonResponse(
+                    {
+                        "id": f"{PAGE_ID}_9",
+                        "message": posted["message"],
+                        "attachments": {"data": [{"unshimmed_url": posted["link"]}]},
+                    }
+                )
 
             with mock.patch("urllib.request.urlopen", fake_urlopen):
                 code, output = run_facebook(["--today", "2026-10-28", "--publish", "--force", "--log", str(log)])
             self.assertEqual(code, 0, output)
-            self.assertEqual(calls, [f"POST /v23.0/{PAGE_ID}/feed"])
+            self.assertEqual(
+                calls,
+                [f"POST /v23.0/{PAGE_ID}/feed", f"GET /v23.0/{PAGE_ID}_9"],
+            )
             saved = json.loads(log.read_text(encoding="utf-8"))
             self.assertEqual(saved["2026-W43"]["text"], "keep me")
             self.assertEqual(saved["2026-W44"]["post_id"], f"{PAGE_ID}_9")
@@ -425,9 +432,30 @@ class BlueskyFlowTests(EnvGuard):
                 encoding="utf-8",
             )
             calls = []
+            sent = {}
 
             def fake_urlopen(request, timeout=30):
                 calls.append(request)
+                if request.get_method() == "GET":
+                    self.assertIsNone(request.get_header("Authorization"))
+                    self.assertNotIn("mineral-pass", request.full_url)
+                    self.assertIn("app.bsky.feed.getPosts", request.full_url)
+                    record = sent["record"]
+                    return JsonResponse(
+                        {
+                            "posts": [
+                                {
+                                    "uri": "at://did:plc:mineral/app.bsky.feed.post/rkey1",
+                                    "author": {"handle": "mineraldigger.com"},
+                                    "record": {
+                                        "text": record["text"],
+                                        "facets": record.get("facets"),
+                                        "embed": record.get("embed"),
+                                    },
+                                }
+                            ]
+                        }
+                    )
                 payload = json.loads(request.data.decode("utf-8"))
                 if request.full_url.endswith("createSession"):
                     self.assertEqual(payload["identifier"], "mineraldigger.com")
@@ -468,6 +496,7 @@ class BlueskyFlowTests(EnvGuard):
                 self.assertNotIn("https://", record["embed"]["external"]["description"])
                 self.assertEqual(payload["repo"], "did:plc:mineral")
                 self.assertEqual(payload["collection"], "app.bsky.feed.post")
+                sent["record"] = record
 
                 class Created:
                     def __enter__(self):
@@ -490,7 +519,7 @@ class BlueskyFlowTests(EnvGuard):
                     ["--today", "2026-10-28", "--publish", "--log", str(log), "--secrets", str(secrets)]
                 )
             self.assertEqual(code, 0, output)
-            self.assertEqual(len(calls), 2)
+            self.assertEqual(len(calls), 3)
             saved = json.loads(log.read_text(encoding="utf-8"))
             self.assertEqual(saved["2026-W44"]["url"], "https://bsky.app/profile/mineraldigger.com/post/rkey1")
             raw = log.read_text(encoding="utf-8")
@@ -629,6 +658,8 @@ class PublishRefusalTests(EnvGuard):
             "Open 10\u201416.",
             "Details at https://mineraldigger.com/rock/",
             "Details at HTTPS://mineraldigger.com/rock/",
+            "Stamp fairs are now on FairDigger.\n\nfairdigger.co.uk/stamps",
+            "New on AuctionDigger.\n\nauctiondigger.ie",
         )
         for text in samples:
             post = _forbidden_post(text)
@@ -929,22 +960,40 @@ class DuplicateCheckTests(EnvGuard):
             os.environ["MINERALDIGGER_FB_PAGE_TOKEN"] = "PAGESECRET"
             log = Path(tmp) / "facebook_posts.json"
             calls = []
+            posted = {}
 
             def fake_urlopen(request, timeout=30):
                 path = request_path(request)
                 calls.append((request.get_method(), path))
                 self.assertNotIn("PAGESECRET", request.full_url)
-                if request.get_method() == "GET":
-                    self.assertTrue(path.endswith("/posts"))
+                if request.get_method() == "GET" and path.endswith("/posts"):
                     self.assertFalse(path.endswith("/feed"))
                     _graph_error(request, "(#200) Requires pages_read_engagement permission to read this Page.")
+                if request.get_method() == "GET":
+                    return JsonResponse(
+                        {
+                            "id": f"{PAGE_ID}_9",
+                            "message": posted["message"],
+                            "attachments": {"data": [{"unshimmed_url": posted["link"]}]},
+                        }
+                    )
+                payload = json.loads(request.data.decode("utf-8"))
+                posted["message"] = payload["message"]
+                posted["link"] = payload["link"]
                 self.assertTrue(path.endswith("/feed"))
                 return JsonResponse({"id": f"{PAGE_ID}_9"})
 
             with mock.patch("urllib.request.urlopen", fake_urlopen):
                 code, output = run_facebook(["--today", "2026-10-28", "--publish", "--log", str(log)])
             self.assertEqual(code, 0, output)
-            self.assertEqual(calls, [("GET", f"/v23.0/{PAGE_ID}/posts"), ("POST", f"/v23.0/{PAGE_ID}/feed")])
+            self.assertEqual(
+                calls,
+                [
+                    ("GET", f"/v23.0/{PAGE_ID}/posts"),
+                    ("POST", f"/v23.0/{PAGE_ID}/feed"),
+                    ("GET", f"/v23.0/{PAGE_ID}_9"),
+                ],
+            )
             self.assertIn("duplicate check used the log only", output)
             self.assertIn("/posts", output)
             self.assertIn("pages_read_engagement", output)
@@ -961,6 +1010,448 @@ class DuplicateCheckTests(EnvGuard):
         )
         self.assertEqual(found["id"], f"{PAGE_ID}_1")
         self.assertIsNone(facebook_post.matching_page_post([{"id": "1", "message": "Worcester"}], link))
+
+
+QUEUE_ITEM = "mineral-november-glance-2026-11-03"
+FAIR_ITEM = "fair-stamps-section-2026-11-02"
+MINERAL_FACEBOOK = (
+    "Rock, gem, mineral and fossil shows in the UK this November:\n\n"
+    "Saturday 7 and Sunday 8 November: Rock, Gem & Bead Show, Worcester Racecourse\n"
+    "Saturday 14 and Sunday 15 November: Rock, Gem & Bead Show, Newcastle Racecourse\n"
+    "Saturday 14 November: Sussex Mineral, Crystal & Fossil Show, Haywards Heath College, "
+    "10:00 to 16:30, entry £5\n"
+    "Sunday 29 November: Oxford Mineral & Fossil Show, Exeter Hall, Kidlington, "
+    "10:00 to 16:00, free entry\n\n"
+    "Check with the organiser before you travel. Map and details for every show: mineraldigger.com"
+)
+MINERAL_BLUESKY = (
+    "UK rock, gem and mineral shows this November:\n\n"
+    "Worcester Racecourse, Saturday 7 and Sunday 8 November\n"
+    "Newcastle Racecourse, Saturday 14 and Sunday 15 November\n"
+    "Haywards Heath, Saturday 14 November\n"
+    "Kidlington, Sunday 29 November\n\n"
+    "Map and details: mineraldigger.com"
+)
+FAIR_LAUNCH = (
+    "Stamp fairs are now on FairDigger: over 70 upcoming UK stamp and postcard fairs on one map, "
+    "from AMP Fairs, Swindon Philatelic Society and more.\n\n"
+    "This week: Cirencester Wednesday 4 November, Stafford Stamp Show Friday 6 November.\n\n"
+    "Thanks to Xanthe's Stamp Magazine.\n\n"
+    "fairdigger.co.uk/stamps"
+)
+
+
+def write_queue(path: Path, items: list[dict]) -> None:
+    path.write_text(json.dumps({"items": items}), encoding="utf-8")
+
+
+def mineral_item(**overrides) -> dict:
+    item = {
+        "id": QUEUE_ITEM,
+        "site": "mineral",
+        "facebook_text": MINERAL_FACEBOOK,
+        "bluesky_text": MINERAL_BLUESKY,
+        "link": "mineraldigger.com",
+    }
+    item.update(overrides)
+    return item
+
+
+def fair_item() -> dict:
+    return {
+        "id": FAIR_ITEM,
+        "site": "fair",
+        "facebook_text": FAIR_LAUNCH,
+        "bluesky_text": FAIR_LAUNCH,
+        "link": "fairdigger.co.uk/stamps",
+    }
+
+
+def serve_facebook(test, token, post_id, live):
+    posted = {}
+    calls = []
+
+    def fake(request, timeout=30):
+        calls.append((request.get_method(), request_path(request)))
+        test.assertNotIn(token, request.full_url)
+        if request.get_method() == "GET":
+            test.assertEqual(request.get_header("Authorization"), f"Bearer {token}")
+            body = live(posted) if callable(live) else live
+            return JsonResponse(body)
+        payload = json.loads(request.data.decode("utf-8"))
+        test.assertEqual(payload["access_token"], token)
+        posted["message"] = payload["message"]
+        posted["link"] = payload["link"]
+        return JsonResponse({"id": post_id})
+
+    return fake, calls, posted
+
+
+def serve_bluesky(test, password, live):
+    sent = {}
+    calls = []
+
+    def fake(request, timeout=30):
+        calls.append(request.full_url)
+        if request.get_method() == "GET":
+            test.assertIsNone(request.get_header("Authorization"))
+            test.assertNotIn(password, request.full_url)
+            test.assertIn("app.bsky.feed.getPosts", request.full_url)
+            return JsonResponse({"posts": [live(sent)]})
+        payload = json.loads(request.data.decode("utf-8"))
+        if request.full_url.endswith("createSession"):
+            test.assertEqual(payload["identifier"], "mineraldigger.com")
+            test.assertEqual(payload["password"], password)
+            return JsonResponse(
+                {"accessJwt": "jwt-1", "did": "did:plc:mineral", "handle": "mineraldigger.com"}
+            )
+        test.assertNotIn(password, request.data.decode("utf-8"))
+        sent["record"] = payload["record"]
+        return JsonResponse({"uri": "at://did:plc:mineral/app.bsky.feed.post/rkey1", "cid": "cid1"})
+
+    return fake, calls, sent
+
+
+class BrandGuardTests(EnvGuard):
+    def test_brand_guard_accepts_mineral_copy_and_blocks_other_brands(self):
+        self.assertIsNone(publish_refusal(MINERAL_BLUESKY, "mineraldigger.com"))
+        self.assertIsNone(publish_refusal(MINERAL_FACEBOOK, "https://www.mineraldigger.co.uk/show/x/"))
+        self.assertIsNone(publish_refusal(MINERAL_BLUESKY))
+        self.assertIn("FairDigger", publish_refusal(FAIR_LAUNCH, "https://mineraldigger.com"))
+        self.assertIn("example.com", publish_refusal(MINERAL_BLUESKY, "https://example.com/shows"))
+        self.assertIn("AuctionDigger", publish_refusal(MINERAL_BLUESKY, "https://auctiondigger.ie/lots"))
+        self.assertIn("FairDigger", publish_refusal("See the list.\n\nfairdigger.com/stamps", "https://mineraldigger.com"))
+        self.assertIn("Refusing to publish", publish_refusal("See you there!", "https://mineraldigger.com"))
+        self.assertIn("Refusing to publish", publish_refusal("Open 10\u201316.", "https://mineraldigger.com"))
+        self.assertIn(
+            "Refusing to publish",
+            publish_refusal("Details at https://mineraldigger.com", "https://mineraldigger.com"),
+        )
+
+    def test_missing_queue_path_does_not_read_a_leftover_file(self):
+        with TemporaryDirectory() as tmp:
+            leftover = Path(tmp) / "post.txt"
+            leftover.write_text(FAIR_LAUNCH, encoding="utf-8")
+            os.environ["MINERALDIGGER_QUEUE"] = str(leftover)
+            try:
+                with mock.patch("urllib.request.urlopen", side_effect=AssertionError("posted")):
+                    code, output = run_facebook(["--queue-item", QUEUE_ITEM, "--publish"])
+                    blue, blue_output = run_bluesky(["--queue-item", QUEUE_ITEM, "--publish"])
+            finally:
+                os.environ.pop("MINERALDIGGER_QUEUE", None)
+        self.assertEqual(code, 1)
+        self.assertEqual(blue, 1)
+        self.assertIn("leftover temp file", output)
+        self.assertIn("leftover temp file", blue_output)
+        self.assertIn("Nothing posted", output)
+        self.assertNotIn("Stamp fairs", output)
+        self.assertNotIn("FairDigger", output)
+
+    def test_another_brands_queue_item_is_refused(self):
+        with TemporaryDirectory() as tmp:
+            queue = Path(tmp) / "queue.json"
+            write_queue(queue, [fair_item(), mineral_item()])
+            log = Path(tmp) / "log.json"
+            with mock.patch("urllib.request.urlopen", side_effect=AssertionError("posted")):
+                code, output = run_facebook(
+                    ["--queue-item", FAIR_ITEM, "--queue", str(queue), "--publish", "--log", str(log)]
+                )
+                blue, blue_output = run_bluesky(
+                    ["--queue-item", FAIR_ITEM, "--queue", str(queue), "--publish", "--log", str(log)]
+                )
+        self.assertEqual(code, 1)
+        self.assertEqual(blue, 1)
+        self.assertIn("FairDigger", output)
+        self.assertIn("not MineralDigger", output)
+        self.assertIn("not MineralDigger", blue_output)
+        self.assertNotIn("Stamp fairs are now", output)
+        self.assertFalse(log.exists())
+
+    def test_mineral_item_carrying_fair_text_is_refused(self):
+        with TemporaryDirectory() as tmp:
+            queue = Path(tmp) / "queue.json"
+            write_queue(queue, [mineral_item(facebook_text=FAIR_LAUNCH, bluesky_text=FAIR_LAUNCH)])
+            with mock.patch("urllib.request.urlopen", side_effect=AssertionError("posted")):
+                code, output = run_bluesky(
+                    ["--queue-item", QUEUE_ITEM, "--queue", str(queue), "--publish", "--log", str(Path(tmp) / "log.json")]
+                )
+        self.assertEqual(code, 1)
+        self.assertIn("mentions FairDigger", output)
+        self.assertIn("Nothing posted", output)
+        self.assertFalse((Path(tmp) / "log.json").exists())
+
+    def test_wrong_domain_link_is_refused(self):
+        with TemporaryDirectory() as tmp:
+            queue = Path(tmp) / "queue.json"
+            write_queue(queue, [mineral_item(link="https://example.com/shows")])
+            fair_link = Path(tmp) / "fair-link.json"
+            write_queue(fair_link, [mineral_item(link="fairdigger.co.uk/stamps")])
+            with mock.patch("urllib.request.urlopen", side_effect=AssertionError("posted")):
+                code, output = run_facebook(
+                    ["--queue-item", QUEUE_ITEM, "--queue", str(queue), "--publish"]
+                )
+                blue, blue_output = run_bluesky(
+                    ["--queue-item", QUEUE_ITEM, "--queue", str(fair_link), "--publish"]
+                )
+                text = Path(tmp) / "post.txt"
+                text.write_text(MINERAL_FACEBOOK + "\n", encoding="utf-8")
+                filed, filed_output = run_facebook(
+                    ["--text-file", str(text), "--link", "https://auctiondigger.ie", "--publish"]
+                )
+        self.assertEqual(code, 1)
+        self.assertIn("example.com", output)
+        self.assertIn("not a MineralDigger domain", output)
+        self.assertEqual(blue, 1)
+        self.assertIn("FairDigger", blue_output)
+        self.assertEqual(filed, 1)
+        self.assertIn("AuctionDigger", filed_output)
+
+    def test_direct_publish_refuses_before_the_network(self):
+        with mock.patch("urllib.request.urlopen", side_effect=AssertionError("posted")):
+            with self.assertRaises(SocialError) as caught:
+                bluesky_post.publish_post("app-secret", FAIR_LAUNCH, "https://mineraldigger.com")
+            self.assertIn("FairDigger", str(caught.exception))
+            self.assertNotIn("app-secret", str(caught.exception))
+            with self.assertRaises(SocialError) as caught:
+                facebook_post.publish_page(PAGE_ID, "page-secret", MINERAL_FACEBOOK, "https://example.com/shows")
+            self.assertIn("example.com", str(caught.exception))
+            self.assertNotIn("page-secret", str(caught.exception))
+
+    def test_text_file_of_another_brand_is_refused_and_a_link_is_required(self):
+        with TemporaryDirectory() as tmp:
+            text = Path(tmp) / "post.txt"
+            text.write_text(FAIR_LAUNCH + "\n", encoding="utf-8")
+            with mock.patch("urllib.request.urlopen", side_effect=AssertionError("posted")):
+                code, output = run_facebook(
+                    ["--text-file", str(text), "--link", "mineraldigger.com", "--publish"]
+                )
+                missing, missing_output = run_bluesky(["--text-file", str(text), "--publish"])
+        self.assertEqual(code, 1)
+        self.assertIn("mentions FairDigger", output)
+        self.assertEqual(missing, 1)
+        self.assertIn("--link", missing_output)
+        self.assertIn("leftover temp file", missing_output)
+
+    def test_facebook_queue_item_publishes_the_approved_text(self):
+        with TemporaryDirectory() as tmp:
+            queue = Path(tmp) / "queue.json"
+            write_queue(queue, [fair_item(), mineral_item()])
+            log = Path(tmp) / "facebook_posts.json"
+            with mock.patch("urllib.request.urlopen", side_effect=AssertionError("network")):
+                dry, dry_output = run_facebook(["--queue-item", QUEUE_ITEM, "--queue", str(queue), "--log", str(log)])
+            self.assertEqual(dry, 0)
+            self.assertIn("Dry run. Nothing posted.", dry_output)
+            self.assertIn(MINERAL_FACEBOOK, dry_output)
+            self.assertNotIn("Stamp fairs are now", dry_output)
+            self.assertFalse(log.exists())
+
+            os.environ["MINERALDIGGER_FB_PAGE_TOKEN"] = "page-token"
+            post_id = f"{PAGE_ID}_555"
+
+            def live(posted):
+                return {
+                    "id": post_id,
+                    "message": posted["message"],
+                    "attachments": {"data": [{"unshimmed_url": posted["link"]}]},
+                }
+
+            fake, calls, posted = serve_facebook(self, "page-token", post_id, live)
+            with mock.patch("urllib.request.urlopen", fake):
+                code, output = run_facebook(
+                    ["--queue-item", QUEUE_ITEM, "--queue", str(queue), "--publish", "--log", str(log)]
+                )
+            self.assertEqual(code, 0, output)
+            self.assertEqual(posted["message"], MINERAL_FACEBOOK)
+            self.assertEqual(posted["link"], "https://mineraldigger.com")
+            self.assertEqual(calls[0][0], "POST")
+            self.assertTrue(calls[0][1].endswith("/feed"))
+            self.assertEqual(calls[1][0], "GET")
+            self.assertIn(post_id, calls[1][1])
+            self.assertIn("Read-back matched", output)
+            self.assertNotIn("page-token", output)
+            self.assertNotIn("Stamp fairs", output)
+            saved = json.loads(log.read_text(encoding="utf-8"))
+            self.assertEqual(saved[QUEUE_ITEM]["text"], MINERAL_FACEBOOK)
+            self.assertEqual(saved[QUEUE_ITEM]["queue_item"], QUEUE_ITEM)
+            self.assertNotIn("page-token", log.read_text(encoding="utf-8"))
+
+            with mock.patch("urllib.request.urlopen", side_effect=AssertionError("second")):
+                again, message = run_facebook(
+                    ["--queue-item", QUEUE_ITEM, "--queue", str(queue), "--publish", "--log", str(log)]
+                )
+            self.assertEqual(again, 1)
+            self.assertIn("already in", message)
+
+    def test_bluesky_queue_item_publishes_the_approved_text(self):
+        with TemporaryDirectory() as tmp:
+            queue = Path(tmp) / "queue.json"
+            write_queue(queue, [fair_item(), mineral_item()])
+            log = Path(tmp) / "bluesky_posts.json"
+            os.environ["MINERALDIGGER_BLUESKY_APP_PASSWORD"] = "app-secret"
+
+            def live(sent):
+                record = sent["record"]
+                return {
+                    "uri": "at://did:plc:mineral/app.bsky.feed.post/rkey1",
+                    "author": {"handle": "mineraldigger.com"},
+                    "record": {
+                        "text": record["text"],
+                        "facets": record.get("facets"),
+                        "embed": record.get("embed"),
+                    },
+                }
+
+            fake, calls, sent = serve_bluesky(self, "app-secret", live)
+            with mock.patch("urllib.request.urlopen", fake):
+                code, output = run_bluesky(
+                    ["--queue-item", QUEUE_ITEM, "--queue", str(queue), "--publish", "--log", str(log)]
+                )
+            self.assertEqual(code, 0, output)
+            record = sent["record"]
+            self.assertEqual(record["text"], MINERAL_BLUESKY)
+            self.assertEqual(record["embed"]["external"]["uri"], "https://mineraldigger.com")
+            self.assertEqual(record["facets"][0]["features"][0]["uri"], "https://mineraldigger.com")
+            self.assertTrue(any("getPosts" in url for url in calls))
+            self.assertIn("Read-back matched", output)
+            self.assertNotIn("app-secret", output)
+            self.assertNotIn("Stamp fairs", output)
+            saved = json.loads(log.read_text(encoding="utf-8"))
+            self.assertEqual(saved[QUEUE_ITEM]["text"], MINERAL_BLUESKY)
+            self.assertEqual(saved[QUEUE_ITEM]["url"], "https://bsky.app/profile/mineraldigger.com/post/rkey1")
+            self.assertNotIn("app-secret", log.read_text(encoding="utf-8"))
+            self.assertNotIn("jwt-1", log.read_text(encoding="utf-8"))
+
+    def test_facebook_readback_mismatch_fails(self):
+        with TemporaryDirectory() as tmp:
+            queue = Path(tmp) / "queue.json"
+            write_queue(queue, [mineral_item()])
+            log = Path(tmp) / "facebook_posts.json"
+            os.environ["MINERALDIGGER_FB_PAGE_TOKEN"] = "page-token"
+
+            def wrong_text(_posted):
+                return {
+                    "id": f"{PAGE_ID}_9",
+                    "message": FAIR_LAUNCH,
+                    "attachments": {"data": [{"unshimmed_url": "https://fairdigger.co.uk/stamps"}]},
+                }
+
+            fake, calls, _posted = serve_facebook(self, "page-token", f"{PAGE_ID}_9", wrong_text)
+            with mock.patch("urllib.request.urlopen", fake):
+                code, output = run_facebook(
+                    ["--queue-item", QUEUE_ITEM, "--queue", str(queue), "--publish", "--log", str(log)]
+                )
+            self.assertEqual(code, 1, output)
+            self.assertIn("read-back mismatch", output)
+            self.assertIn("does not match", output)
+            self.assertNotIn("page-token", output)
+            self.assertFalse(log.exists())
+            self.assertTrue(any(method == "POST" for method, _path in calls))
+
+            def wrong_card(posted):
+                return {
+                    "id": f"{PAGE_ID}_9",
+                    "message": posted["message"],
+                    "attachments": {"data": [{"unshimmed_url": "https://auctiondigger.ie"}]},
+                }
+
+            fake, calls, _posted = serve_facebook(self, "page-token", f"{PAGE_ID}_9", wrong_card)
+            with mock.patch("urllib.request.urlopen", fake):
+                code, output = run_facebook(
+                    ["--queue-item", QUEUE_ITEM, "--queue", str(queue), "--publish", "--log", str(log)]
+                )
+            self.assertEqual(code, 1, output)
+            self.assertIn("read-back mismatch", output)
+            self.assertIn("auctiondigger.ie", output)
+            self.assertNotIn("page-token", output)
+            self.assertFalse(log.exists())
+
+    def test_bluesky_readback_mismatch_fails(self):
+        with TemporaryDirectory() as tmp:
+            queue = Path(tmp) / "queue.json"
+            write_queue(queue, [mineral_item()])
+            log = Path(tmp) / "bluesky_posts.json"
+            os.environ["MINERALDIGGER_BLUESKY_APP_PASSWORD"] = "app-secret"
+
+            def wrong_card(sent):
+                record = sent["record"]
+                return {
+                    "author": {"handle": "mineraldigger.com"},
+                    "record": {
+                        "text": record["text"],
+                        "facets": [{"features": [{"uri": "https://fairdigger.co.uk/stamps"}]}],
+                        "embed": {"external": {"uri": "https://fairdigger.co.uk/stamps"}},
+                    },
+                }
+
+            fake, calls, _sent = serve_bluesky(self, "app-secret", wrong_card)
+            with mock.patch("urllib.request.urlopen", fake):
+                code, output = run_bluesky(
+                    ["--queue-item", QUEUE_ITEM, "--queue", str(queue), "--publish", "--log", str(log)]
+                )
+            self.assertEqual(code, 1, output)
+            self.assertIn("read-back mismatch", output)
+            self.assertIn("fairdigger.co.uk", output)
+            self.assertNotIn("app-secret", output)
+            self.assertFalse(log.exists())
+            self.assertTrue(any("createRecord" in url for url in calls))
+
+            def wrong_handle(sent):
+                record = sent["record"]
+                return {
+                    "author": {"handle": "fairdigger.co.uk"},
+                    "record": {
+                        "text": record["text"],
+                        "facets": record.get("facets"),
+                        "embed": record.get("embed"),
+                    },
+                }
+
+            fake, _calls, _sent = serve_bluesky(self, "app-secret", wrong_handle)
+            with mock.patch("urllib.request.urlopen", fake):
+                code, output = run_bluesky(
+                    ["--queue-item", QUEUE_ITEM, "--queue", str(queue), "--publish", "--log", str(log)]
+                )
+            self.assertEqual(code, 1, output)
+            self.assertIn("read-back mismatch", output)
+            self.assertIn("fairdigger.co.uk", output)
+            self.assertIn("not mineraldigger.com", output)
+            self.assertFalse(log.exists())
+
+    def test_text_file_of_the_approved_copy_publishes(self):
+        with TemporaryDirectory() as tmp:
+            text = Path(tmp) / "post.txt"
+            text.write_text(MINERAL_BLUESKY + "\n", encoding="utf-8")
+            log = Path(tmp) / "bluesky_posts.json"
+            os.environ["MINERALDIGGER_BLUESKY_APP_PASSWORD"] = "app-secret"
+
+            def live(sent):
+                record = sent["record"]
+                return {
+                    "author": {"handle": "mineraldigger.com"},
+                    "record": {
+                        "text": record["text"],
+                        "facets": record.get("facets"),
+                        "embed": record.get("embed"),
+                    },
+                }
+
+            fake, _calls, sent = serve_bluesky(self, "app-secret", live)
+            with mock.patch("urllib.request.urlopen", fake):
+                code, output = run_bluesky(
+                    [
+                        "--text-file",
+                        str(text),
+                        "--link",
+                        "mineraldigger.com",
+                        "--publish",
+                        "--log",
+                        str(log),
+                    ]
+                )
+            self.assertEqual(code, 0, output)
+            self.assertEqual(sent["record"]["text"], MINERAL_BLUESKY)
+            self.assertIn("Read-back matched", output)
+            self.assertNotIn("app-secret", output)
 
 
 if __name__ == "__main__":

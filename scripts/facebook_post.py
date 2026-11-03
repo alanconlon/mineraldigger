@@ -5,7 +5,16 @@ Dry run is the default. The script prints the post and does not call
 Facebook. --publish sends it to the Page in growth/facebook_page.json
 after Alan has OK'd the text. The post text uses mineraldigger.com/... .
 The full https URL is only the link field. Publish refuses a text that
-contains !, an en dash, an em dash, or https://.
+contains !, an en dash, an em dash, or https://. It also refuses
+FairDigger or AuctionDigger wording, and a link that is not on
+mineraldigger.com or mineraldigger.co.uk. After Graph accepts the post,
+the script reads it back and exits with status 1 when the live text
+does not match, or when a returned link attachment is off this brand.
+
+Approved queue copy is an explicit source. Pass --queue-item and --queue
+every time. An explicit text file is --text-file with --link. There is
+no default path, and a leftover temp file is never read. The queue
+item site must be mineral.
 
 The page token is looked up in this order. Nothing here is committed,
 and a missing token names each place without printing a value.
@@ -26,6 +35,9 @@ Posts are logged in growth/facebook_posts.json under the ISO week
 is set.
 
 Examples:
+  python3 scripts/facebook_post.py --queue-item mineral-november-glance-2026-11-03 --queue /path/to/queue.json
+  python3 scripts/facebook_post.py --queue-item mineral-november-glance-2026-11-03 --queue /path/to/queue.json --publish
+  python3 scripts/facebook_post.py --text-file /path/to/post.txt --link mineraldigger.com --publish
   python3 scripts/facebook_post.py
   python3 scripts/facebook_post.py --today 2026-10-28
   python3 scripts/facebook_post.py --today 2026-10-28 --publish
@@ -51,15 +63,23 @@ from social_copy import (  # noqa: E402
     TYPE_ORDER,
     USER_TOKEN_KEYS,
     SocialError,
+    absolute_link,
+    add_explicit_arguments,
     bare_link,
     build_post,
     display_path,
     display_secret,
+    explicit_log_key,
+    explicit_mode,
+    facebook_readback_error,
     load_json,
     load_log,
+    load_queue_item,
     load_shows,
     load_site,
     now_stamp,
+    post_from_queue,
+    post_from_text_file,
     print_draft,
     publish_refusal,
     read_secret_file,
@@ -269,8 +289,24 @@ def _public_post_id(value: object) -> str:
     return ""
 
 
+def read_back_page_post(post_id: str, token: str, message: str, link: str, api_base: str) -> None:
+    """Fetch the Page post from Graph and raise when it is not the text we sent."""
+    fields = "message,permalink_url,attachments{unshimmed_url,url,title}"
+    url = f"{api_base.rstrip('/')}/{post_id}?fields={fields}"
+    try:
+        live = graph_get(url, token)
+    except SocialError as exc:
+        raise SocialError(
+            f"Facebook accepted the post ({post_id}) but the read-back failed, so it is not confirmed. {exc}"
+        ) from exc
+    mismatch = facebook_readback_error(live, message, link)
+    if mismatch:
+        raise SocialError(f"{mismatch} Live post id: {post_id}. The log was not updated.")
+
+
 def publish_page(page_id: str, token: str, message: str, link: str, api_base: str = GRAPH) -> dict:
-    blocked = publish_refusal(message)
+    link = absolute_link(link)
+    blocked = publish_refusal(message, link)
     if blocked:
         raise SocialError(blocked)
     url = f"{api_base.rstrip('/')}/{page_id}/feed"
@@ -314,11 +350,106 @@ def publish_page(page_id: str, token: str, message: str, link: str, api_base: st
     post_id = parsed.get("id") if isinstance(parsed, dict) else None
     if not isinstance(post_id, str) or not post_id:
         raise SocialError("Facebook did not return a post id.")
+    read_back_page_post(post_id, token, message, link, api_base)
     permalink = None
     if "_" in post_id:
         page, story = post_id.split("_", 1)
         permalink = f"https://www.facebook.com/{page}/posts/{story}"
     return {"id": post_id, "url": permalink}
+
+
+def _print_explicit_draft(chosen: dict, text: str, link: str, text_file: Path | None) -> None:
+    print("Dry run. Nothing posted.")
+    if chosen["source"] == "queue":
+        print(f"Queue item: {chosen['queue_item']}")
+    else:
+        print(f"Text file: {display_path(text_file or Path(''))}")
+    print(f"Link: {link}")
+    print("Facebook:")
+    print(text)
+
+
+def run_explicit(args: argparse.Namespace) -> int | None:
+    """Publish from --queue-item or --text-file. None means use the show catalogue.
+
+    The text comes only from the path on the command. There is no default
+    and no leftover temp file.
+    """
+    try:
+        mode = explicit_mode(args.queue, args.queue_item, args.text_file, args.link)
+    except SocialError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    if not mode:
+        return None
+    try:
+        if mode == "queue":
+            item = load_queue_item(args.queue, args.queue_item or "")
+            chosen = post_from_queue(item, "facebook")
+        else:
+            chosen = post_from_text_file(args.text_file, args.link or "", "facebook")
+        log = load_log(args.log)
+    except SocialError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+
+    text = chosen["text"]
+    link = chosen["link"]
+    blocked = publish_refusal(text, link)
+    if blocked:
+        print(f"{blocked} Nothing posted.", file=sys.stderr)
+        return 1
+    if not args.publish:
+        _print_explicit_draft(chosen, text, link, args.text_file)
+        return 0
+
+    log_key = explicit_log_key(chosen)
+    if week_recorded(log, log_key) and not args.force:
+        print(
+            f"{log_key} is already in {display_path(args.log)}. "
+            "Nothing posted. Pass --force to post it again.",
+            file=sys.stderr,
+        )
+        return 1
+
+    try:
+        page_id = page_id_from(args.page_file)
+        token = resolve_token(page_id, args.secrets, args.api)
+    except SocialError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    if not token:
+        print(missing_page_token_message(page_id, args.secrets), file=sys.stderr)
+        return 1
+
+    try:
+        result = publish_page(page_id, token, text, link, args.api)
+    except SocialError as exc:
+        print(redact(str(exc), [token]), file=sys.stderr)
+        return 1
+
+    log[log_key] = {
+        "source": chosen["source"],
+        "queue_item": chosen.get("queue_item"),
+        "link": link,
+        "text": text,
+        "published_at": now_stamp(),
+        "post_id": result["id"],
+        "url": result["url"],
+    }
+    try:
+        save_log(args.log, log)
+    except OSError as exc:
+        print(f"Facebook accepted the post ({result['id']}) but the log was not written. {exc}", file=sys.stderr)
+        return 1
+    if chosen["source"] == "queue":
+        print(f"Posted queue item {chosen['queue_item']} to the MineralDigger Facebook Page.")
+    else:
+        print("Posted the text file to the MineralDigger Facebook Page.")
+    if result.get("url"):
+        print(result["url"])
+    print("Read-back matched the MineralDigger text.")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -334,7 +465,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--page-file", type=Path, default=PAGE_PATH, help=argparse.SUPPRESS)
     parser.add_argument("--secrets", type=Path, default=SECRETS_PATH, help=argparse.SUPPRESS)
     parser.add_argument("--api", default=GRAPH, help=argparse.SUPPRESS)
+    add_explicit_arguments(parser)
     args = parser.parse_args(argv)
+
+    explicit = run_explicit(args)
+    if explicit is not None:
+        return explicit
 
     today = date.today()
     if args.today:
@@ -371,7 +507,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
-    blocked = publish_refusal(post["facebook"])
+    blocked = publish_refusal(post["facebook"], post["link"])
     if blocked:
         print(blocked, file=sys.stderr)
         return 1
