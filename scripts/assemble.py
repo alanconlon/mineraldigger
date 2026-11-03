@@ -66,6 +66,9 @@ def assemble(rows: list[dict]) -> list[dict]:
                 notes = (notes + " " + extra["note"]).strip()
             if extra.get("source_url"):
                 extra_sources.append({"url": extra["source_url"], "note": extra.get("note") or ""})
+        for item in row.get("source_also") or []:
+            if isinstance(item, dict) and item.get("url"):
+                extra_sources.append({"url": item["url"], "note": item.get("note") or ""})
         venue = venues.get(postcode or "")
         if not postcode or not venue or str(postcode).startswith("_"):
             problems.append(f"{row.get('name')} {row.get('start')} has no geocoded postcode ({postcode})")

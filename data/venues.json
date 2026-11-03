@@ -1,5 +1,5 @@
 {
-  "_note": "Postcode centroids from postcodes.io. Town labels are the place a visitor would use. place_note is set when the postcode parish is not that town. Looked up on 25 October 2026, with CO6 1EH on 28 October 2026.",
+  "_note": "Postcode centroids from postcodes.io. Town labels are the place a visitor would use. place_note is set when the postcode parish is not that town. Looked up on 25 October 2026, with CO6 1EH on 28 October 2026 and GL14 2UB on 3 November 2026.",
   "TW16 5AQ": {
     "lat": 51.418928,
     "lng": -0.407472,
@@ -142,5 +142,13 @@
     "town": "Marks Tey",
     "county": "Essex",
     "nation": "England"
+  },
+  "GL14 2UB": {
+    "lat": 51.790134,
+    "lng": -2.487043,
+    "town": "Soudley",
+    "county": "Gloucestershire",
+    "nation": "England",
+    "place_note": "The organiser prints Soudley, Forest of Dean. Postcode GL14 2UB is in the parish of Ruspidge and Soudley."
   }
 }

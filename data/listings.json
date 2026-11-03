@@ -27,6 +27,11 @@
       "nation": "England"
     },
     {
+      "slug": "gloucestershire",
+      "name": "Gloucestershire",
+      "nation": "England"
+    },
+    {
       "slug": "hampshire",
       "name": "Hampshire",
       "nation": "England"
@@ -182,6 +187,12 @@
       "slug": "newton-abbot",
       "name": "Newton Abbot",
       "county": "Devon",
+      "nation": "England"
+    },
+    {
+      "slug": "soudley",
+      "name": "Soudley",
+      "county": "Gloucestershire",
       "nation": "England"
     },
     {
