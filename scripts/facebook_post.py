@@ -7,8 +7,19 @@ after Alan has OK'd the text. The post text uses mineraldigger.com/... .
 The full https URL is only the link field. Publish refuses a text that
 contains !, an en dash, an em dash, or https://.
 
-The page token is MINERALDIGGER_FB_PAGE_TOKEN, or the matching page in
-~/.secrets/fb_pages.json. That file is not committed.
+The page token is looked up in this order. Nothing here is committed,
+and a missing token names each place without printing a value.
+
+1. MINERALDIGGER_FB_PAGE_TOKEN
+2. The matching page in ~/.secrets/fb_pages.json
+3. A user token named fb_user_token (MINERALDIGGER_FB_USER_TOKEN, then
+   FB_USER_TOKEN, then the fb_user_token key in that file, then
+   ~/.secrets/fb_user_token). Graph exchanges it for this page's token.
+
+Before posting, unless --force is set, recent posts are read from
+/{page-id}/posts. /{page-id}/feed is not read: that needs
+pages_read_engagement. The same link already on the Page stops the
+post. If /posts cannot be read, the log is the only duplicate check.
 
 Posts are logged in growth/facebook_posts.json under the ISO week
 (2026-W44). A week that is already logged is skipped unless --force
@@ -27,6 +38,7 @@ import json
 import os
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import date
 from pathlib import Path
@@ -37,9 +49,12 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from social_copy import (  # noqa: E402
     ANGLES,
     TYPE_ORDER,
+    USER_TOKEN_KEYS,
     SocialError,
+    bare_link,
     build_post,
     display_path,
+    display_secret,
     load_json,
     load_log,
     load_shows,
@@ -47,9 +62,11 @@ from social_copy import (  # noqa: E402
     now_stamp,
     print_draft,
     publish_refusal,
+    read_secret_file,
     redact,
     save_log,
     token_from_pages,
+    user_token_from_pages,
     week_recorded,
 )
 
@@ -57,7 +74,10 @@ PAGE_PATH = ROOT / "growth" / "facebook_page.json"
 LOG_PATH = ROOT / "growth" / "facebook_posts.json"
 SECRETS_PATH = Path.home() / ".secrets" / "fb_pages.json"
 ENV_TOKEN = "MINERALDIGGER_FB_PAGE_TOKEN"
+USER_TOKEN_ENVS = ("MINERALDIGGER_FB_USER_TOKEN", "FB_USER_TOKEN")
+USER_TOKEN_FILE = "fb_user_token"
 GRAPH = "https://graph.facebook.com/v23.0"
+USER_TOKEN_FILE_KEYS = ("access_token", "token", "user_token", "fb_user_token")
 
 
 def page_id_from(path: Path) -> str:
@@ -67,13 +87,186 @@ def page_id_from(path: Path) -> str:
     return page_id
 
 
-def resolve_token(page_id: str, secrets_path: Path) -> str | None:
+def missing_page_token_message(page_id: str, secrets_path: Path) -> str:
+    user_file = secrets_path.parent / USER_TOKEN_FILE
+    env_names = " or ".join(USER_TOKEN_ENVS)
+    return (
+        f"No MineralDigger Facebook page token for page {page_id}. "
+        f"Looked for the environment variable {ENV_TOKEN}, "
+        f"a token for that page in {display_secret(secrets_path)}, "
+        f"and a user token named {USER_TOKEN_KEYS[0]} "
+        f"(environment variables {env_names}, "
+        f"the {USER_TOKEN_KEYS[0]} key in {display_secret(secrets_path)}, "
+        f"or the file {display_secret(user_file)}) "
+        "to derive a page token from Graph. "
+        "Nothing posted. Values are not printed."
+    )
+
+
+def _graph_target(url: str) -> str:
+    """Path only, so a token in the query string is never shown."""
+    return urllib.parse.urlsplit(url).path or "/"
+
+
+def graph_get(url: str, token: str) -> dict:
+    request = urllib.request.Request(
+        url,
+        method="GET",
+        headers={
+            "Accept": "application/json",
+            "Authorization": f"Bearer {token}",
+            "User-Agent": "MineralDiggerSocial/1 (+https://mineraldigger.com)",
+        },
+    )
+    target = _graph_target(url)
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            raw = response.read().decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        detail = ""
+        if exc.fp is not None:
+            detail = exc.read().decode("utf-8", errors="replace")
+        message_text = detail
+        try:
+            parsed = json.loads(detail) if detail else {}
+            if isinstance(parsed, dict) and isinstance(parsed.get("error"), dict):
+                message_text = str(parsed["error"].get("message") or detail)
+        except json.JSONDecodeError:
+            message_text = detail
+        message_text = redact(message_text, [token])
+        if len(message_text) > 300:
+            message_text = message_text[:300]
+        raise SocialError(f"Facebook returned HTTP {exc.code} for {target}. {message_text}") from exc
+    except urllib.error.URLError as exc:
+        raise SocialError(redact(f"Facebook request failed for {target}. {exc.reason}", [token])) from exc
+    try:
+        parsed = json.loads(raw) if raw else {}
+    except json.JSONDecodeError as exc:
+        raise SocialError(f"Facebook returned a response that was not JSON for {target}.") from exc
+    if not isinstance(parsed, dict):
+        raise SocialError(f"Facebook returned an unexpected response for {target}.")
+    error = parsed.get("error")
+    if isinstance(error, dict):
+        message_text = redact(str(error.get("message") or "Facebook returned an error."), [token])
+        raise SocialError(f"Facebook rejected {target}. {message_text}")
+    return parsed
+
+
+def _user_token(secrets_path: Path, pages: dict | None) -> tuple[str | None, str]:
+    for name in USER_TOKEN_ENVS:
+        env = os.environ.get(name, "").strip()
+        if env:
+            return env, f"environment variable {name}"
+    if isinstance(pages, dict):
+        found = user_token_from_pages(pages)
+        if found:
+            return found, f"the {USER_TOKEN_KEYS[0]} key in {display_secret(secrets_path)}"
+    file_path = secrets_path.parent / USER_TOKEN_FILE
+    found = read_secret_file(file_path, USER_TOKEN_FILE_KEYS)
+    if found:
+        return found, f"the file {display_secret(file_path)}"
+    return None, ""
+
+
+def derive_page_token(page_id: str, user_token: str, api_base: str, source: str) -> str:
+    """Exchange a user token for this Page's token. Raises when Graph does not return one."""
+    base = api_base.rstrip("/")
+    errors: list[str] = []
+    direct_url = f"{base}/{page_id}?fields=access_token"
+    payload: dict = {}
+    try:
+        payload = graph_get(direct_url, user_token)
+    except SocialError as exc:
+        errors.append(str(exc))
+    token = payload.get("access_token") if isinstance(payload, dict) else None
+    if isinstance(token, str) and token.strip():
+        return token.strip()
+
+    accounts_url = f"{base}/me/accounts?fields=id,access_token&limit=100"
+    payload = {}
+    try:
+        payload = graph_get(accounts_url, user_token)
+    except SocialError as exc:
+        errors.append(str(exc))
+    rows = payload.get("data") if isinstance(payload, dict) else None
+    if isinstance(rows, list):
+        for row in rows:
+            if not isinstance(row, dict) or str(row.get("id") or "").strip() != page_id:
+                continue
+            found = row.get("access_token")
+            if isinstance(found, str) and found.strip():
+                return found.strip()
+    detail = " ".join(errors) if errors else "Facebook returned no access_token for this page."
+    message = (
+        f"A user token named {USER_TOKEN_KEYS[0]} ({source}) did not return a page token for {page_id}. "
+        f"Asked Graph for /{page_id} and /me/accounts. {detail} "
+        "Nothing posted. Values are not printed."
+    )
+    raise SocialError(redact(message, [user_token]))
+
+
+def resolve_token(page_id: str, secrets_path: Path, api_base: str = GRAPH) -> str | None:
+    """Page token from the environment, the pages file, or a derived user token.
+
+    Returns None when every source is missing. Raises SocialError when a user
+    token is present but Graph does not return a page token for page_id.
+    """
     env = os.environ.get(ENV_TOKEN, "").strip()
     if env:
         return env
-    if not secrets_path.is_file():
+    pages = None
+    if secrets_path.is_file():
+        pages = load_json(secrets_path)
+        found = token_from_pages(pages, page_id)
+        if found:
+            return found
+    user_token, source = _user_token(secrets_path, pages)
+    if not user_token:
         return None
-    return token_from_pages(load_json(secrets_path), page_id)
+    return derive_page_token(page_id, user_token, api_base, source)
+
+
+def fetch_page_posts(page_id: str, token: str, api_base: str = GRAPH) -> list[dict]:
+    """Recent posts published by the Page.
+
+    /{page-id}/posts is used because /{page-id}/feed needs pages_read_engagement.
+    """
+    url = (
+        f"{api_base.rstrip('/')}/{page_id}/posts"
+        "?fields=id,message,permalink_url,created_time&limit=25"
+    )
+    payload = graph_get(url, token)
+    rows = payload.get("data")
+    if not isinstance(rows, list):
+        raise SocialError(f"Facebook /{page_id}/posts did not return a list of posts.")
+    return [row for row in rows if isinstance(row, dict)]
+
+
+def _text_has_link(value: object, needles: tuple[str, ...]) -> bool:
+    if isinstance(value, str):
+        return any(needle and needle in value for needle in needles)
+    if isinstance(value, dict):
+        return any(_text_has_link(item, needles) for item in value.values())
+    if isinstance(value, list):
+        return any(_text_has_link(item, needles) for item in value)
+    return False
+
+
+def matching_page_post(posts: list[dict], link: str) -> dict | None:
+    bare = bare_link(link)
+    needles = tuple(item for item in (link.strip(), bare) if item)
+    for post in posts:
+        if _text_has_link(post, needles):
+            return post
+    return None
+
+
+def _public_post_id(value: object) -> str:
+    text = str(value or "").strip()
+    parts = text.split("_")
+    if text and all(part.isdigit() for part in parts):
+        return text
+    return ""
 
 
 def publish_page(page_id: str, token: str, message: str, link: str, api_base: str = GRAPH) -> dict:
@@ -184,17 +377,36 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     try:
-        token = resolve_token(page_id or "", args.secrets)
+        token = resolve_token(page_id or "", args.secrets, args.api)
     except SocialError as exc:
         print(exc, file=sys.stderr)
         return 1
     if not token:
-        print(
-            "No MineralDigger Facebook page token. "
-            f"Set {ENV_TOKEN} or add the page to ~/.secrets/fb_pages.json.",
-            file=sys.stderr,
-        )
+        print(missing_page_token_message(page_id or "", args.secrets), file=sys.stderr)
         return 1
+
+    if not args.force:
+        try:
+            already = matching_page_post(fetch_page_posts(page_id or "", token, args.api), post["link"])
+        except SocialError as exc:
+            print(
+                redact(
+                    f"Could not read recent Page posts from /{page_id}/posts. "
+                    f"The duplicate check used the log only. {exc}",
+                    [token],
+                ),
+                file=sys.stderr,
+            )
+        else:
+            if already:
+                shown = _public_post_id(already.get("id"))
+                label = f" (post {shown})" if shown else ""
+                print(
+                    f"This link is already on the MineralDigger Page{label}. "
+                    "Nothing posted. Pass --force to post again.",
+                    file=sys.stderr,
+                )
+                return 1
 
     try:
         result = publish_page(page_id or "", token, post["facebook"], post["link"], args.api)

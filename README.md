@@ -236,9 +236,23 @@ python3 scripts/bluesky_post.py --today 2026-10-28 --publish
 
 Each network keeps a log keyed by ISO week (`2026-W44`): `growth/facebook_posts.json` and `growth/bluesky_posts.json`. When that week is already there, `--publish` stops. `--force` posts the week again and replaces that one key.
 
-Facebook posts to the Page in `growth/facebook_page.json` (Graph id `1419817424553579`). The page token is `MINERALDIGGER_FB_PAGE_TOKEN`, or the entry for that page id in `~/.secrets/fb_pages.json`. That file stays on the machine. It can map the page id to a token, or use `page_id` and `access_token`.
+Facebook posts to the Page in `growth/facebook_page.json` (Graph id `1419817424553579`). `--publish` looks for a page token in this order:
 
-Bluesky posts as `mineraldigger.com`. The app password is `MINERALDIGGER_BLUESKY_APP_PASSWORD`, or the `mineraldigger.com` entry in `~/.secrets/bluesky.json`.
+1. The environment variable `MINERALDIGGER_FB_PAGE_TOKEN`.
+2. The entry for that page id in `~/.secrets/fb_pages.json`. That file stays on the machine. It can map the page id to a token, or use `page_id` and `access_token`.
+3. A user token named `fb_user_token`, which Graph exchanges for this Page. The user token is the environment variable `MINERALDIGGER_FB_USER_TOKEN`, then `FB_USER_TOKEN`, then the `fb_user_token` key in `~/.secrets/fb_pages.json`, then the file `~/.secrets/fb_user_token`. The exchange calls `/{page-id}?fields=access_token`, then `/me/accounts` if that returns no page token.
+
+If none of those is set, the script stops and names each place it looked. It does not print the values.
+
+Before it posts, and unless `--force` is set, it reads recent posts from `/{page-id}/posts` and stops when that same link is already on the Page. It does not read `/{page-id}/feed`, which needs `pages_read_engagement`. If `/posts` cannot be read, it says so and the log is the only duplicate check. Publishing still uses `POST /{page-id}/feed`.
+
+Bluesky posts as `mineraldigger.com`. `--publish` looks for the app password in this order:
+
+1. The environment variable `MINERALDIGGER_BLUESKY_APP_PASSWORD`.
+2. The `mineraldigger.com` entry in `~/.secrets/bluesky.json`, or the key `mineraldigger_bluesky_app_password` in that file.
+3. The secret file `~/.secrets/mineraldigger_bluesky_app_password`.
+
+If none of those is set, the script stops and names each place it looked. It does not print the values.
 
 ## Still to do before a public launch
 

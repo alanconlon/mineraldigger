@@ -7,6 +7,7 @@ import json
 import os
 import unittest
 import urllib.error
+import urllib.parse
 from contextlib import redirect_stderr, redirect_stdout
 from datetime import date
 from pathlib import Path
@@ -22,14 +23,18 @@ import bluesky_post  # noqa: E402
 import facebook_post  # noqa: E402
 from social_copy import (  # noqa: E402
     BLUESKY_LIMIT,
+    BLUESKY_PASSWORD_KEY,
+    SocialError,
     build_post,
     fit_bluesky,
     link_facet,
     load_shows,
     password_from_bluesky,
     post_range,
+    read_secret_file,
     repeated_slugs,
     token_from_pages,
+    user_token_from_pages,
     week_key,
 )
 
@@ -37,7 +42,30 @@ TODAY = date(2026, 10, 28)
 SHOWS = load_shows(ROOT / "data" / "shows.json")
 SITE = "https://mineraldigger.com"
 PAGE_ID = "1419817424553579"
-TOKEN_KEYS = ("MINERALDIGGER_FB_PAGE_TOKEN", "MINERALDIGGER_BLUESKY_APP_PASSWORD")
+TOKEN_KEYS = (
+    "MINERALDIGGER_FB_PAGE_TOKEN",
+    "MINERALDIGGER_FB_USER_TOKEN",
+    "FB_USER_TOKEN",
+    "MINERALDIGGER_BLUESKY_APP_PASSWORD",
+)
+
+
+class JsonResponse:
+    def __init__(self, payload: dict):
+        self.payload = payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def read(self):
+        return json.dumps(self.payload).encode("utf-8")
+
+
+def request_path(request) -> str:
+    return urllib.parse.urlparse(request.full_url).path
 
 
 def banned(value: str) -> bool:
@@ -185,6 +213,9 @@ class SecretShapeTests(unittest.TestCase):
         self.assertIsNone(
             token_from_pages({"mineraldigger": {"page_id": "999", "access_token": "wrong-page"}}, page_id)
         )
+        user_only = {"fb_user_token": {"page_id": page_id, "access_token": "user-secret"}}
+        self.assertIsNone(token_from_pages(user_only, page_id))
+        self.assertEqual(user_token_from_pages(user_only), "user-secret")
 
     def test_bluesky_password_matches_the_handle_only(self):
         handle = "mineraldigger.com"
@@ -198,6 +229,11 @@ class SecretShapeTests(unittest.TestCase):
             "from-list",
         )
         self.assertIsNone(password_from_bluesky({"fairdigger.co.uk": "fair-pass"}, handle))
+        self.assertEqual(
+            password_from_bluesky({BLUESKY_PASSWORD_KEY: "named-pass", "fairdigger.co.uk": "fair-pass"}, handle),
+            "named-pass",
+        )
+        self.assertIsNone(password_from_bluesky({BLUESKY_PASSWORD_KEY: "named-pass"}, "fairdigger.co.uk"))
 
 
 class FacebookFlowTests(EnvGuard):
@@ -231,6 +267,12 @@ class FacebookFlowTests(EnvGuard):
 
             def fake_urlopen(request, timeout=30):
                 calls.append(request)
+                self.assertNotIn("from-file", request.full_url)
+                if request.get_method() == "GET":
+                    self.assertTrue(request_path(request).endswith("/posts"))
+                    self.assertFalse(request_path(request).endswith("/feed"))
+                    self.assertEqual(request.get_header("Authorization"), "Bearer from-file")
+                    return JsonResponse({"data": []})
                 payload = json.loads(request.data.decode("utf-8"))
                 self.assertEqual(payload["access_token"], "from-file")
                 self.assertIn("mineraldigger.com", payload["message"])
@@ -239,7 +281,7 @@ class FacebookFlowTests(EnvGuard):
                 self.assertTrue(payload["link"].startswith("https://mineraldigger.com/"))
                 self.assertEqual(payload["message"].rstrip().splitlines()[-1], payload["link"].removeprefix("https://"))
                 self.assertTrue(payload["published"])
-                self.assertIn(f"/{PAGE_ID}/feed", request.full_url)
+                self.assertTrue(request_path(request).endswith("/feed"))
 
                 class Response:
                     def __enter__(self):
@@ -268,7 +310,9 @@ class FacebookFlowTests(EnvGuard):
                     ]
                 )
             self.assertEqual(code, 0, output)
-            self.assertEqual(len(calls), 1)
+            self.assertEqual(len(calls), 2)
+            self.assertTrue(request_path(calls[0]).endswith("/posts"))
+            self.assertTrue(request_path(calls[1]).endswith("/feed"))
             saved = json.loads(log.read_text(encoding="utf-8"))
             self.assertIn("2026-W44", saved)
             self.assertEqual(saved["2026-W44"]["post_id"], f"{PAGE_ID}_555")
@@ -289,8 +333,9 @@ class FacebookFlowTests(EnvGuard):
             os.environ["MINERALDIGGER_FB_PAGE_TOKEN"] = "from-env"
 
             def fake_urlopen(request, timeout=30):
-                payload = json.loads(request.data.decode("utf-8"))
-                self.assertEqual(payload["access_token"], "from-env")
+                if request.data:
+                    payload = json.loads(request.data.decode("utf-8"))
+                    self.assertEqual(payload["access_token"], "from-env")
                 body = json.dumps({"error": {"message": "bad from-env"}}).encode("utf-8")
                 raise urllib.error.HTTPError(request.full_url, 400, "Bad", None, io.BytesIO(body))
 
@@ -326,8 +371,11 @@ class FacebookFlowTests(EnvGuard):
                 encoding="utf-8",
             )
             os.environ["MINERALDIGGER_FB_PAGE_TOKEN"] = "token-1"
+            calls = []
 
             def fake_urlopen(request, timeout=30):
+                calls.append(request.get_method() + " " + request_path(request))
+
                 class Response:
                     def __enter__(self):
                         return self
@@ -343,6 +391,7 @@ class FacebookFlowTests(EnvGuard):
             with mock.patch("urllib.request.urlopen", fake_urlopen):
                 code, output = run_facebook(["--today", "2026-10-28", "--publish", "--force", "--log", str(log)])
             self.assertEqual(code, 0, output)
+            self.assertEqual(calls, [f"POST /v23.0/{PAGE_ID}/feed"])
             saved = json.loads(log.read_text(encoding="utf-8"))
             self.assertEqual(saved["2026-W43"]["text"], "keep me")
             self.assertEqual(saved["2026-W44"]["post_id"], f"{PAGE_ID}_9")
@@ -600,6 +649,318 @@ class PublishRefusalTests(EnvGuard):
                 self.assertEqual(code, 1, text)
                 self.assertIn("Refusing to publish", output)
                 self.assertFalse(log.exists())
+
+
+def _graph_error(request, message: str, status: int = 400):
+    body = json.dumps({"error": {"message": message}}).encode("utf-8")
+    raise urllib.error.HTTPError(request.full_url, status, "Bad", None, io.BytesIO(body))
+
+
+class CredentialLookupTests(EnvGuard):
+    def test_secret_file_reads_text_or_json_and_hides_a_broken_file(self):
+        with TemporaryDirectory() as tmp:
+            plain = Path(tmp) / "mineraldigger_bluesky_app_password"
+            plain.write_text("  app-pass  \n", encoding="utf-8")
+            self.assertEqual(read_secret_file(plain, ("app_password",)), "app-pass")
+            shaped = Path(tmp) / "fb_user_token"
+            shaped.write_text(json.dumps({"access_token": "json-user"}), encoding="utf-8")
+            self.assertEqual(read_secret_file(shaped, ("access_token", "token")), "json-user")
+            nested = Path(tmp) / "nested.json"
+            nested.write_text(
+                json.dumps({BLUESKY_PASSWORD_KEY: {"app_password": "nested-pass"}}),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                read_secret_file(nested, ("app_password", BLUESKY_PASSWORD_KEY)),
+                "nested-pass",
+            )
+            broken = Path(tmp) / "broken"
+            broken.write_text('{"access_token": "LEAKME"', encoding="utf-8")
+            with self.assertRaises(SocialError) as caught:
+                read_secret_file(broken, ("access_token",))
+            self.assertNotIn("LEAKME", str(caught.exception))
+            self.assertIn("not valid JSON", str(caught.exception))
+
+    def test_facebook_env_page_token_wins_and_does_not_call_graph(self):
+        with TemporaryDirectory() as tmp:
+            secrets = Path(tmp) / "fb_pages.json"
+            secrets.write_text(json.dumps({PAGE_ID: "from-file", "fb_user_token": "from-key"}), encoding="utf-8")
+            (Path(tmp) / "fb_user_token").write_text("from-user-file\n", encoding="utf-8")
+            os.environ["MINERALDIGGER_FB_PAGE_TOKEN"] = "from-env"
+            os.environ["FB_USER_TOKEN"] = "from-user-env"
+            with mock.patch("urllib.request.urlopen", side_effect=AssertionError("graph")):
+                token = facebook_post.resolve_token(PAGE_ID, secrets)
+            self.assertEqual(token, "from-env")
+
+    def test_facebook_pages_file_wins_over_a_user_token(self):
+        with TemporaryDirectory() as tmp:
+            secrets = Path(tmp) / "fb_pages.json"
+            secrets.write_text(
+                json.dumps({PAGE_ID: "from-file", "fb_user_token": "from-key"}),
+                encoding="utf-8",
+            )
+            (Path(tmp) / "fb_user_token").write_text("from-user-file\n", encoding="utf-8")
+            os.environ["FB_USER_TOKEN"] = "from-user-env"
+            with mock.patch("urllib.request.urlopen", side_effect=AssertionError("graph")):
+                token = facebook_post.resolve_token(PAGE_ID, secrets)
+            self.assertEqual(token, "from-file")
+
+    def _derived(self, request, user_token: str, page_token: str):
+        self.assertNotIn(user_token, request.full_url)
+        self.assertNotIn(page_token, request.full_url)
+        self.assertEqual(request.get_header("Authorization"), f"Bearer {user_token}")
+        self.assertEqual(request.get_method(), "GET")
+        path = request_path(request)
+        self.assertFalse(path.endswith("/feed"))
+        if path.endswith("/accounts"):
+            return JsonResponse(
+                {"data": [{"id": "111", "access_token": "other-page-secret"}, {"id": PAGE_ID, "access_token": page_token}]}
+            )
+        self.assertTrue(path.endswith("/" + PAGE_ID))
+        return JsonResponse({"id": PAGE_ID})
+
+    def test_facebook_user_token_env_is_exchanged_for_the_page(self):
+        with TemporaryDirectory() as tmp:
+            secrets = Path(tmp) / "fb_pages.json"
+            secrets.write_text(json.dumps({"fb_user_token": "from-key"}), encoding="utf-8")
+            (Path(tmp) / "fb_user_token").write_text("from-user-file\n", encoding="utf-8")
+            os.environ["FB_USER_TOKEN"] = "shared-user"
+            os.environ["MINERALDIGGER_FB_USER_TOKEN"] = "mineral-user"
+            with mock.patch("urllib.request.urlopen", lambda request, timeout=30: self._derived(request, "mineral-user", "derived-page")):
+                token = facebook_post.resolve_token(PAGE_ID, secrets)
+            self.assertEqual(token, "derived-page")
+
+    def test_facebook_shared_user_token_env_is_used_when_the_mineral_one_is_unset(self):
+        with TemporaryDirectory() as tmp:
+            secrets = Path(tmp) / "fb_pages.json"
+            os.environ["FB_USER_TOKEN"] = "shared-user"
+
+            def fake_urlopen(request, timeout=30):
+                self.assertEqual(request.get_header("Authorization"), "Bearer shared-user")
+                return JsonResponse({"access_token": "derived-page", "id": PAGE_ID})
+
+            with mock.patch("urllib.request.urlopen", fake_urlopen):
+                token = facebook_post.resolve_token(PAGE_ID, secrets)
+            self.assertEqual(token, "derived-page")
+
+    def test_facebook_user_token_key_uses_accounts_when_the_page_field_is_empty(self):
+        with TemporaryDirectory() as tmp:
+            secrets = Path(tmp) / "fb_pages.json"
+            secrets.write_text(json.dumps({"111": "other-page-secret", "fb_user_token": "from-key"}), encoding="utf-8")
+            calls = []
+
+            def fake_urlopen(request, timeout=30):
+                calls.append(request_path(request))
+                return self._derived(request, "from-key", "derived-page")
+
+            with mock.patch("urllib.request.urlopen", fake_urlopen):
+                token = facebook_post.resolve_token(PAGE_ID, secrets)
+            self.assertEqual(token, "derived-page")
+            self.assertTrue(calls[0].endswith("/" + PAGE_ID))
+            self.assertTrue(calls[1].endswith("/accounts"))
+            self.assertNotIn("other-page-secret", token)
+
+    def test_facebook_user_token_file_is_exchanged_without_calling_accounts(self):
+        with TemporaryDirectory() as tmp:
+            secrets = Path(tmp) / "missing-pages.json"
+            (Path(tmp) / "fb_user_token").write_text(json.dumps({"fb_user_token": "file-user"}), encoding="utf-8")
+            calls = []
+
+            def fake_urlopen(request, timeout=30):
+                calls.append(request_path(request))
+                self.assertEqual(request.get_header("Authorization"), "Bearer file-user")
+                self.assertNotIn("file-user", request.full_url)
+                return JsonResponse({"access_token": "derived-page", "id": PAGE_ID})
+
+            with mock.patch("urllib.request.urlopen", fake_urlopen):
+                token = facebook_post.resolve_token(PAGE_ID, secrets)
+            self.assertEqual(token, "derived-page")
+            self.assertEqual(len(calls), 1)
+            self.assertTrue(calls[0].endswith("/" + PAGE_ID))
+
+    def test_facebook_user_token_that_cannot_mint_a_page_token_is_redacted(self):
+        with TemporaryDirectory() as tmp:
+            secrets = Path(tmp) / "fb_pages.json"
+            secrets.write_text("{}\n", encoding="utf-8")
+            (Path(tmp) / "fb_user_token").write_text("USERSECRET\n", encoding="utf-8")
+
+            def fake_urlopen(request, timeout=30):
+                self.assertNotIn("USERSECRET", request.full_url)
+                _graph_error(request, "Invalid OAuth access token USERSECRET")
+
+            with mock.patch("urllib.request.urlopen", fake_urlopen):
+                code, output = run_facebook(
+                    ["--today", "2026-10-28", "--publish", "--log", str(Path(tmp) / "log.json"), "--secrets", str(secrets)]
+                )
+            self.assertEqual(code, 1)
+            self.assertNotIn("USERSECRET", output)
+            self.assertIn("[redacted]", output)
+            self.assertIn(f"/{PAGE_ID}", output)
+            self.assertIn("/me/accounts", output)
+            self.assertIn("Nothing posted", output)
+            self.assertFalse((Path(tmp) / "log.json").exists())
+
+    def test_facebook_missing_everything_names_each_place_and_prints_no_value(self):
+        with TemporaryDirectory() as tmp:
+            secrets = Path(tmp) / "fb_pages.json"
+            secrets.write_text(json.dumps({"111": "OTHERPAGESECRET"}), encoding="utf-8")
+            with mock.patch("urllib.request.urlopen", side_effect=AssertionError("graph")):
+                code, output = run_facebook(
+                    ["--today", "2026-10-28", "--publish", "--log", str(Path(tmp) / "log.json"), "--secrets", str(secrets)]
+                )
+            self.assertEqual(code, 1)
+            self.assertIn("MINERALDIGGER_FB_PAGE_TOKEN", output)
+            self.assertIn("fb_pages.json", output)
+            self.assertIn("fb_user_token", output)
+            self.assertIn("MINERALDIGGER_FB_USER_TOKEN or FB_USER_TOKEN", output)
+            self.assertIn(PAGE_ID, output)
+            self.assertIn("Values are not printed.", output)
+            self.assertNotIn("OTHERPAGESECRET", output)
+            self.assertFalse((Path(tmp) / "log.json").exists())
+
+    def test_broken_user_token_file_does_not_print_its_contents(self):
+        with TemporaryDirectory() as tmp:
+            secrets = Path(tmp) / "fb_pages.json"
+            (Path(tmp) / "fb_user_token").write_text('{"access_token": "SECRETVALUE"', encoding="utf-8")
+            with mock.patch("urllib.request.urlopen", side_effect=AssertionError("graph")):
+                code, output = run_facebook(
+                    ["--today", "2026-10-28", "--publish", "--log", str(Path(tmp) / "log.json"), "--secrets", str(secrets)]
+                )
+            self.assertEqual(code, 1)
+            self.assertIn("not valid JSON", output)
+            self.assertNotIn("SECRETVALUE", output)
+
+    def test_bluesky_env_password_wins(self):
+        with TemporaryDirectory() as tmp:
+            secrets = Path(tmp) / "bluesky.json"
+            secrets.write_text(json.dumps({"mineraldigger.com": "from-json"}), encoding="utf-8")
+            (Path(tmp) / BLUESKY_PASSWORD_KEY).write_text("from-file\n", encoding="utf-8")
+            os.environ["MINERALDIGGER_BLUESKY_APP_PASSWORD"] = "from-env"
+            self.assertEqual(bluesky_post.resolve_password(secrets), "from-env")
+
+    def test_bluesky_json_handle_is_used_when_the_env_is_unset(self):
+        with TemporaryDirectory() as tmp:
+            secrets = Path(tmp) / "bluesky.json"
+            secrets.write_text(
+                json.dumps({"fairdigger.co.uk": "fair-pass", "mineraldigger.com": "from-json"}),
+                encoding="utf-8",
+            )
+            (Path(tmp) / BLUESKY_PASSWORD_KEY).write_text("from-file\n", encoding="utf-8")
+            self.assertEqual(bluesky_post.resolve_password(secrets), "from-json")
+
+    def test_bluesky_named_key_is_used_when_the_handle_is_absent(self):
+        with TemporaryDirectory() as tmp:
+            secrets = Path(tmp) / "bluesky.json"
+            secrets.write_text(
+                json.dumps({"fairdigger.co.uk": "fair-pass", BLUESKY_PASSWORD_KEY: "from-key"}),
+                encoding="utf-8",
+            )
+            self.assertEqual(bluesky_post.resolve_password(secrets), "from-key")
+
+    def test_bluesky_named_secret_file_is_used_when_bluesky_json_is_missing(self):
+        with TemporaryDirectory() as tmp:
+            secrets = Path(tmp) / "bluesky.json"
+            named = Path(tmp) / BLUESKY_PASSWORD_KEY
+            named.write_text(json.dumps({"app_password": "from-file"}), encoding="utf-8")
+            self.assertEqual(bluesky_post.resolve_password(secrets), "from-file")
+
+    def test_bluesky_missing_everything_names_each_place_and_prints_no_value(self):
+        with TemporaryDirectory() as tmp:
+            secrets = Path(tmp) / "bluesky.json"
+            secrets.write_text(json.dumps({"fairdigger.co.uk": "fair-pass"}), encoding="utf-8")
+            log = Path(tmp) / "bluesky_posts.json"
+            with mock.patch.object(bluesky_post, "fetch_recent_posts", return_value=[]), mock.patch(
+                "urllib.request.urlopen", side_effect=AssertionError("posted")
+            ):
+                code, output = run_bluesky(
+                    ["--today", "2026-10-28", "--publish", "--log", str(log), "--secrets", str(secrets)]
+                )
+            self.assertEqual(code, 1)
+            self.assertIn("MINERALDIGGER_BLUESKY_APP_PASSWORD", output)
+            self.assertIn("bluesky.json", output)
+            self.assertIn("mineraldigger.com", output)
+            self.assertIn(BLUESKY_PASSWORD_KEY, output)
+            self.assertIn("Values are not printed.", output)
+            self.assertNotIn("fair-pass", output)
+            self.assertFalse(log.exists())
+
+
+class DuplicateCheckTests(EnvGuard):
+    def test_posts_endpoint_blocks_a_link_already_on_the_page(self):
+        with TemporaryDirectory() as tmp:
+            os.environ["MINERALDIGGER_FB_PAGE_TOKEN"] = "PAGESECRET"
+            post = build_post(SHOWS, TODAY, SITE)
+            calls = []
+
+            def fake_urlopen(request, timeout=30):
+                calls.append(request)
+                self.assertEqual(request.get_method(), "GET")
+                self.assertTrue(request_path(request).endswith("/posts"))
+                self.assertFalse(request_path(request).endswith("/feed"))
+                self.assertNotIn("PAGESECRET", request.full_url)
+                self.assertEqual(request.get_header("Authorization"), "Bearer PAGESECRET")
+                return JsonResponse(
+                    {
+                        "data": [
+                            {
+                                "id": f"{PAGE_ID}_77",
+                                "message": "UNIQUEPAGEBODY " + post["link"],
+                                "permalink_url": "https://www.facebook.com/example/posts/77",
+                            }
+                        ]
+                    }
+                )
+
+            with mock.patch("urllib.request.urlopen", fake_urlopen):
+                code, output = run_facebook(
+                    ["--today", "2026-10-28", "--publish", "--log", str(Path(tmp) / "log.json")]
+                )
+            self.assertEqual(code, 1)
+            self.assertEqual(len(calls), 1)
+            self.assertIn(f"post {PAGE_ID}_77", output)
+            self.assertIn("--force", output)
+            self.assertIn("Nothing posted", output)
+            self.assertNotIn("PAGESECRET", output)
+            self.assertNotIn("UNIQUEPAGEBODY", output)
+            self.assertFalse((Path(tmp) / "log.json").exists())
+
+    def test_posts_failure_uses_the_log_and_still_publishes(self):
+        with TemporaryDirectory() as tmp:
+            os.environ["MINERALDIGGER_FB_PAGE_TOKEN"] = "PAGESECRET"
+            log = Path(tmp) / "facebook_posts.json"
+            calls = []
+
+            def fake_urlopen(request, timeout=30):
+                path = request_path(request)
+                calls.append((request.get_method(), path))
+                self.assertNotIn("PAGESECRET", request.full_url)
+                if request.get_method() == "GET":
+                    self.assertTrue(path.endswith("/posts"))
+                    self.assertFalse(path.endswith("/feed"))
+                    _graph_error(request, "(#200) Requires pages_read_engagement permission to read this Page.")
+                self.assertTrue(path.endswith("/feed"))
+                return JsonResponse({"id": f"{PAGE_ID}_9"})
+
+            with mock.patch("urllib.request.urlopen", fake_urlopen):
+                code, output = run_facebook(["--today", "2026-10-28", "--publish", "--log", str(log)])
+            self.assertEqual(code, 0, output)
+            self.assertEqual(calls, [("GET", f"/v23.0/{PAGE_ID}/posts"), ("POST", f"/v23.0/{PAGE_ID}/feed")])
+            self.assertIn("duplicate check used the log only", output)
+            self.assertIn("/posts", output)
+            self.assertIn("pages_read_engagement", output)
+            self.assertNotIn("PAGESECRET", output)
+            saved = json.loads(log.read_text(encoding="utf-8"))
+            self.assertEqual(saved["2026-W44"]["post_id"], f"{PAGE_ID}_9")
+            self.assertNotIn("PAGESECRET", log.read_text(encoding="utf-8"))
+
+    def test_nested_link_counts_as_the_same_post(self):
+        link = "https://mineraldigger.com/rock/"
+        found = facebook_post.matching_page_post(
+            [{"id": f"{PAGE_ID}_1", "attachments": {"data": [{"url": link}]}}],
+            link,
+        )
+        self.assertEqual(found["id"], f"{PAGE_ID}_1")
+        self.assertIsNone(facebook_post.matching_page_post([{"id": "1", "message": "Worcester"}], link))
 
 
 if __name__ == "__main__":

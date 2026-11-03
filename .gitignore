@@ -10,5 +10,7 @@ __pycache__/
 *.pyc
 .wrangler/
 fb_pages.json
+fb_user_token
 bluesky.json
+mineraldigger_bluesky_app_password
 *.tmp

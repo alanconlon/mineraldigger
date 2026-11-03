@@ -143,6 +143,90 @@ def _string_field(value: object, keys: tuple[str, ...]) -> str | None:
     return None
 
 
+def _normal_key(key: object) -> str:
+    return str(key).strip().lower().replace(" ", "").replace("-", "_")
+
+
+# A user token can mint a page token. It is not itself a page token.
+USER_TOKEN_KEYS = ("fb_user_token", "user_token", "user_access_token")
+BLUESKY_PASSWORD_KEY = "mineraldigger_bluesky_app_password"
+
+
+def display_secret(path: Path) -> str:
+    """~/.secrets/name when the file sits under the home directory."""
+    try:
+        relative = path.resolve().relative_to(Path.home().resolve())
+    except ValueError:
+        return str(path)
+    return "~/" + relative.as_posix()
+
+
+def read_secret_file(path: Path, keys: tuple[str, ...] = ()) -> str | None:
+    """Read one secret from a file.
+
+    A plain text file is the secret itself. A JSON object may hold it under
+    one of keys. The file contents are never included in an error.
+    """
+    if not path.is_file():
+        return None
+    try:
+        raw = path.read_text(encoding="utf-8-sig").strip()
+    except OSError as exc:
+        raise SocialError(f"Could not read {display_secret(path)}.") from exc
+    if not raw:
+        return None
+    if raw[0] in "{[":
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise SocialError(f"{display_secret(path)} is not valid JSON.") from exc
+        if isinstance(data, str) and data.strip():
+            return data.strip()
+        if isinstance(data, dict):
+            found = _string_field(data, keys) if keys else None
+            if found:
+                return found
+            for key in keys:
+                found = named_secret(data, key)
+                if found:
+                    return found
+            return None
+        return None
+    line = raw.splitlines()[0].strip()
+    return line or None
+
+
+def named_secret(data: dict, name: str) -> str | None:
+    """The string stored under name, or a nested app_password, password, or token."""
+    if not isinstance(data, dict):
+        return None
+    wanted = _normal_key(name)
+    for key, value in data.items():
+        if _normal_key(key) != wanted:
+            continue
+        found = _string_field(value, ("app_password", "password", "access_token", "token", "secret"))
+        if found:
+            return found
+    return None
+
+
+def user_token_from_pages(data: dict) -> str | None:
+    """The stored user token in ~/.secrets/fb_pages.json, named fb_user_token.
+
+    A user token is not a page token. The caller exchanges it for the Page.
+    """
+    if not isinstance(data, dict):
+        return None
+    by_name = {_normal_key(key): value for key, value in data.items()}
+    for name in USER_TOKEN_KEYS:
+        if name not in by_name:
+            continue
+        found = _string_field(by_name[name], ("access_token", "token", "user_token", "fb_user_token"))
+        if found:
+            return found
+    return None
+
+
 def token_from_pages(data: dict, page_id: str) -> str | None:
     """Pick the token for this Page id out of ~/.secrets/fb_pages.json.
 
@@ -152,6 +236,8 @@ def token_from_pages(data: dict, page_id: str) -> str | None:
     - {"mineraldigger": {"page_id": "1419...", "access_token": "<token>"}}
     - {"pages": [ {"id": "1419...", "token": "<token>"} ]}
     A mineraldigger object with a different page_id is left unused.
+    Keys named fb_user_token, user_token, or user_access_token are user
+    tokens and are left unused here.
     """
     if not isinstance(data, dict):
         return None
@@ -175,7 +261,9 @@ def token_from_pages(data: dict, page_id: str) -> str | None:
         owner = ""
         if isinstance(value, dict):
             owner = str(value.get("page_id") or value.get("id") or "").strip()
-        key_name = str(key).strip().lower().replace(" ", "")
+        key_name = _normal_key(key)
+        if key_name in USER_TOKEN_KEYS:
+            continue
         if owner == page_id or (key_name == "mineraldigger" and owner in {"", page_id}):
             token = _string_field(value, ("access_token", "token", "page_token"))
             if token:
@@ -204,6 +292,8 @@ def password_from_bluesky(data: dict, handle: str) -> str | None:
     - {"mineraldigger.com": {"app_password": "<app password>"}}
     - {"handle": "mineraldigger.com", "app_password": "<app password>"}
     - {"accounts": [{"handle": "mineraldigger.com", "app_password": "..."}]}
+    - {"mineraldigger_bluesky_app_password": "<app password>"}
+    The last shape is only used for the mineraldigger.com handle.
     """
     if not isinstance(data, dict):
         return None
@@ -233,6 +323,10 @@ def password_from_bluesky(data: dict, handle: str) -> str | None:
             found = _string_field(value, ("app_password", "password"))
             if found:
                 return found
+    if wanted == normal_handle(BLUESKY_HANDLE):
+        found = named_secret(data, BLUESKY_PASSWORD_KEY)
+        if found:
+            return found
     return None
 
 
