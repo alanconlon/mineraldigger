@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
@@ -803,8 +804,15 @@ if (indexNowState.host !== "mineraldigger.com" || !indexNowState.urls || Array.i
 const homeIndexNow = indexNowState.urls["https://mineraldigger.com/"];
 if (!homeIndexNow || !/^[0-9a-f]{64}$/.test(homeIndexNow.hash || "") || !/^\d{4}-\d{2}-\d{2}$/.test(homeIndexNow.lastmod || "")) {
   fail("IndexNow state should store a content hash and lastmod for the homepage.");
-} else if (!sitemap.includes(`<loc>https://mineraldigger.com/</loc><lastmod>${homeIndexNow.lastmod}</lastmod>`)) {
-  fail("Homepage sitemap lastmod should stay on the stored content date while the page is unchanged.");
+}
+// Demand the stored date only while the content hash matches. A changed page uses the build date.
+const lastmodCheck = spawnSync("python3", ["scripts/indexnow.py", "--check-sitemap", "--date", isoToday()], {
+  cwd: root,
+  encoding: "utf8",
+});
+if (lastmodCheck.status !== 0) {
+  const detail = `${lastmodCheck.stdout || ""}\n${lastmodCheck.stderr || ""}`.trim();
+  fail(detail || "Sitemap lastmod check failed.");
 }
 for (const [url, entry] of Object.entries(indexNowState.urls)) {
   if (!url.startsWith("https://mineraldigger.com/")) fail(`IndexNow state URL is not on mineraldigger.com: ${url}`);
