@@ -9,12 +9,16 @@ The host is mineraldigger.com. mineraldigger.co.uk is never submitted.
 Every mineraldigger.com URL in the sitemap is eligible. A low show count does not remove one.
 
 --stamp-sitemap rewrites each sitemap lastmod. An unchanged page keeps the
-stored date. A new or changed page uses the build date. The state file is
-rewritten only after HTTP 200 or 202. Any other response is logged. The
-submit command still exits 0, so a deploy is not failed by IndexNow.
+stored date. A new or changed page uses the build date. --check-sitemap
+checks that rule and exits 1 when a date is wrong. It does not POST.
+The state file is rewritten only after HTTP 200 or 202. Any other response
+is logged. The submit command still exits 0, so a deploy is not failed by
+IndexNow.
 
   python3 scripts/indexnow.py
   python3 scripts/indexnow.py --dry-run
+  python3 scripts/indexnow.py --stamp-sitemap
+  python3 scripts/indexnow.py --check-sitemap
 """
 
 from __future__ import annotations
@@ -113,12 +117,42 @@ def changed_urls(pages: dict[str, str], previous: dict[str, dict[str, str]]) -> 
     return changed
 
 
+def same_content(url: str, digest: str, previous: dict[str, dict[str, str]]) -> bool:
+    """True when the stored hash and lastmod still describe this page."""
+    prior = previous.get(url) or {}
+    return bool(prior.get("hash") and prior.get("hash") == digest and prior.get("lastmod"))
+
+
 def lastmod_for(url: str, digest: str, previous: dict[str, dict[str, str]], today: str) -> str:
     """Keep the stored date while the content hash matches. Otherwise use the build date."""
-    prior = previous.get(url) or {}
-    if prior.get("hash") and prior.get("hash") == digest and prior.get("lastmod"):
-        return prior["lastmod"]
+    if same_content(url, digest, previous):
+        return previous[url]["lastmod"]
     return today
+
+
+def sitemap_lastmod_errors(
+    sitemap: dict[str, str],
+    pages: dict[str, str],
+    previous: dict[str, dict[str, str]],
+    today: str,
+) -> list[str]:
+    """Stored date while the hash matches. Build date when the page is new or changed."""
+    home = f"https://{HOST}/"
+    errors: list[str] = []
+    for url, actual in sitemap.items():
+        digest = pages.get(url) or ""
+        if actual == lastmod_for(url, digest, previous, today):
+            continue
+        unchanged = same_content(url, digest, previous)
+        if url == home and unchanged:
+            errors.append("Homepage sitemap lastmod should stay on the stored content date while the page is unchanged.")
+        elif url == home:
+            errors.append("Homepage sitemap lastmod should be the build date when the page content changed.")
+        elif unchanged:
+            errors.append(f"Sitemap lastmod should stay on the stored content date while the page is unchanged: {url}")
+        else:
+            errors.append(f"Sitemap lastmod should be the build date when the page content changed: {url}")
+    return errors
 
 
 def batches(urls: list[str], size: int = BATCH) -> list[list[str]]:
@@ -189,6 +223,16 @@ def stamp_sitemap(sitemap_path: Path, state_path: Path, dist: Path, today: str) 
     rewrite_lastmods(sitemap_path, lastmods)
 
 
+def check_sitemap(sitemap_path: Path, state_path: Path, dist: Path, today: str) -> list[str]:
+    """Compare the built sitemap with the dates stamp_sitemap would write."""
+    if not sitemap_path.is_file():
+        return [f"Sitemap not found at {sitemap_path}."]
+    sitemap = parse_sitemap(sitemap_path)
+    pages = page_hashes(dist, list(sitemap))
+    previous = load_state(state_path)
+    return sitemap_lastmod_errors(sitemap, pages, previous, today)
+
+
 def post_batch(payload: dict) -> int | None:
     body = json.dumps(payload).encode("utf-8")
     request = urllib.request.Request(
@@ -247,16 +291,31 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Submit new or changed MineralDigger URLs to IndexNow.")
     parser.add_argument("--dry-run", action="store_true", help="Print the URLs and do not POST or update the state file.")
     parser.add_argument("--stamp-sitemap", action="store_true", help="Set each sitemap lastmod from the content hash. Do not POST.")
+    parser.add_argument("--check-sitemap", action="store_true", help="Exit 1 when a sitemap lastmod does not follow the content hash. Do not POST.")
     parser.add_argument("--date", default="", help="Build date for a page whose content hash changed. Defaults to today.")
     parser.add_argument("--sitemap", type=Path, default=ROOT / "dist" / "sitemap.xml")
     parser.add_argument("--state", type=Path, default=ROOT / "data" / "indexnow_state.json")
     parser.add_argument("--dist", type=Path, default=ROOT / "dist")
     args = parser.parse_args(argv)
+    today = args.date or date.today().isoformat()
+    if args.stamp_sitemap and args.check_sitemap:
+        print("Pass only one of --stamp-sitemap or --check-sitemap.", file=sys.stderr)
+        return 1
     if args.stamp_sitemap:
         try:
-            stamp_sitemap(args.sitemap, args.state, args.dist, args.date or date.today().isoformat())
+            stamp_sitemap(args.sitemap, args.state, args.dist, today)
         except Exception as exc:
             print(f"IndexNow sitemap stamp failed: {exc}", file=sys.stderr)
+            return 1
+        return 0
+    if args.check_sitemap:
+        try:
+            errors = check_sitemap(args.sitemap, args.state, args.dist, today)
+        except Exception as exc:
+            print(f"IndexNow sitemap check failed: {exc}", file=sys.stderr)
+            return 1
+        if errors:
+            print("\n".join(errors), file=sys.stderr)
             return 1
         return 0
     try:

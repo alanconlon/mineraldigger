@@ -112,6 +112,147 @@ class DiffTests(unittest.TestCase):
             self.assertIn("<loc>https://mineraldigger.com/</loc><lastmod>2026-10-30</lastmod>", text)
             self.assertIn("<loc>https://mineraldigger.com/show/a/</loc><lastmod>2026-11-02</lastmod>", text)
 
+    def test_check_keeps_stored_dates_and_accepts_the_build_date_when_content_changes(self):
+        home = indexnow.content_hash(HOME)
+        show = indexnow.content_hash(SHOW)
+        changed_home = indexnow.content_hash(HOME.replace("Home shows", "Home shows today"))
+        changed_show = indexnow.content_hash(SHOW_CHANGED)
+        previous = {
+            "https://mineraldigger.com/": {"hash": home, "lastmod": "2026-10-30"},
+            "https://mineraldigger.com/show/a/": {"hash": show, "lastmod": "2026-10-29"},
+            "https://mineraldigger.com/old/": {"hash": "gone", "lastmod": "2026-10-01"},
+        }
+        unchanged_pages = {
+            "https://mineraldigger.com/": home,
+            "https://mineraldigger.com/show/a/": show,
+        }
+        self.assertEqual(
+            indexnow.sitemap_lastmod_errors(
+                {
+                    "https://mineraldigger.com/": "2026-10-30",
+                    "https://mineraldigger.com/show/a/": "2026-10-29",
+                },
+                unchanged_pages,
+                previous,
+                "2026-11-03",
+            ),
+            [],
+        )
+        bumped = indexnow.sitemap_lastmod_errors(
+            {
+                "https://mineraldigger.com/": "2026-11-03",
+                "https://mineraldigger.com/show/a/": "2026-11-03",
+            },
+            unchanged_pages,
+            previous,
+            "2026-11-03",
+        )
+        self.assertEqual(
+            bumped,
+            [
+                "Homepage sitemap lastmod should stay on the stored content date while the page is unchanged.",
+                "Sitemap lastmod should stay on the stored content date while the page is unchanged: https://mineraldigger.com/show/a/",
+            ],
+        )
+        changed_pages = {
+            "https://mineraldigger.com/": changed_home,
+            "https://mineraldigger.com/show/a/": changed_show,
+            "https://mineraldigger.com/town/new/": "new",
+        }
+        self.assertNotEqual("2026-11-03", previous["https://mineraldigger.com/"]["lastmod"])
+        self.assertEqual(
+            indexnow.sitemap_lastmod_errors(
+                {
+                    "https://mineraldigger.com/": "2026-11-03",
+                    "https://mineraldigger.com/show/a/": "2026-11-03",
+                    "https://mineraldigger.com/town/new/": "2026-11-03",
+                },
+                changed_pages,
+                previous,
+                "2026-11-03",
+            ),
+            [],
+        )
+        stale = indexnow.sitemap_lastmod_errors(
+            {
+                "https://mineraldigger.com/": "2026-10-30",
+                "https://mineraldigger.com/show/a/": "2026-10-29",
+                "https://mineraldigger.com/town/new/": "2026-10-01",
+            },
+            changed_pages,
+            previous,
+            "2026-11-03",
+        )
+        self.assertEqual(
+            stale,
+            [
+                "Homepage sitemap lastmod should be the build date when the page content changed.",
+                "Sitemap lastmod should be the build date when the page content changed: https://mineraldigger.com/show/a/",
+                "Sitemap lastmod should be the build date when the page content changed: https://mineraldigger.com/town/new/",
+            ],
+        )
+
+    def test_stamp_and_check_pass_for_an_unchanged_and_a_changed_homepage(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sitemap, state, dist = write_site(
+                root,
+                {
+                    "host": "mineraldigger.com",
+                    "urls": {
+                        "https://mineraldigger.com/": entry(HOME, "2026-10-30"),
+                        "https://mineraldigger.com/show/a/": entry(SHOW, "2026-10-29"),
+                    },
+                },
+            )
+            paths = ["--date", "2026-11-03", "--sitemap", str(sitemap), "--state", str(state), "--dist", str(dist)]
+            code, output = run_main(["--stamp-sitemap", *paths])
+            self.assertEqual(code, 0, output)
+            text = sitemap.read_text(encoding="utf-8")
+            self.assertIn("<loc>https://mineraldigger.com/</loc><lastmod>2026-10-30</lastmod>", text)
+            self.assertIn("<loc>https://mineraldigger.com/show/a/</loc><lastmod>2026-10-29</lastmod>", text)
+            code, output = run_main(["--check-sitemap", *paths])
+            self.assertEqual(code, 0, output)
+
+            (dist / "index.html").write_text(HOME.replace("Home shows", "Home shows today"), encoding="utf-8")
+            code, output = run_main(["--stamp-sitemap", *paths])
+            self.assertEqual(code, 0, output)
+            text = sitemap.read_text(encoding="utf-8")
+            self.assertIn("<loc>https://mineraldigger.com/</loc><lastmod>2026-11-03</lastmod>", text)
+            self.assertIn("<loc>https://mineraldigger.com/show/a/</loc><lastmod>2026-10-29</lastmod>", text)
+            self.assertNotIn("<lastmod>2026-10-30</lastmod>", text)
+            code, output = run_main(["--check-sitemap", *paths])
+            self.assertEqual(code, 0, output)
+
+            sitemap.write_text(
+                text.replace(
+                    "<loc>https://mineraldigger.com/</loc><lastmod>2026-11-03</lastmod>",
+                    "<loc>https://mineraldigger.com/</loc><lastmod>2026-10-30</lastmod>",
+                ),
+                encoding="utf-8",
+            )
+            code, output = run_main(["--check-sitemap", *paths])
+            self.assertEqual(code, 1)
+            self.assertIn("Homepage sitemap lastmod should be the build date when the page content changed.", output)
+
+            sitemap.write_text(text, encoding="utf-8")
+            bumped = text.replace(
+                "<loc>https://mineraldigger.com/show/a/</loc><lastmod>2026-10-29</lastmod>",
+                "<loc>https://mineraldigger.com/show/a/</loc><lastmod>2026-11-03</lastmod>",
+            )
+            sitemap.write_text(bumped, encoding="utf-8")
+            code, output = run_main(["--check-sitemap", *paths])
+            self.assertEqual(code, 1)
+            self.assertIn(
+                "Sitemap lastmod should stay on the stored content date while the page is unchanged: https://mineraldigger.com/show/a/",
+                output,
+            )
+
+    def test_page_check_does_not_demand_the_stored_date_unconditionally(self):
+        source = (ROOT / "scripts" / "check.mjs").read_text(encoding="utf-8")
+        self.assertIn('"--check-sitemap"', source)
+        self.assertNotIn("${homeIndexNow.lastmod}", source)
+
     def test_sitemap_ignores_co_uk_hosts(self):
         with TemporaryDirectory() as tmp:
             sitemap, _, _ = write_site(Path(tmp), None)
