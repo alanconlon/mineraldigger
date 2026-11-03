@@ -9,12 +9,17 @@ already has them.
 The copy is plain British English: no em dashes, no en dashes, no
 exclamation marks, and no Ireland listings. The post text names the
 page as mineraldigger.com/... . The full https URL stays in the link
-card or the link field, and publish refuses a text that contains one.
+card or the link field. Publish refuses a text that contains one, and
+it refuses FairDigger or AuctionDigger wording or a link off this brand.
 """
 
 from __future__ import annotations
 
+import argparse
+import hashlib
 import json
+import re
+import urllib.parse
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -27,6 +32,27 @@ GROWTH = ROOT / "growth"
 SITE_URL = "https://mineraldigger.com"
 BLUESKY_LIMIT = 300
 BLUESKY_HANDLE = "mineraldigger.com"
+BRAND_SITE = "mineral"
+BRAND_NAME = "MineralDigger"
+OWN_HOSTS = frozenset({"mineraldigger.com", "mineraldigger.co.uk"})
+SITE_LABELS = {
+    "mineral": "MineralDigger",
+    "fair": "FairDigger",
+    "auction": "AuctionDigger",
+}
+_OTHER_BRANDS = (
+    (
+        "FairDigger",
+        re.compile(r"(?<![a-z0-9])fair[\s\-]*digger(?![a-z0-9])", re.IGNORECASE),
+        ("fairdigger.co.uk", "fairdigger.com"),
+    ),
+    (
+        "AuctionDigger",
+        re.compile(r"(?<![a-z0-9])auction[\s\-]*digger(?![a-z0-9])", re.IGNORECASE),
+        ("auctiondigger.ie",),
+    ),
+)
+_TEXT_FIELDS = {"facebook": "facebook_text", "bluesky": "bluesky_text"}
 
 UK_NATIONS = {
     "england",
@@ -339,15 +365,111 @@ def assert_voice(text: str) -> None:
         raise SocialError("Post copy includes an unknown price.")
 
 
-def publish_refusal(text: str) -> str | None:
-    """Why --publish must stop, or None when the text is allowed out.
+def link_host(url: str) -> str:
+    """Hostname of a bare domain or a full URL, without a leading www."""
+    text = (url or "").strip()
+    if not text:
+        return ""
+    if "://" not in text:
+        text = "https://" + text
+    host = urllib.parse.urlsplit(text).hostname or ""
+    return host.casefold().removeprefix("www.")
 
-    The visible post may say mineraldigger.com/.... It may not contain
-    an exclamation mark, an en dash, an em dash, or an https:// URL.
+
+def absolute_link(url: str) -> str:
+    """https URL for the Facebook link field and the Bluesky card."""
+    text = (url or "").strip()
+    if not text:
+        return ""
+    lowered = text.casefold()
+    if lowered.startswith("https://"):
+        return "https://" + text[len("https://"):]
+    if lowered.startswith("http://"):
+        return "https://" + text[len("http://"):]
+    return "https://" + text
+
+
+def canonical_link(url: str) -> str:
+    """Host and path, for comparing the link we sent with the live post.
+
+    Scheme, a leading www, a trailing slash and a query string are ignored.
+    """
+    host = link_host(url)
+    text = (url or "").strip()
+    if not text:
+        return ""
+    if "://" not in text:
+        text = "https://" + text
+    path = urllib.parse.urlsplit(text).path or ""
+    if path != "/" and path.endswith("/"):
+        path = path.rstrip("/")
+    if path == "/":
+        path = ""
+    return host + path.casefold()
+
+
+def is_own_host(host: str) -> bool:
+    return host.casefold().removeprefix("www.") in OWN_HOSTS
+
+
+def foreign_brand(value: str) -> str | None:
+    """FairDigger or AuctionDigger when this MineralDigger text names one of them."""
+    folded = value.casefold()
+    for name, pattern, domains in _OTHER_BRANDS:
+        if pattern.search(value) or any(domain in folded for domain in domains):
+            return name
+    return None
+
+
+def destination_url(url: str) -> str:
+    """Unwrap a Facebook l.php redirect so the real host can be checked."""
+    text = (url or "").strip()
+    if not text:
+        return ""
+    parts = urllib.parse.urlsplit(text if "://" in text else "https://" + text)
+    host = (parts.hostname or "").casefold().removeprefix("www.")
+    if host == "facebook.com" or host.endswith(".facebook.com") or host == "fb.com" or host.endswith(".fb.com"):
+        query = urllib.parse.parse_qs(parts.query)
+        target = (query.get("u") or query.get("url") or [""])[0].strip()
+        if target and target != text:
+            return destination_url(target)
+    return text
+
+
+def _same_text(left: str, right: str) -> bool:
+    def normal(value: str) -> str:
+        return value.replace("\r\n", "\n").replace("\r", "\n")
+
+    return normal(left) == normal(right)
+
+
+def publish_refusal(text: str, link: str | None = None) -> str | None:
+    """Why publishing must stop, or None when the text and link are allowed.
+
+    The visible post may name mineraldigger.com or mineraldigger.co.uk.
+    It may not contain an exclamation mark, an en dash, an em dash, or an
+    https:// URL. It may not mention FairDigger or AuctionDigger. When a
+    link is given, that link must be on mineraldigger.com or mineraldigger.co.uk.
+    Direct publish calls pass the link, so the brand check covers them too.
     """
     if "!" in text or "\u2013" in text or "\u2014" in text or "https://" in text.casefold():
         return (
             "Refusing to publish. The post text contains '!', an en dash, an em dash, or 'https://'."
+        )
+    other = foreign_brand(text)
+    if other:
+        return f"Refusing to publish. The post text mentions {other}, which is not {BRAND_NAME}."
+    if link is None:
+        return None
+    other = foreign_brand(link)
+    if other:
+        return f"Refusing to publish. The link mentions {other}, which is not {BRAND_NAME}."
+    host = link_host(link)
+    if not is_own_host(host):
+        shown = host or "a missing domain"
+        return (
+            f"Refusing to publish. The link {shown} is not a MineralDigger domain. "
+            "Use mineraldigger.com or mineraldigger.co.uk."
         )
     return None
 
@@ -360,6 +482,263 @@ def bare_link(url: str) -> str:
         if lowered.startswith(prefix):
             return text[len(prefix):]
     return text
+
+
+def _attachment_destinations(live: dict) -> list[str]:
+    found: list[str] = []
+    raw_link = live.get("link")
+    if isinstance(raw_link, str) and raw_link.strip():
+        found.append(destination_url(raw_link))
+    attachments = live.get("attachments")
+    rows = []
+    if isinstance(attachments, dict) and isinstance(attachments.get("data"), list):
+        rows = attachments["data"]
+    elif isinstance(attachments, list):
+        rows = attachments
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        unshimmed = row.get("unshimmed_url")
+        if isinstance(unshimmed, str) and unshimmed.strip():
+            found.append(destination_url(unshimmed))
+            continue
+        for key in ("url", "link"):
+            value = row.get(key)
+            if isinstance(value, str) and value.strip():
+                found.append(destination_url(value))
+        target = row.get("target")
+        if isinstance(target, dict) and isinstance(target.get("url"), str) and target["url"].strip():
+            found.append(destination_url(target["url"]))
+    return found
+
+
+def bluesky_readback_error(live: dict, text: str, link: str, handle: str) -> str | None:
+    """Why the live Bluesky post is not the one we sent, or None when it matches.
+
+    The live text, the author handle, and every link facet or card must match.
+    """
+    if not isinstance(live, dict):
+        return "Bluesky read-back mismatch. The live post was not returned."
+    record = live.get("record") if isinstance(live.get("record"), dict) else {}
+    live_text = record.get("text") if isinstance(record.get("text"), str) else ""
+    if not _same_text(live_text, text):
+        return (
+            "Bluesky read-back mismatch. The live post text does not match "
+            "the MineralDigger text that was sent."
+        )
+    author = live.get("author") if isinstance(live.get("author"), dict) else {}
+    live_handle = normal_handle(str(author.get("handle") or ""))
+    if live_handle != normal_handle(handle):
+        shown = live_handle or "an unknown handle"
+        return f"Bluesky read-back mismatch. The live post is by {shown}, not {handle}."
+    uris: list[str] = []
+    facets = record.get("facets") if isinstance(record.get("facets"), list) else []
+    for facet in facets:
+        if not isinstance(facet, dict):
+            continue
+        features = facet.get("features") if isinstance(facet.get("features"), list) else []
+        for feature in features:
+            if isinstance(feature, dict) and isinstance(feature.get("uri"), str) and feature["uri"].strip():
+                uris.append(feature["uri"])
+    embed = record.get("embed") if isinstance(record.get("embed"), dict) else {}
+    external = embed.get("external") if isinstance(embed.get("external"), dict) else {}
+    card = external.get("uri")
+    if isinstance(card, str) and card.strip():
+        uris.append(card)
+    if not uris:
+        return (
+            "Bluesky read-back mismatch. The live post has no link facet or card "
+            "for the MineralDigger link that was sent."
+        )
+    intended_host = link_host(link)
+    intended = canonical_link(link)
+    live_hosts = [link_host(uri) for uri in uris]
+    if any(host != intended_host or not is_own_host(host) for host in live_hosts):
+        shown = ", ".join(host or "a missing domain" for host in live_hosts)
+        return (
+            "Bluesky read-back mismatch. The live link facet or card domain is "
+            f"{shown}, not {intended_host}."
+        )
+    if any(canonical_link(uri) != intended for uri in uris):
+        return (
+            "Bluesky read-back mismatch. The live link facet or card does not match "
+            "the MineralDigger link that was sent."
+        )
+    return None
+
+
+def facebook_readback_error(live: dict, text: str, link: str) -> str | None:
+    """Why the live Page post is not the one we sent, or None when it matches.
+
+    The message must match. When Graph returns a link attachment, that link
+    must be the MineralDigger link that was sent.
+    """
+    if not isinstance(live, dict):
+        return "Facebook read-back mismatch. The live Page post was not returned."
+    live_text = live.get("message") if isinstance(live.get("message"), str) else ""
+    if not _same_text(live_text, text):
+        return (
+            "Facebook read-back mismatch. The live Page post text does not match "
+            "the MineralDigger text that was sent."
+        )
+    urls = _attachment_destinations(live)
+    if not urls:
+        bare = bare_link(link)
+        if bare and bare in live_text:
+            return None
+        return (
+            "Facebook read-back mismatch. The live Page post does not include "
+            "the MineralDigger link that was sent."
+        )
+    intended_host = link_host(link)
+    intended = canonical_link(link)
+    if any(link_host(url) != intended_host or not is_own_host(link_host(url)) for url in urls):
+        shown = ", ".join(link_host(url) or "a missing domain" for url in urls)
+        return (
+            "Facebook read-back mismatch. The live link domain is "
+            f"{shown}, not {intended_host}."
+        )
+    if any(canonical_link(url) != intended for url in urls):
+        return (
+            "Facebook read-back mismatch. The live link does not match "
+            "the MineralDigger link that was sent."
+        )
+    return None
+
+
+def add_explicit_arguments(parser: argparse.ArgumentParser) -> None:
+    """Flags for the only two explicit sources. Neither has a default path."""
+    parser.add_argument(
+        "--queue",
+        type=Path,
+        help="Posting queue JSON. Required with --queue-item. There is no default path.",
+    )
+    parser.add_argument(
+        "--queue-item",
+        help="Id of one item in --queue. The item site must be mineral.",
+    )
+    parser.add_argument(
+        "--text-file",
+        type=Path,
+        help="Explicit UTF-8 text file. Required with --link. There is no default path.",
+    )
+    parser.add_argument(
+        "--link",
+        help="Link for --text-file. A bare mineraldigger.com path or an https URL on that host.",
+    )
+
+
+def explicit_mode(
+    queue: Path | None,
+    queue_item: str | None,
+    text_file: Path | None,
+    link: str | None,
+) -> str:
+    """'queue', 'text-file', or '' for the show catalogue.
+
+    Raises SocialError when the flags are incomplete or both sources are set.
+    There is no default path and no temp-file fallback.
+    """
+    wants_queue = bool((queue_item or "").strip()) or queue is not None
+    wants_file = text_file is not None or bool((link or "").strip())
+    if wants_queue and wants_file:
+        raise SocialError(
+            "Pass one source: --queue-item with --queue, or --text-file with --link. Nothing posted."
+        )
+    if wants_queue:
+        if not (queue_item or "").strip() or queue is None:
+            raise SocialError(
+                "Pass both --queue-item and --queue with the queue JSON path. "
+                "This script has no default queue and does not read a leftover temp file. Nothing posted."
+            )
+        return "queue"
+    if wants_file:
+        if text_file is None or not (link or "").strip():
+            raise SocialError(
+                "Pass both --text-file and --link. "
+                "This script has no default text file and does not read a leftover temp file. Nothing posted."
+            )
+        if str(text_file) == "-":
+            raise SocialError("Pass a file path to --text-file. Standard input is not read. Nothing posted.")
+        return "text-file"
+    return ""
+
+
+def load_queue_item(path: Path, item_id: str) -> dict:
+    """The one queue item, after checking it belongs to MineralDigger."""
+    wanted = item_id.strip()
+    if not wanted:
+        raise SocialError("Pass --queue-item with the queue item id. Nothing posted.")
+    data = load_json(path)
+    items = data.get("items")
+    if not isinstance(items, list):
+        raise SocialError(f"{display_path(path)} has no items list. Nothing posted.")
+    matches = [item for item in items if isinstance(item, dict) and str(item.get("id") or "") == wanted]
+    if not matches:
+        raise SocialError(f"Queue item {wanted} is not in {display_path(path)}. Nothing posted.")
+    if len(matches) > 1:
+        raise SocialError(f"Queue item {wanted} appears more than once in {display_path(path)}. Nothing posted.")
+    item = matches[0]
+    site = str(item.get("site") or "").strip().casefold()
+    if site != BRAND_SITE:
+        label = SITE_LABELS.get(site) or site or "missing"
+        raise SocialError(
+            f"Refusing to publish. Queue item {wanted} is {label}, not {BRAND_NAME}. "
+            "This repo only publishes MineralDigger."
+        )
+    return item
+
+
+def post_from_queue(item: dict, network: str) -> dict:
+    field = _TEXT_FIELDS[network]
+    text = item.get(field)
+    if not isinstance(text, str) or not text.strip():
+        raise SocialError(f"Queue item {item.get('id')} has no {field}. Nothing posted.")
+    link = item.get("link")
+    if not isinstance(link, str) or not link.strip():
+        raise SocialError(f"Queue item {item.get('id')} has no link. Nothing posted.")
+    return {
+        "source": "queue",
+        "queue_item": str(item.get("id")),
+        "link": absolute_link(link),
+        "text": text,
+        "network": network,
+    }
+
+
+def read_explicit_text(path: Path) -> str:
+    if str(path) == "-" or not path.is_file():
+        raise SocialError(
+            f"{display_path(path)} is missing. Pass the text file on --text-file. Nothing posted."
+        )
+    try:
+        raw = path.read_text(encoding="utf-8-sig")
+    except OSError as exc:
+        raise SocialError(f"Could not read {display_path(path)}. Nothing posted.") from exc
+    if raw.endswith("\r\n"):
+        raw = raw[:-2]
+    elif raw.endswith("\n"):
+        raw = raw[:-1]
+    if not raw.strip():
+        raise SocialError(f"{display_path(path)} is empty. Nothing posted.")
+    return raw
+
+
+def post_from_text_file(path: Path, link: str, network: str) -> dict:
+    return {
+        "source": "text-file",
+        "queue_item": None,
+        "link": absolute_link(link),
+        "text": read_explicit_text(path),
+        "network": network,
+    }
+
+
+def explicit_log_key(explicit: dict) -> str:
+    if explicit["source"] == "queue":
+        return str(explicit["queue_item"])
+    digest = hashlib.sha256(explicit["text"].encode("utf-8")).hexdigest()[:16]
+    return f"text-file:{digest}"
 
 
 def is_uk(show: dict) -> bool:

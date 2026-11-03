@@ -10,7 +10,16 @@ over. --allow-repeat keeps that show. If the feed cannot be read,
 --publish sends it as mineraldigger.com after Alan has OK'd the text.
 The post text uses mineraldigger.com/... . The full https URL is only
 the link card. Publish refuses a text that contains !, an en dash, an
-em dash, or https://.
+em dash, or https://. It also refuses FairDigger or AuctionDigger
+wording, and a link that is not on mineraldigger.com or
+mineraldigger.co.uk. After Bluesky accepts the post, the script reads
+it back from the public API and exits with status 1 when the live text,
+the author handle, or the link facet or card does not match.
+
+Approved queue copy is an explicit source. Pass --queue-item and --queue
+every time. An explicit text file is --text-file with --link. There is
+no default path, and a leftover temp file is never read. The queue
+item site must be mineral.
 
 The app password is looked up in this order. Nothing here is committed,
 and a missing password names each place without printing a value.
@@ -25,6 +34,9 @@ Posts are logged in growth/bluesky_posts.json under the ISO week
 is set. The text matches the Facebook draft for the same week and angle.
 
 Examples:
+  python3 scripts/bluesky_post.py --queue-item mineral-november-glance-2026-11-03 --queue /path/to/queue.json
+  python3 scripts/bluesky_post.py --queue-item mineral-november-glance-2026-11-03 --queue /path/to/queue.json --publish
+  python3 scripts/bluesky_post.py --text-file /path/to/post.txt --link mineraldigger.com --publish
   python3 scripts/bluesky_post.py
   python3 scripts/bluesky_post.py --today 2026-10-28
   python3 scripts/bluesky_post.py --today 2026-10-28 --publish
@@ -37,6 +49,7 @@ import json
 import os
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import date
 from pathlib import Path
@@ -50,19 +63,27 @@ from social_copy import (  # noqa: E402
     BLUESKY_PASSWORD_KEY,
     TYPE_ORDER,
     SocialError,
+    absolute_link,
+    add_explicit_arguments,
+    bluesky_readback_error,
     build_post,
     display_path,
     display_secret,
+    explicit_log_key,
+    explicit_mode,
     link_card,
     link_facet,
     load_json,
     load_log,
+    load_queue_item,
     load_shows,
     load_site,
     normal_handle,
     now_stamp,
     REPEAT_DAYS,
     password_from_bluesky,
+    post_from_queue,
+    post_from_text_file,
     posts_from_log,
     print_draft,
     publish_refusal,
@@ -166,8 +187,46 @@ def _xrpc(pds: str, method: str, payload: dict, token: str | None, secrets: list
     return parsed
 
 
-def publish_post(password: str, text: str, link: str, pds: str = PDS) -> dict:
-    blocked = publish_refusal(text)
+def fetch_live_post(uri: str, api: str = PUBLIC_API) -> dict:
+    """The post we just created, from the public Bluesky API (no login)."""
+    query = urllib.parse.urlencode({"uris": uri})
+    url = f"{api.rstrip('/')}/xrpc/app.bsky.feed.getPosts?{query}"
+    request = urllib.request.Request(
+        url,
+        headers={"Accept": "application/json", "User-Agent": "MineralDiggerSocial/1"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            raw = response.read().decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        detail = ""
+        if exc.fp is not None:
+            detail = exc.read().decode("utf-8", errors="replace")[:300]
+        raise SocialError(
+            f"Bluesky accepted the post ({uri}) but the read-back failed, so it is not confirmed. "
+            f"HTTP {exc.code}. {detail}"
+        ) from exc
+    except urllib.error.URLError as exc:
+        raise SocialError(
+            f"Bluesky accepted the post ({uri}) but the read-back failed, so it is not confirmed. {exc.reason}"
+        ) from exc
+    try:
+        parsed = json.loads(raw) if raw else {}
+    except json.JSONDecodeError as exc:
+        raise SocialError(
+            f"Bluesky accepted the post ({uri}) but the read-back was not JSON, so it is not confirmed."
+        ) from exc
+    posts = parsed.get("posts") if isinstance(parsed, dict) else None
+    if not isinstance(posts, list) or not posts or not isinstance(posts[0], dict):
+        raise SocialError(
+            f"Bluesky accepted the post ({uri}) but the read-back returned no post, so it is not confirmed."
+        )
+    return posts[0]
+
+
+def publish_post(password: str, text: str, link: str, pds: str = PDS, public_api: str = PUBLIC_API) -> dict:
+    link = absolute_link(link)
+    blocked = publish_refusal(text, link)
     if blocked:
         raise SocialError(blocked)
     secrets = [password]
@@ -208,11 +267,109 @@ def publish_post(password: str, text: str, link: str, pds: str = PDS) -> dict:
     if not isinstance(uri, str) or not uri:
         raise SocialError("Bluesky did not return a post uri.")
     rkey = uri.rstrip("/").split("/")[-1]
+    live_url = f"https://bsky.app/profile/{BLUESKY_HANDLE}/post/{rkey}"
+    live = fetch_live_post(uri, public_api)
+    mismatch = bluesky_readback_error(live, text, link, BLUESKY_HANDLE)
+    if mismatch:
+        raise SocialError(f"{mismatch} Live post: {live_url}. The log was not updated.")
     return {
         "uri": uri,
         "cid": created.get("cid"),
-        "url": f"https://bsky.app/profile/{BLUESKY_HANDLE}/post/{rkey}",
+        "url": live_url,
     }
+
+
+def _print_explicit_draft(chosen: dict, text: str, link: str, text_file: Path | None) -> None:
+    print("Dry run. Nothing posted.")
+    if chosen["source"] == "queue":
+        print(f"Queue item: {chosen['queue_item']}")
+    else:
+        print(f"Text file: {display_path(text_file or Path(''))}")
+    print(f"Link: {link}")
+    print("Bluesky:")
+    print(text)
+
+
+def run_explicit(args: argparse.Namespace) -> int | None:
+    """Publish from --queue-item or --text-file. None means use the show catalogue.
+
+    The text comes only from the path on the command. There is no default
+    and no leftover temp file.
+    """
+    try:
+        mode = explicit_mode(args.queue, args.queue_item, args.text_file, args.link)
+    except SocialError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    if not mode:
+        return None
+    try:
+        if mode == "queue":
+            item = load_queue_item(args.queue, args.queue_item or "")
+            chosen = post_from_queue(item, "bluesky")
+        else:
+            chosen = post_from_text_file(args.text_file, args.link or "", "bluesky")
+        log = load_log(args.log)
+    except SocialError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+
+    text = chosen["text"]
+    link = chosen["link"]
+    blocked = publish_refusal(text, link)
+    if blocked:
+        print(f"{blocked} Nothing posted.", file=sys.stderr)
+        return 1
+    if not args.publish:
+        _print_explicit_draft(chosen, text, link, args.text_file)
+        return 0
+
+    log_key = explicit_log_key(chosen)
+    if week_recorded(log, log_key) and not args.force:
+        print(
+            f"{log_key} is already in {display_path(args.log)}. "
+            "Nothing posted. Pass --force to post it again.",
+            file=sys.stderr,
+        )
+        return 1
+
+    try:
+        password = resolve_password(args.secrets)
+    except SocialError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    if not password:
+        print(missing_password_message(args.secrets), file=sys.stderr)
+        return 1
+
+    try:
+        result = publish_post(password, text, link, args.pds)
+    except SocialError as exc:
+        print(redact(str(exc), [password]), file=sys.stderr)
+        return 1
+
+    log[log_key] = {
+        "source": chosen["source"],
+        "queue_item": chosen.get("queue_item"),
+        "link": link,
+        "text": text,
+        "published_at": now_stamp(),
+        "uri": result["uri"],
+        "cid": result.get("cid"),
+        "url": result["url"],
+    }
+    try:
+        save_log(args.log, log)
+    except OSError as exc:
+        print(f"Bluesky accepted the post ({result['uri']}) but the log was not written. {exc}", file=sys.stderr)
+        return 1
+    if chosen["source"] == "queue":
+        print(f"Posted queue item {chosen['queue_item']} to {BLUESKY_HANDLE} on Bluesky.")
+    else:
+        print(f"Posted the text file to {BLUESKY_HANDLE} on Bluesky.")
+    print(result["url"])
+    print("Read-back matched the MineralDigger text.")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -232,7 +389,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--log", type=Path, default=LOG_PATH, help=argparse.SUPPRESS)
     parser.add_argument("--secrets", type=Path, default=SECRETS_PATH, help=argparse.SUPPRESS)
     parser.add_argument("--pds", default=PDS, help=argparse.SUPPRESS)
+    add_explicit_arguments(parser)
     args = parser.parse_args(argv)
+
+    explicit = run_explicit(args)
+    if explicit is not None:
+        return explicit
 
     today = date.today()
     if args.today:
@@ -290,7 +452,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
-    blocked = publish_refusal(post["bluesky"])
+    blocked = publish_refusal(post["bluesky"], post["link"])
     if blocked:
         print(blocked, file=sys.stderr)
         return 1
