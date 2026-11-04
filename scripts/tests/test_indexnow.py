@@ -253,6 +253,23 @@ class DiffTests(unittest.TestCase):
         self.assertIn('"--check-sitemap"', source)
         self.assertNotIn("${homeIndexNow.lastmod}", source)
 
+    def test_page_check_follows_the_catalogue_instead_of_named_weekends(self):
+        source = (ROOT / "scripts" / "check.mjs").read_text(encoding="utf-8")
+        for needle in (
+            "rock-gem-and-bead-show-worcester-2026-11-07",
+            "rock-gem-and-bead-show-sunbury-on-thames-2026-10-31",
+            "bakewell-rock-exchange-bakewell-2026-10-10",
+            "Kempton Park",
+            "Haywards Heath: Sussex",
+            "Unexpected show count",
+            "Not enough upcoming shows",
+        ):
+            self.assertNotIn(needle, source)
+        self.assertIn("entryLabel", source)
+        self.assertIn("listedName", source)
+        self.assertIn("example-past-show", source)
+        self.assertIn("example-free-show", source)
+
     def test_sitemap_ignores_co_uk_hosts(self):
         with TemporaryDirectory() as tmp:
             sitemap, _, _ = write_site(Path(tmp), None)

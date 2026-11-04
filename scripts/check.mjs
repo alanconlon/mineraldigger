@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { assetHash } from "./asset-hash.mjs";
 import { featuredIds, stripeReady } from "./feature.mjs";
 import { frameForPoints } from "../src/js/format.js";
-import { EMPTY_SHOWS_NOTE, listingPaths, mergePlaces, offerValidFrom, organizerLink, renderCounty, renderFeature, renderTown, renderType } from "./render.mjs";
+import { EMPTY_SHOWS_NOTE, entryLabel, esc, listedName, listingPaths, mergePlaces, offerValidFrom, organizerLink, renderCounty, renderFeature, renderShow, renderTown, renderType } from "./render.mjs";
 import { onRequestPost } from "../functions/api/submit.js";
 import { TURNSTILE_ERROR } from "../functions/api/turnstile.js";
 import { validateSubmission } from "../functions/api/validate.js";
@@ -18,6 +18,59 @@ const failures = [];
 
 function fail(message) {
   failures.push(message);
+}
+
+function countOf(haystack, needle) {
+  if (!needle) return 0;
+  let count = 0;
+  let from = 0;
+  while (from <= haystack.length) {
+    const at = haystack.indexOf(needle, from);
+    if (at < 0) return count;
+    count += 1;
+    from = at + needle.length;
+  }
+  return count;
+}
+
+function sampleShow(patch = {}) {
+  const show = {
+    id: "example-show",
+    slug: "example-show",
+    name: "Example Mineral Show",
+    summary: "A mineral weekend for collectors.",
+    organiser: { id: "example", name: "Example Society", url: "", phone: null, email: null },
+    types: ["mineral"],
+    start: "2026-06-06",
+    end: "2026-06-06",
+    provisional: false,
+    year_inferred: false,
+    times: { summary: null, notes: null },
+    entry: { kind: "unknown", label: "Unknown", adult_gbp: null, notes: null },
+    venue: {
+      name: "Village Hall",
+      street: null,
+      postcode: "RH16 1LT",
+      town: "Quiet Town",
+      county: "Example",
+      nation: "England",
+      lat: 51,
+      lng: -0.1,
+      place_note: null,
+    },
+    dealers: null,
+    parking: null,
+    access_notes: null,
+    source: { url: "", retrieved: "2026-11-01", notes: null, also: [] },
+  };
+  for (const [key, value] of Object.entries(patch)) {
+    if (value && typeof value === "object" && !Array.isArray(value) && show[key] && typeof show[key] === "object") {
+      show[key] = { ...show[key], ...value };
+    } else {
+      show[key] = value;
+    }
+  }
+  return show;
 }
 
 function jpegSize(buffer) {
@@ -252,7 +305,6 @@ if (sameAs !== "https://www.facebook.com/people/MineralDigger/61595681170967/\nh
 }
 if (!Array.isArray(org?.areaServed) || org.areaServed.join(",") !== "GB") fail("Organization areaServed should be GB.");
 if (index.includes("Also from us")) fail("Homepage should not include a sister-site footer.");
-if (!index.includes("Kempton Park")) fail("Homepage is missing the Rockngem Kempton show.");
 if (!index.includes('class="nav-toggle"') || !index.includes('id="primary-nav"')) fail("Homepage is missing the mobile menu.");
 if (!index.includes('href="#main">Skip to content</a>')) fail("Skip to content link is missing.");
 if (!index.includes(">Search</button>")) fail("Search button is missing.");
@@ -288,11 +340,14 @@ if (beforeList.includes('href="/county/">Counties</a>') || beforeList.includes('
   fail("Counties and Towns should not sit above the list.");
 }
 if (index.includes("<h2>Nothing listed for this weekend.</h2>")) fail("Homepage still has the hidden weekend heading.");
-if (!index.includes("<h3>Haywards Heath: Sussex Mineral, Crystal &amp; Fossil Show</h3>")) fail("Homepage show names should lead with the town.");
+for (const show of homeCatalogue.shows.filter((item) => item.end >= isoToday())) {
+  const heading = `<h3>${esc(listedName(show))}</h3>`;
+  if (!index.includes(heading)) fail(`Homepage show names should lead with the town: ${show.slug}.`);
+  if (!index.includes(`/show/${show.slug}/`)) fail(`Homepage is missing ${show.slug}.`);
+}
 const monthKeys = [...index.matchAll(/data-month="(\d{4}-\d{2})"/g)].map((match) => match[1]);
-if (!monthKeys.length || new Set(monthKeys).size !== monthKeys.length) fail("Homepage should have one heading per month.");
-if (!/Oxford Mineral|Sussex Mineral|Bakewell Rock Exchange|South of England Mineral Show/.test(index)) {
-  fail("Homepage is missing an independent show.");
+if (homeCount && (!monthKeys.length || new Set(monthKeys).size !== monthKeys.length)) {
+  fail("Homepage should have one heading per month.");
 }
 const banned = /healing|psychic|tarot|mediums|wellbeing|mind[ -]body|white light|crystal spirit|gumroad|crystaldigger/i;
 if (banned.test(index)) fail("Homepage contains banned copy.");
@@ -906,35 +961,23 @@ const refreshedLong = longDateFromISO(catalogue.generated || isoToday());
 if (!index.includes(`Data last refreshed ${refreshedLong}.`)) {
   fail(`Footer should say Data last refreshed ${refreshedLong}.`);
 }
-if (catalogue.shows.length < 35 || catalogue.shows.length > 50) fail(`Unexpected show count ${catalogue.shows.length}`);
-const upcoming = catalogue.shows.filter((show) => show.end >= "2026-10-25");
-if (upcoming.length < 35) fail(`Not enough upcoming shows: ${upcoming.length}`);
+if (!Array.isArray(catalogue.shows) || !catalogue.shows.length) fail("Catalogue has no shows.");
+const seenSlugs = new Set();
 for (const show of catalogue.shows) {
+  if (!show?.id || !show.slug || !show.name || !show.start || !show.end || !show.organiser?.name || !show.venue?.town) {
+    fail(`${show?.slug || show?.id || "A show"} is missing an id, name, date, organiser or town.`);
+    continue;
+  }
+  if (seenSlugs.has(show.slug)) fail(`Duplicate slug ${show.slug}.`);
+  seenSlugs.add(show.slug);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(show.start) || !/^\d{4}-\d{2}-\d{2}$/.test(show.end) || show.end < show.start) {
+    fail(`${show.slug} has dates that do not run in order.`);
+  }
   if (JSON.stringify(show).toLowerCase().includes("rockexchange.uk")) {
     fail(`${show.id} still links to rockexchange.uk.`);
   }
 }
-for (const slug of ["bakewell-rock-exchange-bakewell-2026-10-10", "bakewell-rock-exchange-bakewell-2027-10-09"]) {
-  const bakewell = catalogue.shows.find((show) => show.slug === slug);
-  if (!bakewell) {
-    fail(`${slug} is missing.`);
-    continue;
-  }
-  if (bakewell.organiser.url || bakewell.source.url) fail(`${slug} still publishes rockexchange.uk.`);
-  if (bakewell.organiser.phone !== "01433 620304") fail(`${slug} phone changed.`);
-  const bakewellPage = await readFile(join(dist, "show", slug, "index.html"), "utf8");
-  if (/rockexchange\.uk/i.test(bakewellPage)) fail(`${slug} page still links to rockexchange.uk.`);
-  if (bakewellPage.includes("Organiser website")) fail(`${slug} page still renders an organiser website link.`);
-  if (!bakewellPage.includes("01433 620304") || !bakewellPage.includes('href="tel:01433620304"')) {
-    fail(`${slug} page is missing the organiser phone.`);
-  }
-  const bakewellIcs = await readFile(join(dist, "show", slug, "event.ics"), "utf8");
-  if (/rockexchange\.uk/i.test(bakewellIcs) || bakewellIcs.includes("URL:")) {
-    fail(`${slug} calendar still links out.`);
-  }
-}
 const rgbs = catalogue.shows.filter((show) => show.organiser?.id === "rockngem");
-if (rgbs.length < 20) fail(`Expected the Rock, Gem & Bead series, found ${rgbs.length}.`);
 for (const show of rgbs) {
   if (JSON.stringify(show.types) !== JSON.stringify(["rock", "gem", "bead"])) {
     fail(`${show.id} is still tagged with more than rock, gem and bead.`);
@@ -1019,56 +1062,109 @@ if (datedAfter) {
   if (afterCount === 1 && (afterNoun !== "show" || afterVerb !== "has")) fail("One later show should read: 1 show has dates.");
   if (afterCount !== 1 && (afterNoun !== "shows" || afterVerb !== "have")) fail("Later shows should use the plural have.");
 }
-const worcester = await readFile(join(dist, "show/rock-gem-and-bead-show-worcester-2026-11-07/index.html"), "utf8");
-if (!worcester.includes(">Check with organiser<")) fail("Worcester entry badge should say check with the organiser.");
-const worcesterCopy = worcester.replace(/<script[\s\S]*?<\/script>/gi, "");
-if ((worcesterCopy.match(/Check with organiser/g) || []).length !== 1) {
-  fail("Worcester should say Check with organiser once.");
-}
-if (worcester.includes(">Unknown<")) fail("Worcester entry badge still says Unknown.");
-const freeShows = catalogue.shows.filter((show) => show.entry?.kind === "free" || show.entry?.adult_gbp === 0);
-if (!freeShows.length) fail("Expected a free show to check entry text.");
-for (const show of freeShows) {
-  const page = await readFile(join(dist, "show", show.slug, "index.html"), "utf8");
-  const visible = page.replace(/<script[\s\S]*?<\/script>/gi, "");
-  if (visible.includes("Free entrance")) fail(`${show.slug} still says Free entrance.`);
-  if (visible.includes("Free. Free")) fail(`${show.slug} repeats free entry.`);
-  if (!visible.includes(">Free entry<")) fail(`${show.slug} should say Free entry once in the badge.`);
-  if ((visible.match(/>Free entry</g) || []).length !== 1) fail(`${show.slug} should say Free entry once.`);
-  const lede = visible.match(/<p class="lede">([^<]*)<\/p>/);
-  if (lede && /free entry/i.test(lede[1])) fail(`${show.slug} summary repeats the free entry badge.`);
-}
-const countyIndex = await readFile(join(dist, "county/index.html"), "utf8");
-if (!countyIndex.includes("<h1>Shows by county</h1>") || !countyIndex.includes('href="/county/surrey/"')) {
-  fail("County index is missing Surrey.");
-}
-const surrey = await readFile(join(dist, "county/surrey/index.html"), "utf8");
-if (!surrey.includes("<h1>Shows in Surrey</h1>")) fail("Surrey page heading is wrong.");
-if (surrey.includes(EMPTY_SHOWS_NOTE)) fail("Surrey still has shows, so it should not use the empty listing note.");
-if (!surrey.includes("Sunbury-on-Thames")) fail("Surrey page is missing its town.");
 function weekendControls(html) {
   const main = html.slice(0, html.indexOf('<footer class="site-footer">'));
   return (main.match(/>This weekend</g) || []).length;
 }
-if (weekendControls(surrey) !== 1) fail("County pages should keep This weekend only in the filter row.");
+const countyIndex = await readFile(join(dist, "county/index.html"), "utf8");
+if (!countyIndex.includes("<h1>Shows by county</h1>")) fail("County index heading is wrong.");
+const townIndex = await readFile(join(dist, "towns/index.html"), "utf8");
+if (!townIndex.includes("<h1>Shows by town</h1>")) fail("Town index heading is wrong.");
+const countyPages = new Map();
+for (const county of listings.counties || []) {
+  if (!countyIndex.includes(`href="/county/${county.slug}/"`)) fail(`County index is missing ${county.name}.`);
+  let html;
+  try {
+    html = await readFile(join(dist, "county", county.slug, "index.html"), "utf8");
+  } catch {
+    continue;
+  }
+  countyPages.set(county.name, html);
+  if (!html.includes(`<h1>Shows in ${esc(county.name)}</h1>`)) fail(`County heading for ${county.name} is wrong.`);
+  const hasUpcoming = catalogue.shows.some((show) => show.end >= isoToday() && show.venue?.county === county.name);
+  if (hasUpcoming && html.includes(EMPTY_SHOWS_NOTE)) {
+    fail(`${county.name} still has shows, so it should not use the empty listing note.`);
+  }
+  if (!hasUpcoming && !html.includes(EMPTY_SHOWS_NOTE)) {
+    fail(`${county.name} has no upcoming shows, so it should say there are no shows listed right now.`);
+  }
+}
+for (const town of listings.towns || []) {
+  if (!townIndex.includes(`href="/town/${town.slug}/"`)) fail(`Town index is missing ${town.name}.`);
+}
+for (const show of catalogue.shows.filter((item) => item.end >= isoToday())) {
+  const html = countyPages.get(show.venue?.county);
+  if (!html) continue;
+  if (show.venue?.town && !html.includes(esc(show.venue.town))) {
+    fail(`${show.venue.county} page is missing ${show.venue.town}.`);
+  }
+  if (!html.includes(`/show/${show.slug}/`)) fail(`${show.venue.county} page is missing ${show.slug}.`);
+}
+const firstCounty = countyPages.values().next().value;
+if (firstCounty && weekendControls(firstCounty) !== 1) fail("County pages should keep This weekend only in the filter row.");
 const rockHub = await readFile(join(dist, "rock/index.html"), "utf8");
 if (weekendControls(rockHub) !== 1) fail("Type pages should keep This weekend only in the filter row.");
-const townPage = await readFile(join(dist, "town/sunbury-on-thames/index.html"), "utf8");
-if (weekendControls(townPage) !== 1) fail("Town pages should keep This weekend only in the filter row.");
-const townIndex = await readFile(join(dist, "towns/index.html"), "utf8");
-if (!townIndex.includes("<h1>Shows by town</h1>") || !townIndex.includes('href="/town/sunbury-on-thames/"')) {
-  fail("Town index is missing Sunbury-on-Thames.");
+const firstTown = (listings.towns || [])[0];
+if (firstTown) {
+  try {
+    const townPage = await readFile(join(dist, "town", firstTown.slug, "index.html"), "utf8");
+    if (weekendControls(townPage) !== 1) fail("Town pages should keep This weekend only in the filter row.");
+  } catch {
+    fail(`Town page is missing at /town/${firstTown.slug}/.`);
+  }
 }
 const mineralPage = await readFile(join(dist, "mineral/index.html"), "utf8");
 const rockPage = await readFile(join(dist, "rock/index.html"), "utf8");
+const gemPage = await readFile(join(dist, "gem/index.html"), "utf8");
 const fossilPage = await readFile(join(dist, "fossil/index.html"), "utf8");
 const beadPage = await readFile(join(dist, "bead/index.html"), "utf8");
-const rgbsLinks = (html) => (html.match(/rock-gem-and-bead-show/g) || []).length;
-if (rgbsLinks(rockPage) < 10) fail("Rock page is missing the Rock, Gem and Bead series.");
-if (rgbsLinks(beadPage) < 10) fail("Bead page is missing the Rock, Gem and Bead series.");
-if (rgbsLinks(mineralPage) !== 0) fail("Mineral page still lists the Rock, Gem and Bead series.");
-if (rgbsLinks(fossilPage) !== 0) fail("Fossil page still lists the Rock, Gem and Bead series.");
+for (const show of rgbs.filter((item) => item.end >= isoToday())) {
+  const href = `/show/${show.slug}/`;
+  if (!rockPage.includes(href) || !gemPage.includes(href) || !beadPage.includes(href)) {
+    fail(`${show.slug} should be listed on the rock, gem and bead pages.`);
+  }
+  if (mineralPage.includes(href) || fossilPage.includes(href)) {
+    fail(`${show.slug} is tagged onto the mineral or fossil page.`);
+  }
+}
 if (mineralPage === rockPage) fail("Mineral and rock pages are still identical.");
+const pastFixture = renderShow({
+  site: siteFile,
+  show: sampleShow({ id: "example-past", slug: "example-past-show", start: "2020-01-04", end: "2020-01-04" }),
+  generated: "2026-11-04",
+  todayISO: isoToday(),
+});
+if (!pastFixture.includes("<h1>Quiet Town: Example Mineral Show</h1>")) fail("A show page should lead with the town.");
+if (!pastFixture.includes("This date has passed. Check the organiser for the next one.")) {
+  fail("A past show should say this date has passed.");
+}
+if (pastFixture.includes("EventScheduled") || pastFixture.includes("https://schema.org/InStock")) {
+  fail("A past show still publishes EventScheduled or in-stock tickets.");
+}
+if (pastFixture.includes('name="robots" content="noindex"')) fail("A past show is noindex.");
+if (countOf(pastFixture, ">Check with organiser<") !== 1) fail("Unknown entry should say Check with organiser once in the badge.");
+if (pastFixture.includes(">Unknown<")) fail("Unknown entry still says Unknown.");
+if (pastFixture.includes(">Organiser website</a>")) fail("A show with no organiser URL rendered a website link.");
+const freeFixture = renderShow({
+  site: siteFile,
+  show: sampleShow({
+    id: "example-free",
+    slug: "example-free-show",
+    start: "2099-01-02",
+    end: "2099-01-02",
+    summary: "A mineral weekend for collectors. Free entry.",
+    entry: { kind: "free", label: "Free entrance", adult_gbp: 0, notes: "Free entrance" },
+  }),
+  generated: "2026-11-04",
+  todayISO: isoToday(),
+});
+const freeVisible = freeFixture.replace(/<script[\s\S]*?<\/script>/gi, "");
+if (countOf(freeVisible, ">Free entry<") !== 1) fail("Free entry should appear once in the badge.");
+if (freeVisible.includes("Free entrance") || freeVisible.includes("Free. Free")) fail("Free entry copy is still duplicated.");
+const freeLede = freeVisible.match(/<p class="lede">([^<]*)<\/p>/);
+if (freeLede && /free entry/i.test(freeLede[1])) fail("Free entry summary repeats the badge.");
+if (!freeFixture.includes("EventScheduled")) fail("An upcoming show should stay EventScheduled.");
+if (freeFixture.includes("This date has passed")) fail("An upcoming show says the date has passed.");
 
 if (offerValidFrom("2026-10-25") !== "2026-10-25T00:00:00+01:00") fail("Offer validFrom on 25 October 2026 should be UK midnight in BST.");
 if (offerValidFrom("2026-01-16") !== "2026-01-16T00:00:00+00:00") fail("Offer validFrom in January should be UK midnight in GMT.");
@@ -1164,6 +1260,33 @@ for (const show of catalogue.shows) {
     const rawHref = String(show.source.url).replace(/&/g, "&amp;");
     if (html.includes(`>${rawHref}</a>`)) fail(`${show.slug} still prints the source URL as the link text.`);
   }
+  const visible = html.replace(/<script[\s\S]*?<\/script>/gi, "");
+  const entryText = entryLabel(show.entry);
+  const badge = `>${entryText}<`;
+  const badgeCount = countOf(visible, badge);
+  if (badgeCount !== 1) fail(`${show.slug} should say ${entryText} once in the badge, found ${badgeCount}.`);
+  const lede = visible.match(/<p class="lede">([^<]*)<\/p>/);
+  if (lede && lede[1].includes(entryText)) fail(`${show.slug} summary repeats the entry badge.`);
+  if (show.entry?.kind === "free" || show.entry?.adult_gbp === 0) {
+    if (visible.includes("Free entrance")) fail(`${show.slug} still says Free entrance.`);
+    if (visible.includes("Free. Free")) fail(`${show.slug} repeats free entry.`);
+  }
+  if (!show.organiser?.url && visible.includes(">Organiser website</a>")) {
+    fail(`${show.slug} page renders an organiser website link.`);
+  }
+  if (show.organiser?.phone) {
+    const compact = String(show.organiser.phone).replace(/\s+/g, "");
+    if (!visible.includes(String(show.organiser.phone)) || !visible.includes(`href="tel:${compact}"`)) {
+      fail(`${show.slug} page is missing the organiser phone.`);
+    }
+  }
+  let calendar = "";
+  try {
+    calendar = await readFile(join(dist, "show", show.slug, "event.ics"), "utf8");
+  } catch {
+    fail(`${show.slug} is missing its calendar file.`);
+  }
+  if (calendar && !show.source?.url && calendar.includes("URL:")) fail(`${show.slug} calendar invented a link.`);
   if (past || parsed.events.length !== 1) continue;
   const event = parsed.events[0];
   const refreshed = show.source?.retrieved || catalogue.generated;
@@ -1234,16 +1357,6 @@ for (const show of catalogue.shows) {
 const ahead = catalogue.shows.filter((show) => show.end >= isoToday());
 if (organizerCounts.organiser + organizerCounts.source + organizerCounts.omitted !== ahead.length) {
   fail("Organizer URL tally does not cover every show that is still ahead.");
-}
-const pastExamples = [
-  "rock-gem-and-bead-show-sunbury-on-thames-2026-10-31",
-  "south-of-england-mineral-show-ardingly-2026-10-17",
-  "bakewell-rock-exchange-bakewell-2026-10-10",
-];
-for (const slug of pastExamples) {
-  const show = catalogue.shows.find((item) => item.slug === slug);
-  if (!show) fail(`${slug} is missing.`);
-  else if (!(show.end < isoToday())) fail(`${slug} should be past on this build date.`);
 }
 const aggregatorFallback = organizerLink({
   organiser: { name: "Club", url: "https://www.facebook.com/club" },
