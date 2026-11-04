@@ -172,7 +172,22 @@ python3 scripts/indexnow.py
 
 `dist` is the Pages root for that command. Wrangler also picks up `functions/` beside it. Dashboard drag and drop of a zip publishes the static files only and does not compile `functions/`. The public `/api/submit` mail path is the worker route above, not the Pages function.
 
-Daily refresh is `.github/workflows/refresh-and-deploy.yml`. It runs at 05:17 UTC (05:17 GMT, 06:17 BST), and it can also be started by hand with `workflow_dispatch`. The job runs `npm test` on the committed catalogue first, so a failing parser test or page check blocks the deploy. It then fetches the organiser pages (`python3 scripts/refresh.py --live --write`), builds again, and runs `node scripts/check.mjs` on that refreshed build before it deploys with Wrangler. That check keeps each stored sitemap lastmod while the page hash is unchanged, and it accepts the build date when the hash has changed, for the homepage and every other sitemap URL. The tests do not fetch the live sites. It does not commit `data/shows.json`. Catalogue changes on main still go through pull requests. The deployment is marked dirty because the refreshed catalogue exists only on the runner. When IndexNow accepts URLs, the job commits `data/indexnow_state.json` with `[skip ci]` in the message, and rebases if another push lands first.
+Daily refresh is `.github/workflows/refresh-and-deploy.yml`. It runs at 05:17 UTC (05:17 GMT, 06:17 BST), and it can also be started by hand with `workflow_dispatch`. The job runs `npm test` on the committed catalogue first, so a failing parser test or page check blocks the deploy. It then fetches the organiser pages (`python3 scripts/refresh.py --live --write`), builds again, and runs `node scripts/check.mjs` on that refreshed build before it deploys with Wrangler. That check keeps each stored sitemap lastmod while the page hash is unchanged, and it accepts the build date when the hash has changed, for the homepage and every other sitemap URL. The tests do not fetch the live sites. It does not commit `data/shows.json`. Catalogue changes on main still go through pull requests.
+
+`node scripts/check.mjs` checks the built site. It does not keep a list of named weekends. A show can pass, an entry price can change, and a new show can appear, without failing the check.
+
+What it still guarantees:
+
+- Visible copy stays in British English, with no en dash, em dash or exclamation mark, and links stay off sister sites.
+- Every sitemap URL has a `lastmod`. The content hash ignores the refresh date, the retrieved date, the offer `validFrom` stamp and asset `?v=` tokens. While that hash matches the stored hash, `lastmod` stays on the stored date. When the page is new or its hash has changed, including a homepage that changed because a date passed or the catalogue was refreshed, `lastmod` is the build date.
+- The catalogue is non-empty. Each show has an id, a unique slug, dates in order, an organiser and a town. There is no fixed show count.
+- Each show that has not ended is on the homepage, with the town before the show name.
+- The entry badge follows that show: unknown says "Check with organiser" once, free says "Free entry" once, and a price uses the stored label. A past show says the date has passed, stays indexable, and does not publish EventScheduled or in-stock tickets. Those past and free cases are also rendered from synthetic fixtures, so the check still runs when the live catalogue has none.
+- A show with no organiser URL does not gain a website link. Nothing in the build names rockexchange.uk.
+- Rock, Gem & Bead Shows stay tagged rock, gem and bead, so that series is not copied onto the mineral or fossil page.
+- County and town indexes follow `data/listings.json`. An empty county, town or type page stays in the sitemap and says there are no shows listed right now. A low count does not add noindex.
+
+The deployment is marked dirty because the refreshed catalogue exists only on the runner. When IndexNow accepts URLs, the job commits `data/indexnow_state.json` with `[skip ci]` in the message, and rebases if another push lands first.
 
 ```bash
 npx wrangler pages deploy dist --project-name mineraldigger --branch main
