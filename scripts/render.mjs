@@ -455,7 +455,7 @@ export function renderListing({ site, path, title, description, ogTitle, ogDescr
   const featured = ordered.filter((show) => show.featured);
   const rest = ordered.filter((show) => !show.featured);
   const note = shows.some((show) => show.provisional)
-    ? `<p class="fine">Dates marked provisional are printed that way by the organiser. Rock, Gem &amp; Bead Shows mark their 2027 list as provisional.</p>`
+    ? `<p class="fine">Dates marked provisional are printed that way by the organiser.</p>`
     : "";
   const eyebrowText = eyebrow || (home ? "UK shows directory" : "Show type");
   const countNoun = shows.length === 1 ? "show" : "shows";
@@ -1282,7 +1282,7 @@ export function renderAbout({ site, generated }) {
       <p>Always check the organiser's page for times, tickets and any changes before you set off.</p>
       <h2>Where a date comes from</h2>
       <p>Each show page names the organiser URL and the day we read it. If a page prints a weekday and a day of the month but no year, we use that date only when the weekday matches, and we say so on the show page. If a date is unclear, we leave it off.</p>
-      <p>Rock, Gem &amp; Bead Shows mark their 2027 list as provisional. Those rows stay on the map with a provisional label.</p>
+      <p>A date is labelled provisional only when the organiser prints it that way. Those rows stay on the map with a provisional label.</p>
       <p>Map pins are the venue postcode, not a surveyed gate.</p>
       <h2>Corrections</h2>
       <p>Organisers can <a href="/submit/">submit a show</a> or send a correction the same way. We would rather keep a listing incomplete than invent a time or a price.</p>

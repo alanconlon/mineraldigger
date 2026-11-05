@@ -56,8 +56,14 @@ class FixtureTests(unittest.TestCase):
         self.assertIn("Saturday 10:00 to 17:00", kempton["times_summary"])
         self.assertIn("Sunday 10:00 to 16:00", kempton["times_summary"])
         worcester = next(row for row in rows if row["start"] == "2026-11-07")
+        self.assertEqual(worcester["end"], "2026-11-08")
         self.assertEqual(worcester["entry_kind"], "unknown")
         self.assertIsNone(worcester["times_summary"])
+        self.assertFalse(any(row["start"] == "2026-11-06" for row in rows))
+        worcester_2027 = next(row for row in rows if row["start"] == "2027-11-06")
+        self.assertEqual(worcester_2027["end"], "2027-11-07")
+        self.assertTrue(worcester_2027["provisional"])
+        self.assertIn("Provisional 2027 Dates", worcester_2027["source_notes"])
         richmond = next(row for row in rows if row["start"] == "2027-07-10")
         self.assertEqual(richmond["end"], "2027-07-10")
         self.assertEqual(richmond["postcode"], "SS7 5HA")
@@ -74,6 +80,71 @@ class FixtureTests(unittest.TestCase):
         self.assertNotIn("same series", kempton["summary"])
         self.assertNotIn("fossil fair", kempton["summary"])
         self.assertIn("Minerals, fossils and lapidary stock are part of this show too.", kempton["summary"])
+
+    def test_plain_2027_dates_heading_keeps_worcester_november_in_2027(self):
+        """A heading of 2027 Dates, without the word provisional, is still 2027.
+
+        Checked against the organiser homepage on 5 November 2026. The next-show
+        block is 7 and 8 November at Worcester. The 6 and 7 November Worcester
+        line sits under 2027 Dates.
+        """
+        html = """
+        <p>NEXT SHOW</p>
+        <p>7th &amp; 8th November</p>
+        <p>Worcester Racecourse</p>
+        <p>WR1 3EJ</p>
+        <p>Entry by ticket purchased on the door Admission £5, accompanying under 12s free.</p>
+        <p>Free Parking as well as free tea and coffee</p>
+        <p>Open: Saturday 10am to 4pm</p>
+        <p>Sunday 10am to 4pm</p>
+        <p>Last entry 1 hour before closing</p>
+        <p>07712276041</p>
+        <p>2026 Dates</p>
+        <p>7th &amp; 8th November Worcester Racecourse WR1 3EJ</p>
+        <p>14th &amp; 15th November Newcastle Racecourse NE3 5HP</p>
+        <p>2027 Dates</p>
+        <p>6th &amp; 7th November Worcester Racecourse WR1 3EJ</p>
+        <p>Who's at Worcester Racecourse</p>
+        """
+        rows = parse_rockngem(html, today=date(2026, 11, 5), retrieved="2026-11-05")
+        self.assertFalse(any(row["start"] == "2026-11-06" for row in rows))
+        worcester = next(row for row in rows if row["start"] == "2026-11-07")
+        self.assertEqual(worcester["end"], "2026-11-08")
+        self.assertEqual(worcester["postcode"], "WR1 3EJ")
+        self.assertFalse(worcester["provisional"])
+        self.assertEqual(worcester["times_summary"], "Saturday 10:00 to 16:00. Sunday 10:00 to 16:00.")
+        self.assertEqual(worcester["times_notes"], "Last entry one hour before closing.")
+        self.assertEqual(worcester["entry_kind"], "paid")
+        self.assertEqual(worcester["entry_adult_gbp"], 5)
+        self.assertEqual(worcester["entry_notes"], "Pay on the door. Accompanying under 12s free.")
+        self.assertEqual(worcester["parking"], "Free parking")
+        self.assertIn("2026 date list", worcester["source_notes"])
+        self.assertIn("next-show block", worcester["source_notes"])
+        later = next(row for row in rows if row["postcode"] == "WR1 3EJ" and row["start"] == "2027-11-06")
+        self.assertEqual(later["end"], "2027-11-07")
+        self.assertFalse(later["provisional"])
+        self.assertIsNone(later["times_summary"])
+        self.assertEqual(later["entry_kind"], "unknown")
+        self.assertNotIn("Provisional 2027", later["source_notes"])
+        self.assertIn("Printed in the 2027 date list, which is not marked provisional.", later["source_notes"])
+        self.assertNotIn("marked provisional", later["summary"])
+        newcastle = next(row for row in rows if row["start"] == "2026-11-14")
+        self.assertEqual(newcastle["entry_kind"], "unknown")
+        self.assertIsNone(newcastle["times_summary"])
+        shows = assemble(rows)
+        slugs = [show["slug"] for show in shows]
+        self.assertNotIn("rock-gem-and-bead-show-worcester-2026-11-06", slugs)
+        published = next(show for show in shows if show["slug"] == "rock-gem-and-bead-show-worcester-2026-11-07")
+        self.assertEqual(published["end"], "2026-11-08")
+        self.assertEqual(published["times"]["summary"], "Saturday 10:00 to 16:00. Sunday 10:00 to 16:00.")
+        self.assertEqual(published["times"]["notes"], "Last entry one hour before closing.")
+        self.assertEqual(published["entry"]["kind"], "paid")
+        self.assertEqual(published["entry"]["label"], "Entry £5")
+        self.assertEqual(published["entry"]["adult_gbp"], 5)
+        self.assertEqual(published["entry"]["notes"], "Pay on the door. Accompanying under 12s free.")
+        self.assertEqual(published["parking"], "Free parking")
+        self.assertEqual(published["venue"]["postcode"], "WR1 3EJ")
+        self.assertFalse(published["provisional"])
 
     def test_nature_does_not_invent_an_undated_march(self):
         home = (FIXTURES / "nature-home.html").read_text(encoding="utf-8")
