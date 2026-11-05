@@ -27,14 +27,7 @@ def parse_rockngem(html: str, today: date | None = None, retrieved: str | None =
     rows = []
     for event in events:
         attached = event is target
-        notes = (
-            "Date from the organiser homepage. "
-            + (
-                "2027 dates are printed under the heading Provisional 2027 Dates."
-                if event["provisional"]
-                else "Printed in the 2026 date list, which is not marked provisional."
-            )
-        )
+        notes = "Date from the organiser homepage. " + _list_sentence(event)
         if attached:
             notes += " Door price and opening times are printed in the next-show block for this weekend."
         else:
@@ -68,6 +61,14 @@ def parse_rockngem(html: str, today: date | None = None, retrieved: str | None =
         }
         rows.append(row)
     return rows
+
+
+def _list_sentence(event: dict) -> str:
+    """Say which heading the date came from. Provisional follows that heading."""
+    year = event.get("list_year") or int(str(event["start"])[:4])
+    if event["provisional"]:
+        return f"{year} dates are printed under the heading Provisional {year} Dates."
+    return f"Printed in the {year} date list, which is not marked provisional."
 
 
 def _summary(provisional: bool) -> str:
@@ -122,15 +123,24 @@ def _next_show_block(lines: list[str]) -> dict:
     }
 
 
+# "2027 Dates" is the year 2027. The word provisional is optional and is the
+# only thing that marks that list provisional. Matching only "provisional 2027"
+# left a plain "2027 Dates" heading inside the 2026 list.
+_YEAR_HEADING = re.compile(
+    r"\b(?P<provisional>provisional\s+)?(?P<year>20\d{2})\s+dates\b",
+    re.I,
+)
+
+
 def _date_rows(lines: list[str]) -> list[dict]:
     section = None
+    section_provisional = False
     events = []
     for line in lines:
-        if re.search(r"2026\s+dates", line, re.I):
-            section = 2026
-            continue
-        if re.search(r"provisional\s+2027", line, re.I):
-            section = 2027
+        heading = _YEAR_HEADING.search(line)
+        if heading:
+            section = int(heading.group("year"))
+            section_provisional = heading.group("provisional") is not None
             continue
         if section and re.search(r"who'?s at", line, re.I):
             break
@@ -143,7 +153,8 @@ def _date_rows(lines: list[str]) -> list[dict]:
         parsed = parse_show_span(line, section)
         if not parsed:
             continue
-        parsed["provisional"] = section == 2027
+        parsed["provisional"] = section_provisional
+        parsed["list_year"] = section
         events.append(parsed)
     return events
 

@@ -59,7 +59,7 @@ Rules the parsers follow:
 
 - Dates come from the organiser's own HTML. Dealer diaries, Mineralica and Facebook are not sources.
 - Rockngem's homepage is the source for their dates. Their `robots.txt` allows `/`.
-- 2027 Rockngem dates are stored as provisional because the page headings say so.
+- A Rockngem date takes its year from the list heading, including a heading such as 2027 Dates. It is provisional only when that heading says provisional, as in Provisional 2027 Dates.
 - A door price or a clock time is stored only when that page prints it for that weekend. Otherwise the list says check with the organiser.
 - Rock, Gem & Bead Shows are tagged rock, gem and bead. The date list does not assign mineral or fossil to each weekend, so those type pages are not a copy of that series. Nature Unearthed is tagged from the weekend the page actually describes.
 - The Sussex page prints "Saturday 14th November" and no year. 14 November 2026 is that Saturday, so the row uses it and the show page says the year was matched, not printed.

@@ -982,6 +982,9 @@ for (const show of rgbs) {
   if (JSON.stringify(show.types) !== JSON.stringify(["rock", "gem", "bead"])) {
     fail(`${show.id} is still tagged with more than rock, gem and bead.`);
   }
+  if (show.slug === "rock-gem-and-bead-show-worcester-2026-11-06" || (show.venue?.postcode === "WR1 3EJ" && show.start === "2026-11-06")) {
+    fail(`${show.slug} is the 2027 Worcester weekend stored as 2026. A refresh must not publish it.`);
+  }
 }
 for (const show of catalogue.shows) {
   if (show.entry?.label === "Unknown") fail(`${show.id} still labels entry as Unknown.`);
