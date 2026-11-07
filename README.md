@@ -22,8 +22,8 @@ npm run dev
 
 - `/` upcoming shows, with an OpenStreetMap map, type links, and date filters (this weekend, coming later). Pins sit on the venue postcode. County pages are linked under the list.
 - `/this-weekend/` the shows on this weekend, and the next weekend, as a real page
-- `/county/` and `/county/…/` upcoming shows by county. The page states the next show, how many are listed, the venues, and entry where an organiser has published it. It links to its towns and to nearby counties. `/shows/surrey/` redirects to `/county/surrey/`
-- `/towns/` and `/town/…/` upcoming shows by town. Each town page links to its county. When the town lists the same shows as the county, the page stays up and its canonical URL is the county page.
+- `/county/` and `/county/…/` upcoming shows by county. The page states the next show, how many are listed, the venues, and entry where an organiser has published it. Town and nearby county links sit under the list. These pages do not repeat the date, type or postcode search. `/shows/surrey/` redirects to `/county/surrey/`
+- `/towns/` and `/town/…/` upcoming shows by town. The link up to the county sits under the list. When the town lists the same shows as the county, the page stays up and its canonical URL is the county page.
 - `/rock/`, `/gem/`, `/mineral/`, `/fossil/`, `/bead/` type pages
 - `/show/…/` one page per show, plus an `event.ics` calendar file
 - `/feature/` free listing, featured show £15, year pass £99, site sponsor £25 a month, Friday email £12 an issue. The four paid cards link to live Stripe checkout.

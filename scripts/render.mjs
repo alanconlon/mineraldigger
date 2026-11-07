@@ -456,7 +456,7 @@ function placeLinks(counties) {
   return `${index}\n          <nav class="chip-row place-links" aria-label="Counties">${chips}</nav>`;
 }
 
-export function renderListing({ site, path, title, description, ogTitle, ogDescription, heading, lede, shows, generated, home = false, typeLock = null, eyebrow = null, preface = "", crumbs = "", facts = "", canonicalPath = "", structuredData = "", counties = null }) {
+export function renderListing({ site, path, title, description, ogTitle, ogDescription, heading, lede, shows, generated, home = false, typeLock = null, eyebrow = null, preface = "", crumbs = "", facts = "", canonicalPath = "", structuredData = "", counties = null, filters = true, tail = "" }) {
   const ordered = byDate(shows);
   const featured = ordered.filter((show) => show.featured);
   const rest = ordered.filter((show) => !show.featured);
@@ -468,16 +468,8 @@ export function renderListing({ site, path, title, description, ogTitle, ogDescr
   const countLabel = home ? `${shows.length} UK ${countNoun}` : `${shows.length} ${countNoun}`;
   const countTail = home ? ", taken from organiser and society websites." : "";
   const noneListed = shows.length ? "" : `<p class="empty-note">${esc(EMPTY_SHOWS_NOTE)}</p>\n            `;
-  const hero = `<section class="hero"><div class="wrap">
-        ${crumbs ? `${crumbs}\n        ` : ""}<p class="eyebrow">${esc(eyebrowText)}</p>
-        <h1>${esc(heading)}</h1>
-        <p class="lede">${esc(lede)}</p>${facts ? `\n        ${facts}` : ""}
-        <p class="count-line"><strong id="result-count" data-total="${shows.length}">${countLabel}</strong>${countTail ? `<span id="result-count-tail">${countTail}</span>` : ""}</p>
-      </div></section>`;
-  const body = `${hero}
-    <div class="wrap">
-      ${preface}
-      <div class="filters">
+  const filterBlock = filters
+    ? `<div class="filters">
         ${whenFilters()}
         <div class="chip-row chip-scroll" role="group" aria-label="Type">
           ${typeLinks(typeLock)}
@@ -493,11 +485,25 @@ export function renderListing({ site, path, title, description, ogTitle, ogDescr
           <button id="go" type="submit">Search</button>
         </form>
         <p id="search-status" class="muted small" aria-live="polite"></p>
-      </div>
+      </div>`
+    : "";
+  const noscript = filters
+    ? "The map and the weekend filter need JavaScript. The list below is every upcoming show on this page."
+    : "The map needs JavaScript. The list below is every upcoming show on this page.";
+  const hero = `<section class="hero"><div class="wrap">
+        ${crumbs ? `${crumbs}\n        ` : ""}<p class="eyebrow">${esc(eyebrowText)}</p>
+        <h1>${esc(heading)}</h1>
+        <p class="lede">${esc(lede)}</p>${facts ? `\n        ${facts}` : ""}
+        <p class="count-line"><strong id="result-count" data-total="${shows.length}">${countLabel}</strong>${countTail ? `<span id="result-count-tail">${countTail}</span>` : ""}</p>
+      </div></section>`;
+  const body = `${hero}
+    <div class="wrap">
+      ${preface}
+      ${filterBlock}
       ${note}
       <div class="layout">
         <div>
-          <noscript><p class="noscript">The map and the weekend filter need JavaScript. The list below is every upcoming show on this page.</p></noscript>
+          <noscript><p class="noscript">${noscript}</p></noscript>
           <div id="empty" class="empty" hidden>
             <p id="empty-title"></p>
             <p id="empty-copy"></p>
@@ -506,7 +512,7 @@ export function renderListing({ site, path, title, description, ogTitle, ogDescr
             ${noneListed}${featured.length ? `<section class="month"><h2>Featured</h2>${featured.map(card).join("")}</section>` : ""}
             ${months(rest)}
           </div>
-          ${home ? placeLinks(counties) : ""}
+          ${tail}${home ? placeLinks(counties) : ""}
         </div>
         <aside class="map-col">
           <div class="map-frame"><div id="map" role="region" aria-label="Map of shows"></div></div>
@@ -930,11 +936,27 @@ export function nearbyCounties(county, counties) {
   return found.map((item) => item.county);
 }
 
+function quietLinks(heading, chips) {
+  if (!chips) return "";
+  return `<section class="place-more">
+            <h2>${esc(heading)}</h2>
+            <div class="chip-row">${chips}</div>
+          </section>`;
+}
+
 function nearbyHtml(county, counties) {
   const list = nearbyCounties(county, counties);
   if (!list.length) return "";
   const chips = list.map((item) => `<a class="chip" href="/county/${item.slug}/">${esc(item.name)}</a>`).join("");
-  return `<p class="fine">Nearby counties</p><div class="chip-row" aria-label="Nearby counties">${chips}</div>`;
+  return quietLinks("Nearby counties", chips);
+}
+
+function townsHtml(county, towns) {
+  const local = [...(towns?.values?.() || [])]
+    .filter((town) => town.county === county.name)
+    .sort((a, b) => a.name.localeCompare(b.name, "en-GB"));
+  const chips = local.map((town) => `<a class="chip" href="/town/${town.slug}/">${esc(town.name)}</a>`).join("");
+  return quietLinks(`Towns in ${county.name}`, chips);
 }
 
 function crumbTrail(site, crumbs) {
@@ -987,16 +1009,11 @@ function townCountyNote(town, county, same) {
 }
 
 export function renderCounty(ctx, county, towns, counties = null) {
-  const local = [...(towns?.values?.() || [])]
-    .filter((town) => town.county === county.name)
-    .sort((a, b) => a.name.localeCompare(b.name, "en-GB"));
-  const townChips = local.map((town) => `<a class="chip" href="/town/${town.slug}/">${esc(town.name)}</a>`).join("");
   const trail = crumbTrail(ctx.site, [
     { name: "Home", href: "/" },
     { name: "Counties", href: "/county/" },
     { name: county.name, href: "" },
   ]);
-  const townsRow = townChips ? `<div class="chip-row" aria-label="Towns">${townChips}</div>` : "";
   return renderListing({
     ...ctx,
     shows: county.shows,
@@ -1009,7 +1026,8 @@ export function renderCounty(ctx, county, towns, counties = null) {
     crumbs: trail.html,
     structuredData: trail.script,
     eyebrow: county.nation,
-    preface: `${browseLinks(false)}${townsRow}${nearbyHtml(county, counties)}`,
+    filters: false,
+    tail: `${townsHtml(county, towns)}${nearbyHtml(county, counties)}`,
   });
 }
 
@@ -1045,6 +1063,7 @@ export function renderTown(ctx, town, counties = null) {
   if (town.county) crumbs.push({ name: town.county, href: `/county/${county?.slug || slugify(town.county)}/` });
   crumbs.push({ name: town.name, href: "" });
   const trail = crumbTrail(ctx.site, crumbs);
+  const countyNote = townCountyNote(town, county, same);
   return renderListing({
     ...ctx,
     shows: town.shows,
@@ -1058,7 +1077,8 @@ export function renderTown(ctx, town, counties = null) {
     crumbs: trail.html,
     structuredData: trail.script,
     eyebrow: town.county || town.nation,
-    preface: `${browseLinks(false)}${townCountyNote(town, county, same)}`,
+    filters: false,
+    tail: countyNote ? `<div class="place-more">${countyNote}</div>` : "",
   });
 }
 
