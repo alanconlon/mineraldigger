@@ -211,15 +211,15 @@ async function main() {
     counties: new Set(places.counties.keys()),
     towns: new Set(places.towns.keys()),
   };
-  await writePage("index.html", renderHome(ctx));
+  await writePage("index.html", renderHome({ ...ctx, counties: places.counties }));
   await writePage("this-weekend/index.html", renderWeekend(ctx));
   await writePage("county/index.html", renderCountyIndex(ctx, places.counties));
   await writePage("towns/index.html", renderTownIndex(ctx, places.towns));
   for (const county of places.counties.values()) {
-    await writePage(`county/${county.slug}/index.html`, renderCounty(ctx, county, places.towns));
+    await writePage(`county/${county.slug}/index.html`, renderCounty(ctx, county, places.towns, places.counties));
   }
   for (const town of places.towns.values()) {
-    await writePage(`town/${town.slug}/index.html`, renderTown(ctx, town));
+    await writePage(`town/${town.slug}/index.html`, renderTown(ctx, town, places.counties));
   }
   for (const region of places.regions.values()) {
     await writePage(`region/${region.slug}/index.html`, renderRegion(ctx, region));

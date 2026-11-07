@@ -158,6 +158,20 @@ p { margin: 0 0 0.8rem; }
   text-transform: uppercase;
 }
 .lede { font-size: 1.15rem; color: var(--ink-soft); max-width: 42rem; }
+.place-facts {
+  list-style: none;
+  margin: 0.2rem 0 0.65rem;
+  padding: 0;
+  max-width: 42rem;
+  color: var(--ink-soft);
+}
+.place-facts li {
+  display: grid;
+  grid-template-columns: 4.6rem 1fr;
+  column-gap: 0.45rem;
+  margin: 0.18rem 0;
+}
+.place-facts li > span:first-child { font-weight: 600; color: var(--ink); }
 .count-line { color: var(--ink-soft); }
 .count-line strong { color: var(--ink); }
 
@@ -569,6 +583,8 @@ textarea { min-height: 7rem; resize: vertical; }
   .hero .eyebrow { margin-bottom: 0.2rem; }
   .hero .lede { font-size: 0.98rem; margin-bottom: 0.25rem; }
   .hero .count-line { margin-bottom: 0.15rem; }
+  .place-facts { margin: 0.1rem 0 0.35rem; font-size: 0.95rem; }
+  .place-facts li { grid-template-columns: 4.2rem 1fr; }
   .filters { gap: 0.35rem; padding: 0.35rem 0 0.4rem; }
   .chip, button.chip { padding: 0.22rem 0.6rem; font-size: 0.84rem; }
   .search { gap: 0.35rem; }
