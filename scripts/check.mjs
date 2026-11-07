@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { assetHash } from "./asset-hash.mjs";
 import { featuredIds, stripeReady } from "./feature.mjs";
 import { frameForPoints } from "../src/js/format.js";
-import { EMPTY_SHOWS_NOTE, entryLabel, esc, groupPlaces, listedName, listingPaths, mergePlaces, nearbyCounties, offerValidFrom, organizerLink, placeDescription, placeTitle, renderCounty, renderFeature, renderShow, renderTown, renderType, sameShowSet } from "./render.mjs";
+import { EMPTY_SHOWS_NOTE, entryLabel, esc, groupPlaces, listedName, listingPaths, mergePlaces, nearbyCounties, offerValidFrom, organizerLink, placeDescription, placeTitle, renderCounty, renderFeature, renderRegion, renderShow, renderTown, renderType, sameShowSet } from "./render.mjs";
 import { onRequestPost } from "../functions/api/submit.js";
 import { TURNSTILE_ERROR } from "../functions/api/turnstile.js";
 import { validateSubmission } from "../functions/api/validate.js";
@@ -402,6 +402,12 @@ if (!siteJs.includes("frameForPoints")) fail("The list map should frame pins wit
 if (!siteJs.includes("padding: [28, 28]")) fail("A map with several pins should fitBounds with padding.");
 if (!siteJs.includes('view.on("resize"')) fail("The map should refit every pin when its size changes.");
 if (!siteJs.includes("if (!list)")) fail("The weekend map should draw when the page has no filter list.");
+if (!siteJs.includes('document.getElementById("search")?.addEventListener')) fail("The search form should be optional so a page can omit it.");
+if (!siteJs.includes('document.getElementById("q")?.value')) fail("The postcode field should be optional.");
+if (!siteJs.includes('document.getElementById("radius")?.value')) fail("The distance control should be optional.");
+if (!siteJs.includes(`document.querySelector('.chip[data-when][aria-pressed="true"]')?.dataset.when || "all"`)) {
+  fail("Missing date chips should count as all upcoming.");
+}
 if (!siteJs.includes("areaFromCards")) fail("A county search should resolve like a place search.");
 if (!siteJs.includes("shows match")) fail("A narrowed list should say how many of the total match.");
 if (!siteJs.includes("dataset.total")) fail("The intro count should keep the full total.");
@@ -1053,10 +1059,26 @@ const emptyCtx = { site: { url: "https://mineraldigger.com", name: "MineralDigge
 const emptyTown = renderTown(emptyCtx, { slug: "quiet-town", name: "Quiet Town", county: "Example", nation: "England", shows: [] });
 const emptyCounty = renderCounty(emptyCtx, { slug: "example", name: "Example", nation: "England", shows: [] }, new Map());
 const emptyType = renderType(emptyCtx, "fossil");
+const emptyRegion = renderRegion(emptyCtx, { slug: "quiet-region", name: "Quiet Region", nation: "England", shows: [] });
 for (const [label, html] of [["town", emptyTown], ["county", emptyCounty], ["type", emptyType]]) {
   if (!html.includes(EMPTY_SHOWS_NOTE)) fail(`An empty ${label} page should say there are no shows listed right now.`);
   if (html.includes('name="robots" content="noindex"')) fail(`An empty ${label} page should stay indexable.`);
   if (/coming soon/i.test(html)) fail(`An empty ${label} page should not say coming soon.`);
+}
+for (const [label, html] of [["town", emptyTown], ["county", emptyCounty]]) {
+  if (html.includes('id="search"') || html.includes('aria-label="When"') || html.includes('aria-label="Type"') || html.includes('aria-label="Browse"')) {
+    fail(`An empty ${label} page should not show browse chips, date filters, type filters, or the postcode search.`);
+  }
+}
+if (!emptyTown.includes("Quiet Town is in")) fail("An empty town page should still link up to its county.");
+if (emptyTown.indexOf('id="show-list"') > emptyTown.indexOf("Quiet Town is in")) {
+  fail("The town county note should sit below the show list.");
+}
+if (!emptyType.includes('aria-label="When"') || !emptyType.includes('id="search"') || !emptyType.includes('aria-label="Browse"')) {
+  fail("Type pages should keep the browse chips and the filters.");
+}
+if (!emptyRegion.includes('aria-label="When"') || !emptyRegion.includes('id="search"') || !emptyRegion.includes('aria-label="Browse"')) {
+  fail("Region pages should keep the browse chips and the filters.");
 }
 if (!siteJs.includes("pageEmptyAtRest")) fail("An empty listing should keep its own no-shows note when the filters are at rest.");
 const weekendPage = await readFile(join(dist, "this-weekend/index.html"), "utf8");
@@ -1119,6 +1141,29 @@ for (const county of listings.counties || []) {
   if (!html.includes('aria-label="Breadcrumb"') || !html.includes('href="/">Home</a>') || !html.includes('href="/county/">Counties</a>')) {
     fail(`${county.name} should link home and the county index.`);
   }
+  const listAt = html.indexOf('id="show-list"');
+  const beforeList = html.slice(0, listAt);
+  const afterList = html.slice(listAt);
+  if (beforeList.includes('aria-label="Browse"') || beforeList.includes('aria-label="When"') || beforeList.includes('aria-label="Type"') || beforeList.includes('id="search"')) {
+    fail(`${county.name} should open with the summary, not the browse chips or filters.`);
+  }
+  if (html.includes('aria-label="Browse"') || html.includes('role="group" aria-label="When"') || html.includes('aria-label="Type"') || html.includes('id="search"')) {
+    fail(`${county.name} should not include the homepage filters or the Counties and Towns chips.`);
+  }
+  const townHeading = `Towns in ${esc(county.name)}`;
+  const hasTown = [...(upcomingPlaces.towns?.values?.() || [])].some((town) => town.county === county.name);
+  if (hasTown) {
+    const townsAt = html.indexOf(`>${townHeading}<`);
+    if (townsAt < 0 || townsAt < listAt) fail(`${county.name} town links should sit below the show list.`);
+  }
+  const nearby = nearbyCounties(countyRecord, upcomingPlaces.counties);
+  if (nearby.length) {
+    const nearbyAt = html.indexOf(">Nearby counties<");
+    if (nearbyAt < 0 || nearbyAt < listAt) fail(`${county.name} nearby counties should sit below the show list.`);
+    for (const other of nearby) {
+      if (!afterList.includes(`href="/county/${other.slug}/"`)) fail(`${county.name} nearby link for ${other.name} should sit below the show list.`);
+    }
+  }
   if (!countyShows.length) continue;
   const next = [...countyShows].sort((a, b) => a.start.localeCompare(b.start) || a.name.localeCompare(b.name, "en-GB") || String(a.id).localeCompare(String(b.id)))[0];
   if (!html.includes('class="place-facts"') || !html.includes(">Next</span>") || !html.includes(">Entry</span>")) {
@@ -1163,6 +1208,18 @@ for (const town of listings.towns || []) {
   }
   const townShows = townRecord?.shows || [];
   if (townShows.length && !townHtml.includes('class="place-facts"')) fail(`${town.name} should summarise its shows.`);
+  const townListAt = townHtml.indexOf('id="show-list"');
+  const townBefore = townHtml.slice(0, townListAt);
+  const townAfter = townHtml.slice(townListAt);
+  if (townHtml.includes('aria-label="Browse"') || townHtml.includes('role="group" aria-label="When"') || townHtml.includes('aria-label="Type"') || townHtml.includes('id="search"')) {
+    fail(`${town.name} should not include the homepage filters or the Counties and Towns chips.`);
+  }
+  if (townBefore.includes("These shows are also listed for") || townBefore.includes("The county page lists the other shows too") || townBefore.includes("See the shows listed in") || townBefore.includes(`${esc(town.name)} is in`)) {
+    fail(`${town.name} county note should sit below the show list.`);
+  }
+  if (countyRecord && !townAfter.includes(`href="/county/${countyRecord.slug}/"`)) {
+    fail(`${town.name} should keep the county link below the show list.`);
+  }
 }
 for (const show of catalogue.shows.filter((item) => item.end >= isoToday())) {
   const html = countyPages.get(show.venue?.county);
@@ -1172,18 +1229,23 @@ for (const show of catalogue.shows.filter((item) => item.end >= isoToday())) {
   }
   if (!html.includes(`/show/${show.slug}/`)) fail(`${show.venue.county} page is missing ${show.slug}.`);
 }
-const firstCounty = countyPages.values().next().value;
-if (firstCounty && weekendControls(firstCounty) !== 1) fail("County pages should keep This weekend only in the filter row.");
+for (const [name, html] of countyPages) {
+  if (weekendControls(html) !== 0) fail(`${name} should not include the This weekend filter.`);
+}
 const rockHub = await readFile(join(dist, "rock/index.html"), "utf8");
 if (weekendControls(rockHub) !== 1) fail("Type pages should keep This weekend only in the filter row.");
-const firstTown = (listings.towns || [])[0];
-if (firstTown) {
+if (!rockHub.includes('id="search"') || !rockHub.includes('aria-label="Type"') || !rockHub.includes('href="/county/">Counties</a>')) {
+  fail("Type pages should keep the filters and the Counties chip.");
+}
+for (const town of listings.towns || []) {
+  let townPage;
   try {
-    const townPage = await readFile(join(dist, "town", firstTown.slug, "index.html"), "utf8");
-    if (weekendControls(townPage) !== 1) fail("Town pages should keep This weekend only in the filter row.");
+    townPage = await readFile(join(dist, "town", town.slug, "index.html"), "utf8");
   } catch {
-    fail(`Town page is missing at /town/${firstTown.slug}/.`);
+    fail(`Town page is missing at /town/${town.slug}/.`);
+    continue;
   }
+  if (weekendControls(townPage) !== 0) fail(`${town.name} should not include the This weekend filter.`);
 }
 const mineralPage = await readFile(join(dist, "mineral/index.html"), "utf8");
 const rockPage = await readFile(join(dist, "rock/index.html"), "utf8");
