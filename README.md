@@ -20,10 +20,10 @@ npm run dev
 
 ## Pages
 
-- `/` upcoming shows, with an OpenStreetMap map, type links, and date filters (this weekend, coming later). Pins sit on the venue postcode.
+- `/` upcoming shows, with an OpenStreetMap map, type links, and date filters (this weekend, coming later). Pins sit on the venue postcode. County pages are linked under the list.
 - `/this-weekend/` the shows on this weekend, and the next weekend, as a real page
-- `/county/` and `/county/…/` upcoming shows by county. `/shows/surrey/` redirects to `/county/surrey/`
-- `/towns/` and `/town/…/` upcoming shows by town
+- `/county/` and `/county/…/` upcoming shows by county. The page states the next show, how many are listed, the venues, and entry where an organiser has published it. It links to its towns and to nearby counties. `/shows/surrey/` redirects to `/county/surrey/`
+- `/towns/` and `/town/…/` upcoming shows by town. Each town page links to its county. When the town lists the same shows as the county, the page stays up and its canonical URL is the county page.
 - `/rock/`, `/gem/`, `/mineral/`, `/fossil/`, `/bead/` type pages
 - `/show/…/` one page per show, plus an `event.ics` calendar file
 - `/feature/` free listing, featured show £15, year pass £99, site sponsor £25 a month, Friday email £12 an issue. The four paid cards link to live Stripe checkout.
@@ -185,7 +185,7 @@ What it still guarantees:
 - The entry badge follows that show: unknown says "Check with organiser" once, free says "Free entry" once, and a price uses the stored label. A past show says the date has passed, stays indexable, and does not publish EventScheduled or in-stock tickets. Those past and free cases are also rendered from synthetic fixtures, so the check still runs when the live catalogue has none.
 - A show with no organiser URL does not gain a website link. Nothing in the build names rockexchange.uk.
 - Rock, Gem & Bead Shows stay tagged rock, gem and bead, so that series is not copied onto the mineral or fossil page.
-- County and town indexes follow `data/listings.json`. An empty county, town or type page stays in the sitemap and says there are no shows listed right now. A low count does not add noindex.
+- County and town indexes follow `data/listings.json`. An empty county, town or type page stays in the sitemap and says there are no shows listed right now. A low count does not add noindex. A town page with the same shows as its county keeps its own URL in the sitemap and uses the county page as its canonical URL.
 
 The deployment is marked dirty because the refreshed catalogue exists only on the runner. When IndexNow accepts URLs, the job commits `data/indexnow_state.json` with `[skip ci]` in the message, and rebases if another push lands first.
 

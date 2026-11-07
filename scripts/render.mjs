@@ -1,4 +1,4 @@
-import { addDays, formatDay, formatRange, iso, longDate, monthKey, monthLabel, overlaps, parseISO, shortStack, thisWeekend } from "../src/js/format.js";
+import { MONTHS, WEEKDAYS, addDays, formatDay, formatRange, iso, longDate, monthKey, monthLabel, overlaps, parseISO, shortStack, thisWeekend } from "../src/js/format.js";
 import { stripeReady } from "./feature.mjs";
 
 let assetVersion = "";
@@ -254,8 +254,8 @@ function siteGraph(site) {
   return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
 }
 
-function layout({ site, path, title, description, ogTitle, ogDescription, body, map = false, generated, robots, structuredData = "" }) {
-  const canonical = new URL(path, site.url).href;
+function layout({ site, path, title, description, ogTitle, ogDescription, body, map = false, generated, robots, structuredData = "", canonicalPath = "" }) {
+  const canonical = new URL(canonicalPath || path, site.url).href;
   const image = new URL("/og-image.jpg", site.url).href;
   const openTitle = ogTitle ?? title;
   const openDescription = ogDescription ?? description;
@@ -443,14 +443,20 @@ function whenFilters() {
         </div>`;
 }
 
-function placeLinks() {
-  return `<div class="chip-row place-links" aria-label="Places">
+function placeLinks(counties) {
+  const index = `<div class="chip-row place-links" aria-label="Places">
             <a class="chip" href="/county/">Counties</a>
             <a class="chip" href="/towns/">Towns</a>
           </div>`;
+  const list = counties ? [...counties.values()] : [];
+  if (!list.length) return index;
+  const chips = byNation(list)
+    .map((county) => `<a class="chip" href="/county/${county.slug}/">${esc(county.name)} <b>${county.shows.length}</b></a>`)
+    .join("");
+  return `${index}\n          <nav class="chip-row place-links" aria-label="Counties">${chips}</nav>`;
 }
 
-export function renderListing({ site, path, title, description, ogTitle, ogDescription, heading, lede, shows, generated, home = false, typeLock = null, eyebrow = null, preface = "" }) {
+export function renderListing({ site, path, title, description, ogTitle, ogDescription, heading, lede, shows, generated, home = false, typeLock = null, eyebrow = null, preface = "", crumbs = "", facts = "", canonicalPath = "", structuredData = "", counties = null }) {
   const ordered = byDate(shows);
   const featured = ordered.filter((show) => show.featured);
   const rest = ordered.filter((show) => !show.featured);
@@ -463,9 +469,9 @@ export function renderListing({ site, path, title, description, ogTitle, ogDescr
   const countTail = home ? ", taken from organiser and society websites." : "";
   const noneListed = shows.length ? "" : `<p class="empty-note">${esc(EMPTY_SHOWS_NOTE)}</p>\n            `;
   const hero = `<section class="hero"><div class="wrap">
-        <p class="eyebrow">${esc(eyebrowText)}</p>
+        ${crumbs ? `${crumbs}\n        ` : ""}<p class="eyebrow">${esc(eyebrowText)}</p>
         <h1>${esc(heading)}</h1>
-        <p class="lede">${esc(lede)}</p>
+        <p class="lede">${esc(lede)}</p>${facts ? `\n        ${facts}` : ""}
         <p class="count-line"><strong id="result-count" data-total="${shows.length}">${countLabel}</strong>${countTail ? `<span id="result-count-tail">${countTail}</span>` : ""}</p>
       </div></section>`;
   const body = `${hero}
@@ -500,7 +506,7 @@ export function renderListing({ site, path, title, description, ogTitle, ogDescr
             ${noneListed}${featured.length ? `<section class="month"><h2>Featured</h2>${featured.map(card).join("")}</section>` : ""}
             ${months(rest)}
           </div>
-          ${home ? placeLinks() : ""}
+          ${home ? placeLinks(counties) : ""}
         </div>
         <aside class="map-col">
           <div class="map-frame"><div id="map" role="region" aria-label="Map of shows"></div></div>
@@ -519,7 +525,8 @@ export function renderListing({ site, path, title, description, ogTitle, ogDescr
     body,
     map: true,
     generated,
-    structuredData: home ? siteGraph(site) : "",
+    canonicalPath,
+    structuredData: structuredData || (home ? siteGraph(site) : ""),
   });
 }
 
@@ -689,52 +696,369 @@ export function renderTownIndex(ctx, towns) {
   });
 }
 
-export function renderCounty(ctx, county, towns) {
-  const local = [...towns.values()]
+const TYPE_ORDER = ["rock", "gem", "mineral", "fossil", "bead"];
+// Other listed counties whose venue coordinates sit within this distance.
+const NEARBY_MILES = 55;
+
+function joinList(items) {
+  const list = items.filter(Boolean);
+  if (list.length <= 1) return list[0] || "";
+  if (list.length === 2) return `${list[0]} and ${list[1]}`;
+  return `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}`;
+}
+
+function typesPresent(shows) {
+  return TYPE_ORDER.filter((key) => shows.some((show) => Array.isArray(show.types) && show.types.includes(key)));
+}
+
+function typePhrase(shows) {
+  const present = typesPresent(shows);
+  if (!present.length || present.length === TYPE_ORDER.length) return "rock, gem, mineral, fossil and bead";
+  return joinList(present);
+}
+
+function capitalise(text) {
+  if (!text) return "";
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+export function sameShowSet(left, right) {
+  const a = [...(left || [])].map((show) => show.id).sort();
+  const b = [...(right || [])].map((show) => show.id).sort();
+  return a.length === b.length && a.every((id, index) => id === b[index]);
+}
+
+function singleTown(shows) {
+  const towns = [...new Set(shows.map((show) => String(show.venue?.town || "").trim()).filter(Boolean))];
+  return towns.length === 1 ? towns[0] : "";
+}
+
+function placeLabel(name, shows) {
+  const ordered = byDate(shows || []);
+  if (ordered.length < 2) return name;
+  const town = singleTown(ordered);
+  if (!town || town === name || name.startsWith(`${town},`) || name.startsWith(`${town} `)) return name;
+  return `${name}, all in ${town}`;
+}
+
+export function placeTitle(name, shows) {
+  if (!shows?.length) return `Shows in ${name} | MineralDigger`;
+  const full = `${capitalise(typePhrase(shows))} shows in ${name} | MineralDigger`;
+  if (full.length <= 70) return full;
+  if (typesPresent(shows).includes("mineral")) {
+    const mineral = `Mineral shows in ${name} | MineralDigger`;
+    if (mineral.length <= 70) return mineral;
+  }
+  return `Shows in ${name} | MineralDigger`;
+}
+
+function shortWhen(show) {
+  if (show.start === show.end) return longDate(show.start);
+  const start = parseISO(show.start);
+  const end = parseISO(show.end);
+  if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
+    return `${start.getDate()} to ${end.getDate()} ${MONTHS[start.getMonth()]} ${start.getFullYear()}`;
+  }
+  if (start.getFullYear() === end.getFullYear()) {
+    return `${start.getDate()} ${MONTHS[start.getMonth()]} to ${end.getDate()} ${MONTHS[end.getMonth()]} ${start.getFullYear()}`;
+  }
+  return `${longDate(show.start)} to ${longDate(show.end)}`;
+}
+
+function visitorWhen(show) {
+  if (show.start === show.end) return formatDay(show.start);
+  const start = parseISO(show.start);
+  const end = parseISO(show.end);
+  if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
+    return `${WEEKDAYS[start.getDay()]} ${start.getDate()} to ${WEEKDAYS[end.getDay()]} ${end.getDate()} ${MONTHS[start.getMonth()]} ${start.getFullYear()}`;
+  }
+  return `${formatDay(show.start)} to ${formatDay(show.end)}`;
+}
+
+function uniqueVenues(shows) {
+  const venues = [];
+  for (const show of byDate(shows)) {
+    const name = String(show.venue?.name || "").trim();
+    if (!name || venues.some((venue) => venue.name === name)) continue;
+    venues.push({ name, town: String(show.venue?.town || "").trim() });
+  }
+  return venues;
+}
+
+function venueFact(venues) {
+  if (venues.length === 1) {
+    const venue = venues[0];
+    const inTown = venue.town && !venue.name.toLowerCase().includes(venue.town.toLowerCase()) ? ` in ${venue.town}` : "";
+    return `${venue.name}${inTown}.`;
+  }
+  return `${joinList(venues.map((venue) => venue.name))}.`;
+}
+
+function entryFact(shows) {
+  const known = [];
+  let unknown = false;
+  for (const show of byDate(shows)) {
+    const label = entryLabel(show.entry);
+    if (label === "Check with organiser") {
+      unknown = true;
+      continue;
+    }
+    const pretty = label === "Free entry" ? "free" : label.replace(/^Entry\s+/i, "");
+    if (pretty && !known.includes(pretty)) known.push(pretty);
+  }
+  if (!known.length) return "Not listed for these dates. Check with the organiser.";
+  if (known.length === 1 && known[0] === "free" && !unknown) return "Free.";
+  if (known.length === 1 && !unknown) return `${known[0]}.`;
+  const list = joinList(known);
+  if (!unknown) return `${list}.`;
+  return `${list} where it is listed. Otherwise check with the organiser.`;
+}
+
+function sentenceEntry(fact) {
+  if (!fact || fact.startsWith("Not listed")) return "Check entry with the organiser.";
+  if (fact === "Free.") return "Entry is free.";
+  const first = fact.charAt(0);
+  const rest = /[A-Z]/.test(first) ? first.toLowerCase() + fact.slice(1) : fact;
+  return `Entry is ${rest}`;
+}
+
+function placeLede(name, shows) {
+  const ordered = byDate(shows || []);
+  if (!ordered.length) return `No shows are listed in ${name} right now.`;
+  const noun = ordered.length === 1 ? "show is" : "shows are";
+  return `${ordered.length} upcoming ${typePhrase(ordered)} ${noun} listed in ${placeLabel(name, ordered)}.`;
+}
+
+function entrySnippet(shows) {
+  const fact = entryFact(shows);
+  if (!fact || fact.startsWith("Not listed")) return "Check entry with the organiser.";
+  if (fact === "Free.") return "Entry is free.";
+  if (fact.includes("where it is listed")) {
+    const price = fact.match(/£\d+(?:\.\d+)?/);
+    if (price) return `Entry ${price[0]} where listed.`;
+    if (fact.startsWith("free")) return "Entry is free where listed.";
+    return "Check entry with the organiser.";
+  }
+  return sentenceEntry(fact);
+}
+
+export function placeDescription(name, shows) {
+  const ordered = byDate(shows || []);
+  if (!ordered.length) {
+    return `No rock, gem, mineral, fossil or bead shows are listed in ${name} right now. Dates come from organiser websites.`;
+  }
+  const next = ordered[0];
+  const noun = ordered.length === 1 ? "show" : "shows";
+  const where = String(next.venue?.name || next.venue?.town || name).trim();
+  const when = shortWhen(next);
+  const countBit = `${ordered.length} upcoming ${typePhrase(ordered)} ${noun}`;
+  const entry = entrySnippet(ordered);
+  const provisional = next.provisional ? " The date is provisional." : "";
+  const venues = uniqueVenues(ordered);
+  const extraVenues = venues.length > 1 ? ` Venues: ${joinList(venues.map((venue) => venue.name))}.` : "";
+  const build = (place, { entryText = entry, prov = false, withVenues = false, named = true } = {}) => {
+    const nextBit = named ? ` Next: ${next.name} at ${where}, ${when}.` : ` Next: ${when} at ${where}.`;
+    return `${countBit} in ${place}.${nextBit}${prov ? provisional : ""}${withVenues ? extraVenues : ""}${entryText ? ` ${entryText}` : ""}`;
+  };
+  const labelled = placeLabel(name, ordered);
+  const options = [
+    build(labelled, { prov: true, withVenues: true }),
+    build(labelled, { prov: true }),
+    build(labelled, {}),
+    build(name, { prov: true, withVenues: true }),
+    build(name, { prov: true }),
+    build(name, {}),
+    build(name, { entryText: "", prov: true }),
+    build(name, { entryText: "" }),
+    build(name, { entryText: "", named: false }),
+  ];
+  return options.find((text) => text.length <= 170) || options[options.length - 1];
+}
+
+function nextFact(show) {
+  const where = String(show.venue?.name || show.venue?.town || "").trim();
+  const place = where ? ` at ${esc(where)}` : "";
+  const provisional = show.provisional ? " The organiser lists this date as provisional." : "";
+  return `<a href="/show/${esc(show.slug)}/">${esc(show.name)}</a>${place}, ${esc(visitorWhen(show))}.${provisional}`;
+}
+
+function placeFacts(shows) {
+  const ordered = byDate(shows || []);
+  if (!ordered.length) return "";
+  const venues = uniqueVenues(ordered);
+  const item = (label, value) => `<li><span>${label}</span><span>${value}</span></li>`;
+  const items = [item("Next", nextFact(ordered[0]))];
+  if (venues.length) items.push(item(venues.length === 1 ? "Venue" : "Venues", esc(venueFact(venues))));
+  items.push(item("Entry", esc(entryFact(ordered))));
+  return `<ul class="place-facts">${items.join("")}</ul>`;
+}
+
+function centroid(shows) {
+  const points = (shows || [])
+    .map((show) => ({ lat: Number(show.venue?.lat), lng: Number(show.venue?.lng) }))
+    .filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+  if (!points.length) return null;
+  return {
+    lat: points.reduce((sum, point) => sum + point.lat, 0) / points.length,
+    lng: points.reduce((sum, point) => sum + point.lng, 0) / points.length,
+  };
+}
+
+function milesBetween(a, b) {
+  const radius = 3958.7613;
+  const toRad = (degrees) => (degrees * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * radius * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+export function nearbyCounties(county, counties) {
+  const here = centroid(county?.shows);
+  if (!here || !counties?.values) return [];
+  const found = [];
+  for (const other of counties.values()) {
+    if (!other || other.slug === county.slug) continue;
+    const there = centroid(other.shows);
+    if (!there) continue;
+    const miles = milesBetween(here, there);
+    if (miles <= NEARBY_MILES) found.push({ county: other, miles });
+  }
+  found.sort((a, b) => a.miles - b.miles || a.county.name.localeCompare(b.county.name, "en-GB"));
+  return found.map((item) => item.county);
+}
+
+function nearbyHtml(county, counties) {
+  const list = nearbyCounties(county, counties);
+  if (!list.length) return "";
+  const chips = list.map((item) => `<a class="chip" href="/county/${item.slug}/">${esc(item.name)}</a>`).join("");
+  return `<p class="fine">Nearby counties</p><div class="chip-row" aria-label="Nearby counties">${chips}</div>`;
+}
+
+function crumbTrail(site, crumbs) {
+  const html = `<nav class="crumbs" aria-label="Breadcrumb">${crumbs
+    .map((crumb, index) => {
+      const label = crumb.href ? `<a href="${crumb.href}">${esc(crumb.name)}</a>` : `<span>${esc(crumb.name)}</span>`;
+      const sep = index ? `<span class="crumb-sep" aria-hidden="true">›</span> ` : "";
+      return `${sep}${label}`;
+    })
+    .join(" ")}</nav>`;
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: crumbs.map((crumb, index) => {
+      const item = { "@type": "ListItem", position: index + 1, name: crumb.name };
+      if (crumb.href) item.item = new URL(crumb.href, site.url).href;
+      return item;
+    }),
+  };
+  const script = `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
+  return { html, script };
+}
+
+function countyForTown(town, counties) {
+  if (!town?.county || !counties?.values) return null;
+  const slug = slugify(town.county);
+  const found = counties.get?.(slug);
+  if (found) return found;
+  for (const county of counties.values()) {
+    if (county.name === town.county) return county;
+  }
+  return null;
+}
+
+function townCountyNote(town, county, same) {
+  const slug = county?.slug || (town.county ? slugify(town.county) : "");
+  const name = county?.name || town.county || "";
+  if (!slug || !name) return "";
+  const link = `<a href="/county/${slug}/">${esc(name)}</a>`;
+  if (!town.shows?.length) {
+    return county?.shows?.length
+      ? `<p class="fine">See the shows listed in ${link}.</p>`
+      : `<p class="fine">${esc(town.name)} is in ${link}.</p>`;
+  }
+  if (same) return `<p class="fine">These shows are also listed for ${link}.</p>`;
+  if (county?.shows && county.shows.length > town.shows.length) {
+    return `<p class="fine">${esc(town.name)} is in ${link}. The county page lists the other shows too.</p>`;
+  }
+  return `<p class="fine">${esc(town.name)} is in ${link}.</p>`;
+}
+
+export function renderCounty(ctx, county, towns, counties = null) {
+  const local = [...(towns?.values?.() || [])]
     .filter((town) => town.county === county.name)
     .sort((a, b) => a.name.localeCompare(b.name, "en-GB"));
-  const townChips = local
-    .map((town) => `<a class="chip" href="/town/${town.slug}/">${esc(town.name)}</a>`)
-    .join("");
+  const townChips = local.map((town) => `<a class="chip" href="/town/${town.slug}/">${esc(town.name)}</a>`).join("");
+  const trail = crumbTrail(ctx.site, [
+    { name: "Home", href: "/" },
+    { name: "Counties", href: "/county/" },
+    { name: county.name, href: "" },
+  ]);
+  const townsRow = townChips ? `<div class="chip-row" aria-label="Towns">${townChips}</div>` : "";
   return renderListing({
     ...ctx,
     shows: county.shows,
     path: `/county/${county.slug}/`,
-    title: `Shows in ${county.name} | MineralDigger`,
-    description: `Upcoming rock, gem, mineral, fossil and bead shows in ${county.name}. Dates, venues and entry from organiser sites.`,
+    title: placeTitle(county.name, county.shows),
+    description: placeDescription(county.name, county.shows),
     heading: `Shows in ${county.name}`,
-    lede: `Upcoming shows in ${county.name}. Dates and venues come from organiser websites. Check with the organiser before you travel.`,
+    lede: placeLede(county.name, county.shows),
+    facts: placeFacts(county.shows),
+    crumbs: trail.html,
+    structuredData: trail.script,
     eyebrow: county.nation,
-    preface: `${browseLinks(false)}${townChips ? `<div class="chip-row" aria-label="Towns">${townChips}</div>` : ""}`,
+    preface: `${browseLinks(false)}${townsRow}${nearbyHtml(county, counties)}`,
   });
 }
 
 export function renderRegion(ctx, region) {
+  const trail = crumbTrail(ctx.site, [
+    { name: "Home", href: "/" },
+    { name: region.name, href: "" },
+  ]);
   return renderListing({
     ...ctx,
     shows: region.shows,
     path: `/region/${region.slug}/`,
-    title: `Shows in ${region.name} | MineralDigger`,
-    description: `Upcoming rock, gem, mineral, fossil and bead shows in ${region.name}. Dates, venues and entry from organiser sites.`,
+    title: placeTitle(region.name, region.shows),
+    description: placeDescription(region.name, region.shows),
     heading: `Shows in ${region.name}`,
-    lede: `Upcoming shows in ${region.name}. Dates and venues come from organiser websites. Check with the organiser before you travel.`,
+    lede: placeLede(region.name, region.shows),
+    facts: placeFacts(region.shows),
+    crumbs: trail.html,
+    structuredData: trail.script,
     eyebrow: region.nation || "UK",
     preface: browseLinks(false),
   });
 }
 
-export function renderTown(ctx, town) {
-  const countyBit = town.county ? `, ${town.county}` : "";
+export function renderTown(ctx, town, counties = null) {
+  const county = countyForTown(town, counties);
+  const same = Boolean(county && sameShowSet(town.shows, county.shows));
+  const place = town.county ? `${town.name}, ${town.county}` : town.name;
+  const crumbs = [
+    { name: "Home", href: "/" },
+    { name: "Counties", href: "/county/" },
+  ];
+  if (town.county) crumbs.push({ name: town.county, href: `/county/${county?.slug || slugify(town.county)}/` });
+  crumbs.push({ name: town.name, href: "" });
+  const trail = crumbTrail(ctx.site, crumbs);
   return renderListing({
     ...ctx,
     shows: town.shows,
     path: `/town/${town.slug}/`,
-    title: `Shows in ${town.name} | MineralDigger`,
-    description: `Upcoming rock, gem, mineral, fossil and bead shows in ${town.name}${countyBit}. Dates, venues and entry from organiser sites.`,
+    canonicalPath: same ? `/county/${county.slug}/` : "",
+    title: placeTitle(town.name, town.shows),
+    description: placeDescription(place, town.shows),
     heading: `Shows in ${town.name}`,
-    lede: `Upcoming shows in ${town.name}${countyBit}. Dates and venues come from organiser websites. Check with the organiser before you travel.`,
+    lede: placeLede(place, town.shows),
+    facts: placeFacts(town.shows),
+    crumbs: trail.html,
+    structuredData: trail.script,
     eyebrow: town.county || town.nation,
-    preface: `${browseLinks(false)}${town.county ? `<p class="fine"><a href="/county/${slugify(town.county)}/">${esc(town.county)}</a></p>` : ""}`,
+    preface: `${browseLinks(false)}${townCountyNote(town, county, same)}`,
   });
 }
 

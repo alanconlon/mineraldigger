@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { assetHash } from "./asset-hash.mjs";
 import { featuredIds, stripeReady } from "./feature.mjs";
 import { frameForPoints } from "../src/js/format.js";
-import { EMPTY_SHOWS_NOTE, entryLabel, esc, listedName, listingPaths, mergePlaces, offerValidFrom, organizerLink, renderCounty, renderFeature, renderShow, renderTown, renderType } from "./render.mjs";
+import { EMPTY_SHOWS_NOTE, entryLabel, esc, groupPlaces, listedName, listingPaths, mergePlaces, nearbyCounties, offerValidFrom, organizerLink, placeDescription, placeTitle, renderCounty, renderFeature, renderShow, renderTown, renderType, sameShowSet } from "./render.mjs";
 import { onRequestPost } from "../functions/api/submit.js";
 import { TURNSTILE_ERROR } from "../functions/api/turnstile.js";
 import { validateSubmission } from "../functions/api/validate.js";
@@ -338,6 +338,15 @@ if (!homeMain.slice(placesAt).includes('href="/county/">Counties</a>') || !homeM
 const beforeList = homeMain.slice(0, listAt);
 if (beforeList.includes('href="/county/">Counties</a>') || beforeList.includes('href="/towns/">Towns</a>')) {
   fail("Counties and Towns should not sit above the list.");
+}
+const listingsForHome = JSON.parse(await readFile(join(root, "data/listings.json"), "utf8"));
+for (const county of listingsForHome.counties || []) {
+  if (!homeMain.slice(placesAt).includes(`href="/county/${county.slug}/"`)) {
+    fail(`Homepage should link to ${county.name} under the list.`);
+  }
+  if (beforeList.includes(`href="/county/${county.slug}/"`)) {
+    fail(`Homepage should not link to ${county.name} above the list.`);
+  }
 }
 if (index.includes("<h2>Nothing listed for this weekend.</h2>")) fail("Homepage still has the hidden weekend heading.");
 for (const show of homeCatalogue.shows.filter((item) => item.end >= isoToday())) {
@@ -1004,9 +1013,22 @@ const listingPages = [
   ...["rock", "gem", "mineral", "fossil", "bead"].map((key) => [`${key}/index.html`, `/${key}/`, key]),
 ];
 if (!listings.counties?.length || !listings.towns?.length) fail("Listing registry is missing the live county and town pages.");
+const upcomingPlaces = mergePlaces(
+  groupPlaces((catalogue.shows || []).filter((show) => show.end >= isoToday())),
+  listings,
+);
+function listingCanonical(path) {
+  if (path.startsWith("/town/")) {
+    const town = upcomingPlaces.towns.get(path.split("/")[2]);
+    const county = town ? [...upcomingPlaces.counties.values()].find((item) => item.name === town.county) : null;
+    if (town && county && sameShowSet(town.shows, county.shows)) return `https://mineraldigger.com/county/${county.slug}/`;
+  }
+  return `https://mineraldigger.com${path}`;
+}
 for (const [file, path, label] of listingPages) {
-  const pageUrl = `https://mineraldigger.com${path}`;
-  if (!sitemap.includes(`<loc>${pageUrl}</loc>`)) fail(`Sitemap dropped ${pageUrl}.`);
+  const selfUrl = `https://mineraldigger.com${path}`;
+  const pageUrl = listingCanonical(path);
+  if (!sitemap.includes(`<loc>${selfUrl}</loc>`)) fail(`Sitemap dropped ${selfUrl}.`);
   let html;
   try {
     html = await readFile(join(dist, file), "utf8");
@@ -1016,7 +1038,8 @@ for (const [file, path, label] of listingPages) {
   }
   if (html.includes('name="robots" content="noindex"')) fail(`${path} is noindex.`);
   if (/coming soon/i.test(html)) fail(`${path} says coming soon.`);
-  if (!html.includes(`<link rel="canonical" href="${pageUrl}">`)) fail(`${path} is missing its canonical URL.`);
+  if (!html.includes(`<link rel="canonical" href="${pageUrl}">`)) fail(`${path} canonical should be ${pageUrl}.`);
+  if (!html.includes(`property="og:url" content="${pageUrl}"`)) fail(`${path} og:url should match its canonical URL.`);
 }
 const keptPlaces = mergePlaces(
   { counties: new Map(), towns: new Map(), regions: new Map() },
@@ -1091,9 +1114,55 @@ for (const county of listings.counties || []) {
   if (!hasUpcoming && !html.includes(EMPTY_SHOWS_NOTE)) {
     fail(`${county.name} has no upcoming shows, so it should say there are no shows listed right now.`);
   }
+  const countyRecord = upcomingPlaces.counties.get(county.slug);
+  const countyShows = countyRecord?.shows || [];
+  if (!html.includes('aria-label="Breadcrumb"') || !html.includes('href="/">Home</a>') || !html.includes('href="/county/">Counties</a>')) {
+    fail(`${county.name} should link home and the county index.`);
+  }
+  if (!countyShows.length) continue;
+  const next = [...countyShows].sort((a, b) => a.start.localeCompare(b.start) || a.name.localeCompare(b.name, "en-GB") || String(a.id).localeCompare(String(b.id)))[0];
+  if (!html.includes('class="place-facts"') || !html.includes(">Next</span>") || !html.includes(">Entry</span>")) {
+    fail(`${county.name} should summarise the next show and entry.`);
+  }
+  if (!html.includes(">Venue</span>") && !html.includes(">Venues</span>")) fail(`${county.name} summary should name the venues.`);
+  if (!html.includes(esc(next.name)) || !html.includes(`/show/${next.slug}/`)) fail(`${county.name} summary should link the next show.`);
+  if (next.venue?.name && !html.includes(esc(next.venue.name))) fail(`${county.name} summary is missing ${next.venue.name}.`);
+  const title = placeTitle(county.name, countyShows);
+  const description = placeDescription(county.name, countyShows);
+  if (!html.includes(`<title>${esc(title)}</title>`)) fail(`${county.name} title is not the factual title.`);
+  if (!html.includes(`<meta name="description" content="${esc(description)}">`)) fail(`${county.name} description is not the factual summary.`);
+  if (/[—–!]/.test(`${title} ${description}`)) fail(`${county.name} title or description has a dash or an exclamation mark.`);
+  if (/^Mineral shows/.test(title) && !countyShows.some((show) => show.types?.includes("mineral"))) {
+    fail(`${county.name} title says mineral shows when none are tagged mineral.`);
+  }
+  if (!countyShows.some((show) => show.entry?.kind === "paid") && description.includes("£")) {
+    fail(`${county.name} description invents a price.`);
+  }
+  for (const other of nearbyCounties(countyRecord, upcomingPlaces.counties)) {
+    if (!html.includes(`href="/county/${other.slug}/"`)) fail(`${county.name} should link to nearby ${other.name}.`);
+  }
 }
 for (const town of listings.towns || []) {
   if (!townIndex.includes(`href="/town/${town.slug}/"`)) fail(`Town index is missing ${town.name}.`);
+  let townHtml;
+  try {
+    townHtml = await readFile(join(dist, "town", town.slug, "index.html"), "utf8");
+  } catch {
+    fail(`Town page is missing at /town/${town.slug}/.`);
+    continue;
+  }
+  const townRecord = upcomingPlaces.towns.get(town.slug);
+  const countyRecord = [...upcomingPlaces.counties.values()].find((item) => item.name === town.county);
+  if (countyRecord && !townHtml.includes(`href="/county/${countyRecord.slug}/"`)) {
+    fail(`${town.name} should link to ${countyRecord.name}.`);
+  }
+  const same = Boolean(countyRecord && sameShowSet(townRecord?.shows || [], countyRecord.shows));
+  if (same && townHtml === countyPages.get(countyRecord.name)) fail(`${town.name} page is identical to ${countyRecord.name}.`);
+  if (!same && townHtml.includes(`<link rel="canonical" href="https://mineraldigger.com/county/`)) {
+    fail(`${town.name} lists different shows, so it should keep its own canonical URL.`);
+  }
+  const townShows = townRecord?.shows || [];
+  if (townShows.length && !townHtml.includes('class="place-facts"')) fail(`${town.name} should summarise its shows.`);
 }
 for (const show of catalogue.shows.filter((item) => item.end >= isoToday())) {
   const html = countyPages.get(show.venue?.county);
