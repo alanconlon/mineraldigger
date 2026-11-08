@@ -146,6 +146,123 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual(published["venue"]["postcode"], "WR1 3EJ")
         self.assertFalse(published["provisional"])
 
+    def test_named_weekend_keeps_its_price_on_the_sunday(self):
+        """The next-show block names 7 and 8 November at Worcester.
+
+        Checked on the homepage on 8 November 2026, the Sunday of that weekend.
+        The same postcode is also printed for 23 and 24 January 2027. The £5
+        door price and the opening times belong to the November weekend.
+        """
+        html = """
+        <p>NEXT SHOW</p>
+        <p>7th &amp; 8th November</p>
+        <p>Worcester Racecourse</p>
+        <p>WR1 3EJ</p>
+        <p>Entry by ticket purchased on the door Admission £5, accompanying under 12s free.</p>
+        <p>Free Parking as well as free tea and coffee</p>
+        <p>Open: Saturday 10am to 4pm</p>
+        <p>Sunday 10am to 4pm</p>
+        <p>Last entry 1 hour before closing</p>
+        <p>2026 Dates</p>
+        <p>7th &amp; 8th November Worcester Racecourse WR1 3EJ</p>
+        <p>2027 Dates</p>
+        <p>23rd &amp; 24th January Worcester Racecourse WR1 3EJ</p>
+        <p>Who's at Worcester Racecourse</p>
+        """
+        rows = parse_rockngem(html, today=date(2026, 11, 8), retrieved="2026-11-08")
+        worcester = next(row for row in rows if row["start"] == "2026-11-07")
+        self.assertEqual(worcester["end"], "2026-11-08")
+        self.assertEqual(worcester["entry_adult_gbp"], 5)
+        self.assertEqual(worcester["times_summary"], "Saturday 10:00 to 16:00. Sunday 10:00 to 16:00.")
+        later = next(row for row in rows if row["start"] == "2027-01-23")
+        self.assertIsNone(later["times_summary"])
+        self.assertEqual(later["entry_kind"], "unknown")
+        self.assertIsNone(later["entry_adult_gbp"])
+
+    def test_westpoint_exeter_is_geocoded_and_not_given_another_weekends_price(self):
+        """15 and 16 November 2025 at Westpoint Arena was on the homepage.
+
+        The Internet Archive copy from 5 November 2025 prints that line under
+        2025 Dates, and again above the list. The next-show block prices
+        Kempton. Westpoint does not repeat a price or opening times. EX5 1DJ
+        has to be in venues.json or assemble refuses the whole source.
+        """
+        html = """
+        <p>NEXT SHOW</p>
+        <p>8th &amp; 9th November</p>
+        <p>Kempton Park Racecourse TW16 5AQ</p>
+        <p>Entry by ticket purchased on the door Admission £6, accompanying under 12s free.</p>
+        <p>Free Parking and a cafe</p>
+        <p>Open: Saturday 10am to 5pm</p>
+        <p>Sunday 10am to 4pm</p>
+        <p>Last entry 1 hour before closing</p>
+        <p>15th &amp; 16th November Westpoint Arena EX5 1DJ</p>
+        <p>2025 Dates</p>
+        <p>8th &amp; 9th November Kempton Park Racecourse TW16 5AQ</p>
+        <p>15th &amp; 16th November Westpoint Arena EX5 1DJ</p>
+        <p>2026 Dates</p>
+        <p>Who's at Kempton Park Racecourse</p>
+        """
+        rows = parse_rockngem(html, today=date(2025, 11, 5), retrieved="2025-11-05")
+        westpoint = next(row for row in rows if row["postcode"] == "EX5 1DJ")
+        self.assertEqual(westpoint["start"], "2025-11-15")
+        self.assertEqual(westpoint["end"], "2025-11-16")
+        self.assertEqual(westpoint["venue_name"], "Westpoint Arena")
+        self.assertEqual(westpoint["entry_kind"], "unknown")
+        self.assertIsNone(westpoint["entry_adult_gbp"])
+        self.assertIsNone(westpoint["times_summary"])
+        self.assertEqual(westpoint["source_url"], "https://www.rockngem.co/")
+        self.assertEqual(westpoint["organiser_url"], "https://www.rockngem.co/")
+        kempton = next(row for row in rows if row["start"] == "2025-11-08")
+        self.assertEqual(kempton["entry_adult_gbp"], 6)
+        self.assertIn("Saturday 10:00 to 17:00", kempton["times_summary"])
+        shows = assemble(rows)
+        published = next(show for show in shows if show["venue"]["postcode"] == "EX5 1DJ")
+        self.assertEqual(published["slug"], "rock-gem-and-bead-show-exeter-2025-11-15")
+        self.assertEqual(published["venue"]["name"], "Westpoint Arena")
+        self.assertEqual(published["venue"]["town"], "Exeter")
+        self.assertEqual(published["venue"]["county"], "Devon")
+        self.assertEqual(published["venue"]["nation"], "England")
+        self.assertEqual(published["venue"]["lat"], 50.711371)
+        self.assertEqual(published["venue"]["lng"], -3.439555)
+        self.assertIn("Sowton", published["venue"]["place_note"])
+        self.assertEqual(published["entry"]["kind"], "unknown")
+        self.assertEqual(published["entry"]["label"], "Check with organiser")
+        self.assertIsNone(published["times"]["summary"])
+        self.assertEqual(published["source"]["url"], "https://www.rockngem.co/")
+        self.assertNotIn("\u2014", published["venue"]["place_note"])
+        self.assertNotIn("!", published["venue"]["place_note"])
+
+    def test_a_later_westpoint_weekend_does_not_inherit_the_named_price(self):
+        """A door price stays on the weekend named in the next-show block.
+
+        The second Westpoint line is only here so a later copy cannot pick up
+        the price. rockngem.co did not print a 2026 Westpoint date on 8 November 2026.
+        """
+        html = """
+        <p>NEXT SHOW</p>
+        <p>15th &amp; 16th November</p>
+        <p>Westpoint Arena</p>
+        <p>EX5 1DJ</p>
+        <p>Entry by ticket purchased on the door Admission £5, accompanying under 12s free.</p>
+        <p>Open: Saturday 10am to 4pm</p>
+        <p>Sunday 10am to 4pm</p>
+        <p>2025 Dates</p>
+        <p>15th &amp; 16th November Westpoint Arena EX5 1DJ</p>
+        <p>2026 Dates</p>
+        <p>15th &amp; 16th November Westpoint Arena EX5 1DJ</p>
+        <p>Who's at Westpoint Arena</p>
+        """
+        for today in (date(2025, 11, 16), date(2025, 11, 17)):
+            rows = parse_rockngem(html, today=today, retrieved="2025-11-16")
+            current = next(row for row in rows if row["start"] == "2025-11-15")
+            later = next(row for row in rows if row["start"] == "2026-11-15")
+            self.assertEqual(current["entry_adult_gbp"], 5, today)
+            self.assertEqual(current["times_summary"], "Saturday 10:00 to 16:00. Sunday 10:00 to 16:00.")
+            self.assertEqual(later["entry_kind"], "unknown", today)
+            self.assertIsNone(later["entry_adult_gbp"], today)
+            self.assertIsNone(later["times_summary"], today)
+
     def test_nature_does_not_invent_an_undated_march(self):
         home = (FIXTURES / "nature-home.html").read_text(encoding="utf-8")
         only_home = parse_nature(home, "", today=TODAY)

@@ -22,7 +22,12 @@ def parse_rockngem(html: str, today: date | None = None, retrieved: str | None =
     next_block = _next_show_block(lines)
     events = _date_rows(lines)
     phone = _phone(html)
-    target = _attach_target(events, next_block.get("postcode"), today)
+    target = _attach_target(
+        events,
+        next_block.get("postcode"),
+        next_block.get("span"),
+        today,
+    )
 
     rows = []
     for event in events:
@@ -115,12 +120,30 @@ def _next_show_block(lines: list[str]) -> dict:
         entry_notes = "Pay on the door. Accompanying under 12s free."
     return {
         "postcode": normalise_postcode(text),
+        "span": _month_day_span(block),
         "price": price,
         "times": times,
         "times_notes": notes,
         "entry_notes": entry_notes,
         "parking": any(re.search(r"free parking", line, re.I) for line in block),
     }
+
+
+def _month_day_span(lines: list[str]) -> tuple[str, str] | None:
+    """Month and day of the weekend named in the next-show block.
+
+    The block often prints the days without a year, and sometimes without the
+    venue on that line. The year comes from the date list.
+    """
+    for line in lines:
+        for candidate in (line, f"{line} Venue"):
+            parsed = parse_show_span(candidate, 2000)
+            if not parsed:
+                continue
+            if candidate is not line and parsed["venue_name"] != "Venue":
+                continue
+            return parsed["start"][5:], parsed["end"][5:]
+    return None
 
 
 # "2027 Dates" is the year 2027. The word provisional is optional and is the
@@ -159,23 +182,56 @@ def _date_rows(lines: list[str]) -> list[dict]:
     return events
 
 
-def _attach_target(events: list[dict], postcode: str | None, today: date) -> dict | None:
+def _attach_target(
+    events: list[dict],
+    postcode: str | None,
+    span: tuple[str, str] | None,
+    today: date,
+) -> dict | None:
+    """Attach the next-show price and times to the weekend that block names.
+
+    Matching only the next future start date moved Saturday's door price onto
+    a later weekend at the same postcode once Sunday arrived. A named span
+    stays on the closest weekend with those days, so next year's copy does
+    not inherit it. With no span, the earliest date at that postcode that
+    has not ended is used.
+    """
     if not postcode:
         return None
     dated = []
     for event in events:
         if event.get("postcode") != postcode:
             continue
+        if span and (event["start"][5:], event["end"][5:]) != span:
+            continue
         try:
             start = date.fromisoformat(event["start"])
+            end = date.fromisoformat(event["end"])
         except ValueError:
             continue
-        if start >= today:
-            dated.append((start, event))
+        dated.append((start, end, event))
     if not dated:
         return None
-    dated.sort(key=lambda item: item[0])
-    return dated[0][1]
+    if span:
+        dated.sort(key=lambda item: (_day_distance(item[0], item[1], today), item[0]))
+        return dated[0][2]
+    current = [item for item in dated if item[0] <= today <= item[1]]
+    if current:
+        current.sort(key=lambda item: item[0])
+        return current[0][2]
+    upcoming = [item for item in dated if item[1] >= today]
+    if upcoming:
+        upcoming.sort(key=lambda item: item[0])
+        return upcoming[0][2]
+    return None
+
+
+def _day_distance(start: date, end: date, today: date) -> int:
+    if start <= today <= end:
+        return 0
+    if today < start:
+        return (start - today).days
+    return (today - end).days
 
 
 def _phone(html: str) -> str | None:
