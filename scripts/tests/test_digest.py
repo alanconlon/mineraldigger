@@ -40,6 +40,11 @@ EMPTY_FRIDAY = (
     "or the site for £25 a month: "
     "[see the sponsor options](https://mineraldigger.com/feature/)."
 )
+FOLLOW = (
+    "Follow MineralDigger on "
+    "[Bluesky](https://bsky.app/profile/mineraldigger.com) · "
+    "[Facebook](https://www.facebook.com/people/MineralDigger/61595681170967/)"
+)
 
 
 def run_main(argv: list[str]) -> tuple[int, str]:
@@ -99,7 +104,11 @@ class DigestTests(unittest.TestCase):
         self.assertNotIn("Run a rock, gem or lapidary shop?", markdown)
         self.assertEqual(markdown.count(EMPTY_FRIDAY), 1)
         self.assertEqual(markdown.count("**This week's sponsor slot is free.**"), 1)
-        self.assertIn(f"{INTRO}\n\n{EMPTY_FRIDAY}\n\n## This weekend", markdown)
+        self.assertEqual(markdown.count(FOLLOW), 1)
+        self.assertNotIn("!", FOLLOW)
+        self.assertNotIn("\u2014", FOLLOW)
+        self.assertNotIn("\u2013", FOLLOW)
+        self.assertIn(f"{INTRO}\n\n{EMPTY_FRIDAY}\n\n{FOLLOW}\n\n## This weekend", markdown)
         self.assertNotIn("www.rockngem.co", markdown)
         self.assertNotIn("07712", markdown)
         self.assertNotIn("fills quickly", markdown)
@@ -180,7 +189,8 @@ class DigestTests(unittest.TestCase):
         _, markdown = render_newsletter(SHOWS, TODAY, SITE, sponsors, featured)
         booked_line = "Sponsored. [Northstone Lapidary](https://example.com/northstone). Rough and slabs."
         self.assertIn(booked_line, markdown)
-        self.assertIn(f"{INTRO}\n\n{booked_line}\n\n## This weekend", markdown)
+        self.assertIn(f"{INTRO}\n\n{booked_line}\n\n{FOLLOW}\n\n## This weekend", markdown)
+        self.assertEqual(markdown.count(FOLLOW), 1)
         self.assertNotIn(EMPTY_FRIDAY, markdown)
         sunbury = paragraph_for(markdown, "rock-gem-and-bead-show-sunbury-on-thames-2026-10-31")
         self.assertTrue(sunbury.startswith("Featured. "))
@@ -214,7 +224,8 @@ class DigestTests(unittest.TestCase):
         ):
             _, markdown = render_newsletter(SHOWS, TODAY, SITE, sponsors)
             self.assertEqual(markdown.count(EMPTY_FRIDAY), 1)
-            self.assertIn(f"{INTRO}\n\n{EMPTY_FRIDAY}\n\n", markdown)
+            self.assertEqual(markdown.count(FOLLOW), 1)
+            self.assertIn(f"{INTRO}\n\n{EMPTY_FRIDAY}\n\n{FOLLOW}\n\n", markdown)
             self.assertNotIn("Sponsored", markdown)
             self.assertNotIn("Run a rock, gem or lapidary shop?", markdown)
             self.assertNotIn("example.com", markdown)
@@ -234,7 +245,8 @@ class DigestTests(unittest.TestCase):
         self.assertNotIn(EMPTY_FRIDAY, named)
 
         _, later = render_newsletter(SHOWS, date(2026, 12, 4), SITE, {"friday": None})
-        self.assertIn(f"{INTRO}\n\n{EMPTY_FRIDAY}\n\n## Coming up", later)
+        self.assertIn(f"{INTRO}\n\n{EMPTY_FRIDAY}\n\n{FOLLOW}\n\n## Coming up", later)
+        self.assertEqual(later.count(FOLLOW), 1)
 
         _, markdown = render_newsletter(SHOWS, TODAY, SITE, {"friday": None})
         _, body = buttondown_draft.split_subject(markdown)
