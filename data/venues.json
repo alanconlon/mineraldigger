@@ -1,5 +1,5 @@
 {
-  "_note": "Postcode centroids from postcodes.io. Town labels are the place a visitor would use. place_note is set when the postcode parish is not that town. Looked up on 25 October 2026, with CO6 1EH on 28 October 2026 and GL14 2UB on 3 November 2026.",
+  "_note": "Postcode centroids from postcodes.io. Town labels are the place a visitor would use. place_note is set when the postcode parish is not that town. Looked up on 25 October 2026, with CO6 1EH on 28 October 2026, GL14 2UB on 3 November 2026 and EX5 1DJ on 8 November 2026.",
   "TW16 5AQ": {
     "lat": 51.418928,
     "lng": -0.407472,
@@ -150,5 +150,13 @@
     "county": "Gloucestershire",
     "nation": "England",
     "place_note": "The organiser prints Soudley, Forest of Dean. Postcode GL14 2UB is in the parish of Ruspidge and Soudley."
+  },
+  "EX5 1DJ": {
+    "lat": 50.711371,
+    "lng": -3.439555,
+    "town": "Exeter",
+    "county": "Devon",
+    "nation": "England",
+    "place_note": "Postcode EX5 1DJ is in Sowton, the site of Westpoint Arena."
   }
 }
