@@ -377,7 +377,18 @@ def render_newsletter(
         ),
         "",
     ]
-    blocks.extend([sponsor_markdown(sponsors, friday, site_url), ""])
+    blocks.extend(
+        [
+            sponsor_markdown(sponsors, friday, site_url),
+            "",
+            (
+                "Follow MineralDigger on "
+                "[Bluesky](https://bsky.app/profile/mineraldigger.com) · "
+                "[Facebook](https://www.facebook.com/people/MineralDigger/61595681170967/)"
+            ),
+            "",
+        ]
+    )
 
     if this_weekend:
         blocks.extend(["## This weekend", ""])
