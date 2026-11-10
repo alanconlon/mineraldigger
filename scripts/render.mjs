@@ -191,7 +191,6 @@ function footer(generated) {
       <div>
         <h2>Browse</h2>
         <a href="/">Upcoming shows</a>
-        <a href="/this-weekend/">This weekend</a>
         <a href="/?when=later">Coming later</a>
         <a href="/county/">Counties</a>
         <a href="/towns/">Towns</a>
