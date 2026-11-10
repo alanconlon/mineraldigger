@@ -625,9 +625,11 @@ for (const file of files) {
   if (!foot.includes(">Browse</h2>") || !foot.includes(">Organisers</h2>") || !foot.includes(">Show types</h2>") || !foot.includes(">Stay in touch</h2>")) {
     fail(`Footer columns missing in ${file}`);
   }
+  if (foot.includes('href="/this-weekend/"')) {
+    fail(`Footer in ${file} should not repeat This weekend; the filter chip and the weekend page cover it.`);
+  }
   for (const href of [
     "/",
-    "/this-weekend/",
     "/?when=later",
     "/county/",
     "/towns/",
