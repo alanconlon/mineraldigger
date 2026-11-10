@@ -21,6 +21,7 @@ def parse_rockngem(html: str, today: date | None = None, retrieved: str | None =
     lines = html_to_lines(html)
     next_block = _next_show_block(lines)
     events = _date_rows(lines)
+    events = _include_next_show(events, next_block, today)
     phone = _phone(html)
     target = _attach_target(
         events,
@@ -32,11 +33,17 @@ def parse_rockngem(html: str, today: date | None = None, retrieved: str | None =
     rows = []
     for event in events:
         attached = event is target
-        notes = "Date from the organiser homepage. " + _list_sentence(event)
-        if attached:
-            notes += " Door price and opening times are printed in the next-show block for this weekend."
+        if event.get("from_next_show") and not event.get("list_year") and attached:
+            notes = (
+                "Date, door price and opening times are printed in the next-show "
+                "block on the organiser homepage."
+            )
         else:
-            notes += " This date line does not repeat a door price or opening times."
+            notes = "Date from the organiser homepage. " + _list_sentence(event)
+            if attached:
+                notes += " Door price and opening times are printed in the next-show block for this weekend."
+            else:
+                notes += " This date line does not repeat a door price or opening times."
         row = {
             "organiser_id": "rockngem",
             "organiser_name": "Rock, Gem & Bead Shows",
@@ -70,6 +77,8 @@ def parse_rockngem(html: str, today: date | None = None, retrieved: str | None =
 
 def _list_sentence(event: dict) -> str:
     """Say which heading the date came from. Provisional follows that heading."""
+    if event.get("from_next_show") and not event.get("list_year"):
+        return "Printed in the next-show block."
     year = event.get("list_year") or int(str(event["start"])[:4])
     if event["provisional"]:
         return f"{year} dates are printed under the heading Provisional {year} Dates."
@@ -85,9 +94,37 @@ def _summary(provisional: bool) -> str:
     return base
 
 
+# Homepage typo seen on 10 November 2026: "Newvase Racecourse" for Newcastle.
+_VENUE_CORRECTIONS = {
+    "newvase racecourse": "Newcastle Racecourse",
+}
+
+
+def _correct_text(text: str) -> str:
+    out = text
+    for typo, proper in _VENUE_CORRECTIONS.items():
+        out = re.sub(re.escape(typo), proper, out, flags=re.I)
+    return out
+
+
+def _correct_venue(name: str | None) -> str | None:
+    if not name:
+        return name
+    return _correct_text(name)
+
+
 def _next_show_block(lines: list[str]) -> dict:
     start = next((i for i, line in enumerate(lines) if re.search(r"next show", line, re.I)), None)
-    end = next((i for i, line in enumerate(lines) if re.search(r"2026\s+dates", line, re.I)), None)
+    end = None
+    if start is not None:
+        end = next(
+            (
+                i
+                for i, line in enumerate(lines[start + 1 :], start + 1)
+                if _YEAR_HEADING.search(line) or re.search(r"who'?s at", line, re.I)
+            ),
+            len(lines),
+        )
     block = lines[start:end] if start is not None and end is not None and end > start else []
     text = " ".join(block)
     price = None
@@ -97,11 +134,11 @@ def _next_show_block(lines: list[str]) -> dict:
     saturday = sunday = None
     for line in block:
         if re.search(r"saturday", line, re.I):
-            found = re.search(r"(\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:to|–|—|-)\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?)", line, re.I)
+            found = re.search(r"(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?\s*(?:to|–|—|-)\s*\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?)", line, re.I)
             if found:
                 saturday = clock_range(found.group(1))
         if re.search(r"sunday", line, re.I):
-            found = re.search(r"(\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*(?:to|–|—|-)\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?)", line, re.I)
+            found = re.search(r"(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?\s*(?:to|–|—|-)\s*\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?)", line, re.I)
             if found:
                 sunday = clock_range(found.group(1))
     times = None
@@ -119,6 +156,7 @@ def _next_show_block(lines: list[str]) -> dict:
     if price is not None:
         entry_notes = "Pay on the door. Accompanying under 12s free."
     return {
+        "lines": block,
         "postcode": normalise_postcode(text),
         "span": _month_day_span(block),
         "price": price,
@@ -178,8 +216,69 @@ def _date_rows(lines: list[str]) -> list[dict]:
             continue
         parsed["provisional"] = section_provisional
         parsed["list_year"] = section
+        parsed["venue_name"] = _correct_venue(parsed.get("venue_name"))
         events.append(parsed)
     return events
+
+
+def _join_next_show_place(block: list[str]) -> str:
+    """Date, venue and postcode lines from the next-show block, typo-corrected."""
+    bits = []
+    for line in block:
+        if re.search(r"next show", line, re.I):
+            continue
+        if re.search(
+            r"admission|entry by|free parking|open:|saturday|sunday|last entry",
+            line,
+            re.I,
+        ):
+            break
+        if _YEAR_HEADING.search(line) or re.search(r"who'?s at", line, re.I):
+            break
+        bits.append(_correct_text(line))
+    return " ".join(bits)
+
+
+def _next_show_event(next_block: dict, today: date) -> dict | None:
+    """Build a date row when the next show is not in a year-dated list.
+
+    After a show weekend the homepage often drops the 2026 date list and leaves
+    only the next-show block plus the following year's dates. The year is this
+    year when that weekend has not yet ended.
+    """
+    block = next_block.get("lines") or []
+    if not block:
+        return None
+    parsed = parse_show_span(_join_next_show_place(block), today.year)
+    if not parsed:
+        return None
+    parsed["venue_name"] = _correct_venue(parsed.get("venue_name"))
+    if not parsed.get("postcode"):
+        parsed["postcode"] = next_block.get("postcode") or normalise_postcode(" ".join(block))
+    try:
+        end = date.fromisoformat(parsed["end"])
+    except ValueError:
+        return None
+    if end < today:
+        return None
+    parsed["provisional"] = False
+    parsed["from_next_show"] = True
+    parsed["list_year"] = None
+    return parsed
+
+
+def _include_next_show(events: list[dict], next_block: dict, today: date) -> list[dict]:
+    extra = _next_show_event(next_block, today)
+    if not extra:
+        return events
+    for event in events:
+        if (
+            event.get("start") == extra["start"]
+            and event.get("end") == extra["end"]
+            and (event.get("postcode") or "") == (extra.get("postcode") or "")
+        ):
+            return events
+    return [extra, *events]
 
 
 def _attach_target(
