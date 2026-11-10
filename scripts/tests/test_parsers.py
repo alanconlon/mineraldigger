@@ -146,6 +146,56 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual(published["venue"]["postcode"], "WR1 3EJ")
         self.assertFalse(published["provisional"])
 
+    def test_next_show_without_2026_list_keeps_newcastle(self):
+        """When the 2026 date list is gone, the next-show block is still a show.
+
+        Checked against the organiser homepage on 10 November 2026. The next
+        show is 14 and 15 November at Newcastle Racecourse, printed as
+        Newvase Racecourse. There is no 2026 Dates heading, only 2027 Dates.
+        """
+        html = """
+        <p>NEXT SHOW</p>
+        <p>14th &amp; 15th November</p>
+        <p>Newvase Racecourse</p>
+        <p>NE3 5HP</p>
+        <p>Entry by ticket purchased on the door Admission £5, accompanying under 12s free.</p>
+        <p>Free Parking and a cafe.</p>
+        <p>Open: Saturday 10am to 4.30pm</p>
+        <p>Sunday 10am to 4pm</p>
+        <p>Last entry 1 hour before closing</p>
+        <p>07712276041</p>
+        <p>2027 Dates</p>
+        <p>8th &amp; 9th May Newcastle Racecourse NE3 5HP</p>
+        <p>25th &amp; 26th September Newcastle Racecourse NE3 5HP</p>
+        <p>Who's at Newcastle Racecourse</p>
+        """
+        rows = parse_rockngem(html, today=date(2026, 11, 10), retrieved="2026-11-10")
+        newcastle = next(row for row in rows if row["start"] == "2026-11-14")
+        self.assertEqual(newcastle["end"], "2026-11-15")
+        self.assertEqual(newcastle["venue_name"], "Newcastle Racecourse")
+        self.assertEqual(newcastle["postcode"], "NE3 5HP")
+        self.assertFalse(newcastle["provisional"])
+        self.assertEqual(newcastle["times_summary"], "Saturday 10:00 to 16:30. Sunday 10:00 to 16:00.")
+        self.assertEqual(newcastle["times_notes"], "Last entry one hour before closing.")
+        self.assertEqual(newcastle["entry_kind"], "paid")
+        self.assertEqual(newcastle["entry_adult_gbp"], 5)
+        self.assertEqual(newcastle["entry_notes"], "Pay on the door. Accompanying under 12s free.")
+        self.assertEqual(newcastle["parking"], "Free parking")
+        self.assertIn("next-show block", newcastle["source_notes"])
+        self.assertNotIn("2026 date list", newcastle["source_notes"])
+        self.assertFalse(any("Newvase" in (row["venue_name"] or "") for row in rows))
+        later = [row for row in rows if row["postcode"] == "NE3 5HP" and row["start"].startswith("2027-")]
+        self.assertEqual([row["start"] for row in later], ["2027-05-08", "2027-09-25"])
+        self.assertTrue(all(row["entry_kind"] == "unknown" for row in later))
+        self.assertTrue(all(row["times_summary"] is None for row in later))
+        shows = assemble(rows)
+        published = next(
+            show for show in shows if show["slug"] == "rock-gem-and-bead-show-newcastle-upon-tyne-2026-11-14"
+        )
+        self.assertEqual(published["venue"]["name"], "Newcastle Racecourse")
+        self.assertEqual(published["times"]["summary"], "Saturday 10:00 to 16:30. Sunday 10:00 to 16:00.")
+        self.assertEqual(published["entry"]["adult_gbp"], 5)
+
     def test_named_weekend_keeps_its_price_on_the_sunday(self):
         """The next-show block names 7 and 8 November at Worcester.
 
